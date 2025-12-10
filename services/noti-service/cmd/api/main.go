@@ -1,0 +1,163 @@
+// @title           Notification Service API
+// @version         1.0
+// @description     Notification history and real-time streaming API with SSE support
+// @termsOfService  http://swagger.io/terms/
+
+// @contact.name   API Support
+// @contact.url    http://www.wealist.co.kr/support
+// @contact.email  support@wealist.co.kr
+
+// @license.name  Apache 2.0
+// @license.url   http://www.apache.org/licenses/LICENSE-2.0.html
+
+// @host      localhost:8002
+// @BasePath  /api
+
+// @securityDefinitions.apikey BearerAuth
+// @in header
+// @name Authorization
+// @description Type "Bearer" followed by a space and JWT token.
+
+// @securityDefinitions.apikey InternalAPIKey
+// @in header
+// @name x-internal-api-key
+// @description Internal API key for service-to-service communication.
+
+package main
+
+import (
+	"context"
+	"fmt"
+	"net/http"
+	"noti-service/internal/config"
+	"noti-service/internal/database"
+	"noti-service/internal/router"
+	"os"
+	"os/signal"
+	"syscall"
+	"time"
+
+	_ "noti-service/docs" // Swagger docs import
+
+	"github.com/redis/go-redis/v9"
+	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
+)
+
+func main() {
+	// Load configuration
+	cfg, err := config.Load("configs/config.yaml")
+	if err != nil {
+		fmt.Printf("Failed to load config: %v\n", err)
+		os.Exit(1)
+	}
+
+	// Initialize logger
+	logger := initLogger(cfg.Server.Env, cfg.Server.LogLevel)
+	defer logger.Sync()
+
+	logger.Info("Starting notification service",
+		zap.String("env", cfg.Server.Env),
+		zap.Int("port", cfg.Server.Port),
+	)
+
+	// Initialize database
+	db, err := database.NewDB(cfg)
+	if err != nil {
+		logger.Fatal("Failed to connect to database", zap.Error(err))
+	}
+
+	sqlDB, _ := db.DB()
+	defer sqlDB.Close()
+
+	// Initialize Redis
+	var redisClient *redis.Client
+	if cfg.Redis.Host != "" {
+		redisClient = redis.NewClient(&redis.Options{
+			Addr:     fmt.Sprintf("%s:%d", cfg.Redis.Host, cfg.Redis.Port),
+			Password: cfg.Redis.Password,
+			DB:       cfg.Redis.DB,
+		})
+
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+
+		if err := redisClient.Ping(ctx).Err(); err != nil {
+			logger.Warn("Failed to connect to Redis", zap.Error(err))
+			redisClient = nil
+		} else {
+			logger.Info("Connected to Redis",
+				zap.String("host", cfg.Redis.Host),
+				zap.Int("port", cfg.Redis.Port),
+			)
+			defer redisClient.Close()
+		}
+	}
+
+	// Setup router
+	r := router.Setup(cfg, db, redisClient, logger)
+
+	// Create HTTP server
+	srv := &http.Server{
+		Addr:         fmt.Sprintf(":%d", cfg.Server.Port),
+		Handler:      r,
+		ReadTimeout:  30 * time.Second,
+		WriteTimeout: 30 * time.Second,
+		IdleTimeout:  60 * time.Second,
+	}
+
+	// Start server in goroutine
+	go func() {
+		logger.Info("Server listening", zap.Int("port", cfg.Server.Port))
+		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			logger.Fatal("Failed to start server", zap.Error(err))
+		}
+	}()
+
+	// Wait for interrupt signal
+	quit := make(chan os.Signal, 1)
+	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
+	<-quit
+
+	logger.Info("Shutting down server...")
+
+	// Graceful shutdown with timeout
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	if err := srv.Shutdown(ctx); err != nil {
+		logger.Error("Server forced to shutdown", zap.Error(err))
+	}
+
+	logger.Info("Server exited")
+}
+
+func initLogger(env, level string) *zap.Logger {
+	var config zap.Config
+
+	if env == "production" || env == "prod" {
+		config = zap.NewProductionConfig()
+	} else {
+		config = zap.NewDevelopmentConfig()
+		config.EncoderConfig.EncodeLevel = zapcore.CapitalColorLevelEncoder
+	}
+
+	// Parse log level
+	switch level {
+	case "debug":
+		config.Level = zap.NewAtomicLevelAt(zap.DebugLevel)
+	case "info":
+		config.Level = zap.NewAtomicLevelAt(zap.InfoLevel)
+	case "warn":
+		config.Level = zap.NewAtomicLevelAt(zap.WarnLevel)
+	case "error":
+		config.Level = zap.NewAtomicLevelAt(zap.ErrorLevel)
+	}
+
+	logger, err := config.Build()
+	if err != nil {
+		panic(err)
+	}
+
+	return logger
+}

@@ -1,0 +1,1267 @@
+basePath: /api
+definitions:
+  internal_handler.ErrorDetail:
+    properties:
+      code:
+        type: string
+      message:
+        type: string
+    type: object
+  internal_handler.ErrorResponse:
+    properties:
+      error:
+        $ref: '#/definitions/internal_handler.ErrorDetail'
+    type: object
+  internal_handler.SuccessResponse:
+    properties:
+      message:
+        type: string
+    type: object
+  user-service_internal_domain.AttachmentResponse:
+    properties:
+      contentType:
+        type: string
+      createdAt:
+        type: string
+      entityId:
+        type: string
+      entityType:
+        $ref: '#/definitions/user-service_internal_domain.EntityType'
+      expiresAt:
+        type: string
+      fileName:
+        type: string
+      fileSize:
+        type: integer
+      fileUrl:
+        type: string
+      id:
+        type: string
+      status:
+        $ref: '#/definitions/user-service_internal_domain.AttachmentStatus'
+      uploadedBy:
+        type: string
+    type: object
+  user-service_internal_domain.AttachmentStatus:
+    enum:
+    - TEMP
+    - CONFIRMED
+    type: string
+    x-enum-varnames:
+    - AttachmentStatusTemp
+    - AttachmentStatusConfirmed
+  user-service_internal_domain.ConfirmAttachmentRequest:
+    properties:
+      attachmentId:
+        type: string
+    required:
+    - attachmentId
+    type: object
+  user-service_internal_domain.CreateJoinRequestRequest:
+    properties:
+      workspaceId:
+        type: string
+    required:
+    - workspaceId
+    type: object
+  user-service_internal_domain.CreateProfileRequest:
+    properties:
+      email:
+        type: string
+      nickName:
+        type: string
+      profileImageUrl:
+        type: string
+      workspaceId:
+        type: string
+    required:
+    - email
+    - nickName
+    - workspaceId
+    type: object
+  user-service_internal_domain.CreateUserRequest:
+    properties:
+      email:
+        type: string
+      googleId:
+        type: string
+      provider:
+        type: string
+    required:
+    - email
+    type: object
+  user-service_internal_domain.CreateWorkspaceRequest:
+    properties:
+      isPublic:
+        type: boolean
+      needApproved:
+        type: boolean
+      workspaceDescription:
+        type: string
+      workspaceName:
+        type: string
+    required:
+    - workspaceName
+    type: object
+  user-service_internal_domain.EntityType:
+    enum:
+    - USER_PROFILE
+    type: string
+    x-enum-varnames:
+    - EntityTypeUserProfile
+  user-service_internal_domain.InviteMemberRequest:
+    properties:
+      email:
+        type: string
+      roleName:
+        $ref: '#/definitions/user-service_internal_domain.RoleName'
+    required:
+    - email
+    type: object
+  user-service_internal_domain.JoinRequestResponse:
+    properties:
+      joinRequestId:
+        type: string
+      nickName:
+        type: string
+      requestedAt:
+        type: string
+      status:
+        $ref: '#/definitions/user-service_internal_domain.JoinRequestStatus'
+      updatedAt:
+        type: string
+      userEmail:
+        type: string
+      userId:
+        type: string
+      workspaceId:
+        type: string
+      workspaceName:
+        type: string
+    type: object
+  user-service_internal_domain.JoinRequestStatus:
+    enum:
+    - PENDING
+    - APPROVED
+    - REJECTED
+    type: string
+    x-enum-varnames:
+    - JoinStatusPending
+    - JoinStatusApproved
+    - JoinStatusRejected
+  user-service_internal_domain.OAuthLoginRequest:
+    properties:
+      email:
+        type: string
+      name:
+        type: string
+      provider:
+        type: string
+    required:
+    - email
+    - name
+    - provider
+    type: object
+  user-service_internal_domain.PresignedURLRequest:
+    properties:
+      contentType:
+        type: string
+      fileName:
+        type: string
+      fileSize:
+        type: integer
+    required:
+    - contentType
+    - fileName
+    - fileSize
+    type: object
+  user-service_internal_domain.PresignedURLResponse:
+    properties:
+      expiresAt:
+        type: integer
+      fileKey:
+        type: string
+      uploadUrl:
+        type: string
+    type: object
+  user-service_internal_domain.ProcessJoinRequestRequest:
+    properties:
+      status:
+        $ref: '#/definitions/user-service_internal_domain.JoinRequestStatus'
+    required:
+    - status
+    type: object
+  user-service_internal_domain.RoleName:
+    enum:
+    - OWNER
+    - ADMIN
+    - MEMBER
+    type: string
+    x-enum-varnames:
+    - RoleOwner
+    - RoleAdmin
+    - RoleMember
+  user-service_internal_domain.SaveAttachmentRequest:
+    properties:
+      contentType:
+        type: string
+      fileKey:
+        type: string
+      fileName:
+        type: string
+      fileSize:
+        type: integer
+    required:
+    - contentType
+    - fileKey
+    - fileName
+    - fileSize
+    type: object
+  user-service_internal_domain.UpdateMemberRoleRequest:
+    properties:
+      roleName:
+        $ref: '#/definitions/user-service_internal_domain.RoleName'
+    required:
+    - roleName
+    type: object
+  user-service_internal_domain.UpdateProfileRequest:
+    properties:
+      nickName:
+        type: string
+      profileImageUrl:
+        type: string
+    type: object
+  user-service_internal_domain.UpdateUserRequest:
+    properties:
+      email:
+        type: string
+      isActive:
+        type: boolean
+    type: object
+  user-service_internal_domain.UpdateWorkspaceRequest:
+    properties:
+      isPublic:
+        type: boolean
+      needApproved:
+        type: boolean
+      workspaceDescription:
+        type: string
+      workspaceName:
+        type: string
+    type: object
+  user-service_internal_domain.UpdateWorkspaceSettingsRequest:
+    properties:
+      isPublic:
+        type: boolean
+      onlyOwnerCanInvite:
+        type: boolean
+      requiresApproval:
+        type: boolean
+      workspaceDescription:
+        type: string
+      workspaceName:
+        type: string
+    type: object
+  user-service_internal_domain.UserProfileResponse:
+    properties:
+      createdAt:
+        type: string
+      email:
+        type: string
+      nickName:
+        type: string
+      profileId:
+        type: string
+      profileImageUrl:
+        type: string
+      updatedAt:
+        type: string
+      userId:
+        type: string
+      workspaceId:
+        type: string
+    type: object
+  user-service_internal_domain.UserResponse:
+    properties:
+      createdAt:
+        type: string
+      deletedAt:
+        type: string
+      email:
+        type: string
+      googleId:
+        type: string
+      isActive:
+        type: boolean
+      name:
+        type: string
+      provider:
+        type: string
+      updatedAt:
+        type: string
+      userId:
+        type: string
+    type: object
+  user-service_internal_domain.UserWorkspaceResponse:
+    properties:
+      createdAt:
+        type: string
+      owner:
+        type: boolean
+      role:
+        type: string
+      workspaceDescription:
+        type: string
+      workspaceId:
+        type: string
+      workspaceName:
+        type: string
+    type: object
+  user-service_internal_domain.WorkspaceMemberResponse:
+    properties:
+      isActive:
+        type: boolean
+      isDefault:
+        type: boolean
+      joinedAt:
+        type: string
+      nickName:
+        type: string
+      profileImageUrl:
+        type: string
+      roleName:
+        $ref: '#/definitions/user-service_internal_domain.RoleName'
+      updatedAt:
+        type: string
+      userEmail:
+        type: string
+      userId:
+        type: string
+      workspaceId:
+        type: string
+      workspaceMemberId:
+        type: string
+    type: object
+  user-service_internal_domain.WorkspaceResponse:
+    properties:
+      createdAt:
+        type: string
+      deletedAt:
+        type: string
+      isActive:
+        type: boolean
+      isPublic:
+        type: boolean
+      needApproved:
+        type: boolean
+      ownerEmail:
+        type: string
+      ownerId:
+        type: string
+      ownerNickName:
+        type: string
+      workspaceDescription:
+        type: string
+      workspaceId:
+        type: string
+      workspaceName:
+        type: string
+    type: object
+  user-service_internal_domain.WorkspaceSettingsResponse:
+    properties:
+      isPublic:
+        type: boolean
+      onlyOwnerCanInvite:
+        type: boolean
+      requiresApproval:
+        type: boolean
+      workspaceDescription:
+        type: string
+      workspaceId:
+        type: string
+      workspaceName:
+        type: string
+    type: object
+host: localhost:8081
+info:
+  contact:
+    email: support@wealist.co.kr
+    name: API Support
+    url: http://www.wealist.co.kr/support
+  description: User and Workspace management API
+  license:
+    name: Apache 2.0
+    url: http://www.apache.org/licenses/LICENSE-2.0.html
+  termsOfService: http://swagger.io/terms/
+  title: User Service API
+  version: "1.0"
+paths:
+  /internal/oauth/login:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: OAuth login request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/user-service_internal_domain.OAuthLoginRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/internal_handler.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/internal_handler.ErrorResponse'
+      summary: Find or create user for OAuth login (internal)
+      tags:
+      - Internal
+  /internal/users/{userId}/exists:
+    get:
+      parameters:
+      - description: User ID
+        in: path
+        name: userId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: boolean
+            type: object
+      summary: Check if user exists (internal)
+      tags:
+      - Internal
+  /profiles:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Create profile request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/user-service_internal_domain.CreateProfileRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/user-service_internal_domain.UserProfileResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/internal_handler.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Create user profile
+      tags:
+      - Profiles
+  /profiles/all/me:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/user-service_internal_domain.UserProfileResponse'
+            type: array
+      security:
+      - BearerAuth: []
+      summary: Get all my profiles
+      tags:
+      - Profiles
+  /profiles/me:
+    get:
+      parameters:
+      - description: Workspace ID
+        in: header
+        name: X-Workspace-Id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/user-service_internal_domain.UserProfileResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/internal_handler.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get my profile for workspace
+      tags:
+      - Profiles
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: Workspace ID
+        in: header
+        name: X-Workspace-Id
+        required: true
+        type: string
+      - description: Update profile request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/user-service_internal_domain.UpdateProfileRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/user-service_internal_domain.UserProfileResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/internal_handler.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Update my profile
+      tags:
+      - Profiles
+  /profiles/me/image:
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: Workspace ID
+        in: header
+        name: X-Workspace-Id
+        required: true
+        type: string
+      - description: Confirm attachment request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/user-service_internal_domain.ConfirmAttachmentRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/user-service_internal_domain.UserProfileResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/internal_handler.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Confirm profile image (link attachment to profile)
+      tags:
+      - Profile Images
+  /profiles/me/image/attachment:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Save attachment request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/user-service_internal_domain.SaveAttachmentRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/user-service_internal_domain.AttachmentResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/internal_handler.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Save attachment metadata after S3 upload
+      tags:
+      - Profile Images
+  /profiles/me/image/presigned-url:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Presigned URL request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/user-service_internal_domain.PresignedURLRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/user-service_internal_domain.PresignedURLResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/internal_handler.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Generate presigned URL for profile image upload
+      tags:
+      - Profile Images
+  /profiles/workspace/{workspaceId}:
+    delete:
+      parameters:
+      - description: Workspace ID
+        in: path
+        name: workspaceId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_handler.SuccessResponse'
+      security:
+      - BearerAuth: []
+      summary: Delete my profile for workspace
+      tags:
+      - Profiles
+  /profiles/workspace/{workspaceId}/user/{userId}:
+    get:
+      parameters:
+      - description: Workspace ID
+        in: path
+        name: workspaceId
+        required: true
+        type: string
+      - description: User ID
+        in: path
+        name: userId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/user-service_internal_domain.UserProfileResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/internal_handler.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get user profile by workspace and user ID
+      tags:
+      - Profiles
+  /users:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Create user request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/user-service_internal_domain.CreateUserRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/user-service_internal_domain.UserResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/internal_handler.ErrorResponse'
+      summary: Create a new user
+      tags:
+      - Users
+  /users/{userId}:
+    get:
+      parameters:
+      - description: User ID
+        in: path
+        name: userId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/user-service_internal_domain.UserResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/internal_handler.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get user by ID
+      tags:
+      - Users
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: User ID
+        in: path
+        name: userId
+        required: true
+        type: string
+      - description: Update user request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/user-service_internal_domain.UpdateUserRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/user-service_internal_domain.UserResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/internal_handler.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Update user
+      tags:
+      - Users
+  /users/{userId}/restore:
+    put:
+      parameters:
+      - description: User ID
+        in: path
+        name: userId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/user-service_internal_domain.UserResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/internal_handler.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Restore deleted user
+      tags:
+      - Users
+  /users/me:
+    delete:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_handler.SuccessResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/internal_handler.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Delete current user (soft delete)
+      tags:
+      - Users
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/user-service_internal_domain.UserResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/internal_handler.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get current user
+      tags:
+      - Users
+  /workspaces/{workspaceId}:
+    delete:
+      parameters:
+      - description: Workspace ID
+        in: path
+        name: workspaceId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_handler.SuccessResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/internal_handler.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Delete workspace (soft delete)
+      tags:
+      - Workspaces
+    get:
+      parameters:
+      - description: Workspace ID
+        in: path
+        name: workspaceId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/user-service_internal_domain.WorkspaceResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/internal_handler.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get workspace by ID
+      tags:
+      - Workspaces
+  /workspaces/{workspaceId}/joinRequests:
+    get:
+      parameters:
+      - description: Workspace ID
+        in: path
+        name: workspaceId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/user-service_internal_domain.JoinRequestResponse'
+            type: array
+      security:
+      - BearerAuth: []
+      summary: Get join requests for workspace
+      tags:
+      - Join Requests
+  /workspaces/{workspaceId}/joinRequests/{requestId}:
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: Workspace ID
+        in: path
+        name: workspaceId
+        required: true
+        type: string
+      - description: Request ID
+        in: path
+        name: requestId
+        required: true
+        type: string
+      - description: Process request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/user-service_internal_domain.ProcessJoinRequestRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/user-service_internal_domain.JoinRequestResponse'
+      security:
+      - BearerAuth: []
+      summary: Process join request (approve/reject)
+      tags:
+      - Join Requests
+  /workspaces/{workspaceId}/members:
+    get:
+      parameters:
+      - description: Workspace ID
+        in: path
+        name: workspaceId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/user-service_internal_domain.WorkspaceMemberResponse'
+            type: array
+      security:
+      - BearerAuth: []
+      summary: Get workspace members
+      tags:
+      - Workspace Members
+  /workspaces/{workspaceId}/members/{memberId}:
+    delete:
+      parameters:
+      - description: Workspace ID
+        in: path
+        name: workspaceId
+        required: true
+        type: string
+      - description: Member ID
+        in: path
+        name: memberId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_handler.SuccessResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/internal_handler.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Remove member from workspace
+      tags:
+      - Workspace Members
+  /workspaces/{workspaceId}/members/{memberId}/role:
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: Workspace ID
+        in: path
+        name: workspaceId
+        required: true
+        type: string
+      - description: Member ID
+        in: path
+        name: memberId
+        required: true
+        type: string
+      - description: Update role request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/user-service_internal_domain.UpdateMemberRoleRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/user-service_internal_domain.WorkspaceMemberResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/internal_handler.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Update member role
+      tags:
+      - Workspace Members
+  /workspaces/{workspaceId}/members/invite:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Workspace ID
+        in: path
+        name: workspaceId
+        required: true
+        type: string
+      - description: Invite member request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/user-service_internal_domain.InviteMemberRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/user-service_internal_domain.WorkspaceMemberResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/internal_handler.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Invite user to workspace
+      tags:
+      - Workspace Members
+  /workspaces/{workspaceId}/settings:
+    get:
+      parameters:
+      - description: Workspace ID
+        in: path
+        name: workspaceId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/user-service_internal_domain.WorkspaceSettingsResponse'
+      security:
+      - BearerAuth: []
+      summary: Get workspace settings
+      tags:
+      - Workspaces
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: Workspace ID
+        in: path
+        name: workspaceId
+        required: true
+        type: string
+      - description: Update settings request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/user-service_internal_domain.UpdateWorkspaceSettingsRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/user-service_internal_domain.WorkspaceSettingsResponse'
+      security:
+      - BearerAuth: []
+      summary: Update workspace settings
+      tags:
+      - Workspaces
+  /workspaces/{workspaceId}/validate-member/{userId}:
+    get:
+      parameters:
+      - description: Workspace ID
+        in: path
+        name: workspaceId
+        required: true
+        type: string
+      - description: User ID
+        in: path
+        name: userId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: boolean
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Validate user has access to workspace
+      tags:
+      - Workspace Members
+  /workspaces/all:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/user-service_internal_domain.UserWorkspaceResponse'
+            type: array
+      security:
+      - BearerAuth: []
+      summary: Get all workspaces for current user
+      tags:
+      - Workspaces
+  /workspaces/create:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Create workspace request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/user-service_internal_domain.CreateWorkspaceRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/user-service_internal_domain.WorkspaceResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/internal_handler.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Create a new workspace
+      tags:
+      - Workspaces
+  /workspaces/default:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Workspace ID
+        in: body
+        name: request
+        required: true
+        schema:
+          additionalProperties:
+            type: string
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_handler.SuccessResponse'
+      security:
+      - BearerAuth: []
+      summary: Set default workspace for user
+      tags:
+      - Workspaces
+  /workspaces/ids/{workspaceId}:
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: Workspace ID
+        in: path
+        name: workspaceId
+        required: true
+        type: string
+      - description: Update workspace request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/user-service_internal_domain.UpdateWorkspaceRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/user-service_internal_domain.WorkspaceResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/internal_handler.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Update workspace
+      tags:
+      - Workspaces
+  /workspaces/join-requests:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Join request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/user-service_internal_domain.CreateJoinRequestRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/user-service_internal_domain.JoinRequestResponse'
+      security:
+      - BearerAuth: []
+      summary: Create join request for workspace
+      tags:
+      - Join Requests
+  /workspaces/public/{workspaceName}:
+    get:
+      parameters:
+      - description: Workspace name
+        in: path
+        name: workspaceName
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/user-service_internal_domain.WorkspaceResponse'
+            type: array
+      summary: Search public workspaces by name
+      tags:
+      - Workspaces
+securityDefinitions:
+  BearerAuth:
+    description: Type "Bearer" followed by a space and JWT token.
+    in: header
+    name: Authorization
+    type: apiKey
+swagger: "2.0"

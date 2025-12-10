@@ -1,0 +1,40 @@
+server:
+  port: "8003"
+  mode: "debug"
+  base_path: "/api"
+  read_timeout: 10s
+  write_timeout: 10s
+  shutdown_timeout: 30s
+
+database:
+  host: "localhost"
+  port: "5432"
+  user: "storage_service"
+  password: "password"
+  dbname: "storage_db"
+  max_open_conns: 25
+  max_idle_conns: 5
+  conn_max_lifetime: 5m
+
+logger:
+  level: "info"
+  output_path: "stdout"
+
+jwt:
+  secret: "your-secret-key"
+  expire_time: 24h
+
+auth_api:
+  base_url: "http://localhost:8080"
+  timeout: 5s
+
+cors:
+  allowed_origins: "*"
+
+s3:
+  bucket: "wealist-dev-files"
+  region: "ap-northeast-2"
+  access_key: "minioadmin"
+  secret_key: "minioadmin"
+  endpoint: "http://localhost:9000"
+  public_endpoint: "http://localhost:9000"

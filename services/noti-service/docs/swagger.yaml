@@ -1,0 +1,27 @@
+basePath: /api
+host: localhost:8002
+info:
+  contact:
+    email: support@wealist.co.kr
+    name: API Support
+    url: http://www.wealist.co.kr/support
+  description: Notification history and real-time streaming API with SSE support
+  license:
+    name: Apache 2.0
+    url: http://www.apache.org/licenses/LICENSE-2.0.html
+  termsOfService: http://swagger.io/terms/
+  title: Notification Service API
+  version: "1.0"
+paths: {}
+securityDefinitions:
+  BearerAuth:
+    description: Type "Bearer" followed by a space and JWT token.
+    in: header
+    name: Authorization
+    type: apiKey
+  InternalAPIKey:
+    description: Internal API key for service-to-service communication.
+    in: header
+    name: x-internal-api-key
+    type: apiKey
+swagger: "2.0"

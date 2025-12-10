@@ -1,0 +1,260 @@
+// src/components/chat/ChatPanel.tsx
+
+import React, { useState, useEffect, useRef, useMemo } from 'react';
+import { ChevronLeft, X } from 'lucide-react';
+import { useChatWebSocket } from '../../hooks/useChatWebsocket';
+import { getMessages, updateLastRead, getChat } from '../../api/chatService';
+import { getWorkspaceMembers } from '../../api/userService';
+import type { Message } from '../../types/chat';
+import type { WorkspaceMemberResponse } from '../../types/user';
+
+interface ChatPanelProps {
+  chatId: string;
+  onClose: () => void;
+  onBack?: () => void;
+}
+
+export const ChatPanel: React.FC<ChatPanelProps> = ({ chatId, onClose, onBack }) => {
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [inputMessage, setInputMessage] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [members, setMembers] = useState<WorkspaceMemberResponse[]>([]);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  // 현재 사용자 ID
+  const currentUserId = localStorage.getItem('userId');
+
+  // 🔥 userId -> nickName 매핑 (워크스페이스 멤버 정보에서)
+  const userNameMap = useMemo(() => {
+    const map: Record<string, string> = {};
+    members.forEach((m) => {
+      map[m.userId] = m.nickName || m.userEmail || 'Unknown';
+    });
+    return map;
+  }, [members]);
+
+  // WebSocket 연결
+  const {
+    sendMessage,
+    sendTyping,
+    // isConnected
+  } = useChatWebSocket({
+    chatId,
+    onMessage: (event) => {
+      console.log('🔊 [ChatPanel] 이벤트 수신:', event);
+
+      if (event.type === 'MESSAGE_RECEIVED') {
+        // 🔥 isMine 계산하여 추가
+        // 백엔드에서 message 필드 안에 데이터를 보냄
+        const messageData = event.message || event.payload || event;
+        const newMessage: Message = {
+          messageId: messageData.messageId,
+          chatId: messageData.chatId,
+          userId: messageData.userId,
+          userName: messageData.userName,
+          content: messageData.content,
+          messageType: messageData.messageType,
+          fileUrl: messageData.fileUrl,
+          fileName: messageData.fileName,
+          fileSize: messageData.fileSize,
+          createdAt: messageData.createdAt,
+          updatedAt: messageData.createdAt,
+          isMine: messageData.userId === currentUserId,
+        };
+        // 🔥 중복 방지: 이미 존재하는 메시지인지 확인 (ID 또는 optimistic 메시지)
+        setMessages((prev) => {
+          // 동일 messageId 중복 체크
+          if (prev.some((m) => m.messageId === newMessage.messageId)) {
+            console.log('⚠️ [ChatPanel] 중복 메시지 무시:', newMessage.messageId);
+            return prev;
+          }
+          // 🔥 Optimistic UI 메시지 대체: 내 메시지이고 같은 내용이면 temp 메시지 교체
+          if (newMessage.isMine) {
+            const tempIndex = prev.findIndex(
+              (m) =>
+                m.messageId.startsWith('temp-') &&
+                m.content === newMessage.content &&
+                m.userId === newMessage.userId,
+            );
+            if (tempIndex !== -1) {
+              console.log(
+                '✅ [ChatPanel] Optimistic 메시지 대체:',
+                prev[tempIndex].messageId,
+                '→',
+                newMessage.messageId,
+              );
+              const updated = [...prev];
+              updated[tempIndex] = newMessage;
+              return updated;
+            }
+          }
+          return [...prev, newMessage];
+        });
+      }
+
+      if (event.type === 'USER_TYPING') {
+        console.log('⌨️ User typing:', event.userId);
+      }
+    },
+  });
+
+  // 메시지 로드 및 읽음 처리
+  useEffect(() => {
+    const loadMessages = async () => {
+      setIsLoading(true);
+      try {
+        // 🔥 채팅방 정보 + 메시지 동시 로드
+        const [chatInfo, msgs] = await Promise.all([getChat(chatId), getMessages(chatId)]);
+
+        setMessages(msgs);
+
+        // 🔥 워크스페이스 멤버 정보 로드 (userName 조회용)
+        if (chatInfo.workspaceId) {
+          const workspaceMembers = await getWorkspaceMembers(chatInfo.workspaceId);
+          setMembers(workspaceMembers);
+        }
+
+        // 🔥 채팅방 진입 시 lastReadAt 업데이트 (읽음 처리)
+        await updateLastRead(chatId);
+        console.log('✅ [ChatPanel] lastReadAt 업데이트 완료');
+      } catch (error) {
+        console.error('Failed to load messages:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadMessages();
+  }, [chatId]);
+
+  // 자동 스크롤
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages]);
+
+  // 메시지 전송
+  const handleSendMessage = () => {
+    if (!inputMessage.trim()) return;
+
+    const content = inputMessage.trim();
+    const success = sendMessage(content);
+    if (success) {
+      // 🔥 Optimistic UI Update - 메시지를 즉시 UI에 표시
+      const optimisticMessage: Message = {
+        messageId: `temp-${Date.now()}`, // 임시 ID
+        chatId,
+        userId: currentUserId || '',
+        userName: '', // 본인 메시지이므로 표시 안됨
+        content,
+        messageType: 'TEXT',
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        isMine: true,
+      };
+      setMessages((prev) => [...prev, optimisticMessage]);
+      setInputMessage('');
+    }
+  };
+
+  // 타이핑 인디케이터
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setInputMessage(e.target.value);
+    sendTyping(true);
+    setTimeout(() => sendTyping(false), 1000);
+  };
+
+  return (
+    // 🔥 fixed와 right-0 제거! 부모(MainLayout)가 위치 제어
+    <div className="h-full w-full bg-white flex flex-col">
+      {/* 헤더 */}
+      <div className="p-4 border-b bg-gradient-to-r from-blue-600 to-blue-700 text-white">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            {onBack && (
+              <button
+                onClick={onBack}
+                className="p-1 hover:bg-white/20 rounded transition"
+                title="채팅 목록으로"
+              >
+                <ChevronLeft className="w-5 h-5" />
+              </button>
+            )}
+            <h3 className="font-bold">채팅</h3>
+          </div>
+          <button onClick={onClose} className="p-1 hover:bg-white/20 rounded transition">
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+      </div>
+
+      {/* 메시지 영역 */}
+      <div className="flex-1 overflow-y-auto p-4 space-y-3">
+        {isLoading ? (
+          <div className="flex justify-center py-8">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500" />
+          </div>
+        ) : messages.length === 0 ? (
+          <div className="flex justify-center py-8 text-gray-400 text-sm">
+            메시지가 없습니다. 첫 메시지를 보내보세요!
+          </div>
+        ) : (
+          messages.map((msg) => {
+            // 🔥 메시지 유효성 검사 및 isMine fallback
+            if (!msg || !msg.messageId) return null;
+            const isMine = msg.isMine ?? msg.userId === currentUserId;
+
+            return (
+              <div
+                key={msg.messageId}
+                className={`flex ${isMine ? 'justify-end' : 'justify-start'}`}
+              >
+                <div
+                  className={`max-w-[70%] rounded-lg p-3 ${
+                    isMine ? 'bg-blue-500 text-white' : 'bg-gray-100 text-gray-900'
+                  }`}
+                >
+                  {!isMine && (
+                    <p className="text-xs font-bold mb-1 text-blue-600">
+                      {msg.userName || userNameMap[msg.userId] || 'Unknown'}
+                    </p>
+                  )}
+                  <p className="text-sm whitespace-pre-wrap">{msg.content}</p>
+                  <p className={`text-xs mt-1 ${isMine ? 'text-blue-100' : 'text-gray-500'}`}>
+                    {msg.createdAt
+                      ? new Date(msg.createdAt).toLocaleTimeString('ko-KR', {
+                          hour: '2-digit',
+                          minute: '2-digit',
+                        })
+                      : ''}
+                  </p>
+                </div>
+              </div>
+            );
+          })
+        )}
+        <div ref={messagesEndRef} />
+      </div>
+
+      {/* 입력 영역 */}
+      <div className="p-4 border-t bg-gray-50">
+        <div className="flex items-center gap-2">
+          <input
+            type="text"
+            value={inputMessage}
+            onChange={handleInputChange}
+            onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
+            placeholder="메시지를 입력하세요..."
+            className="flex-1 p-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+          />
+          <button
+            onClick={handleSendMessage}
+            disabled={!inputMessage.trim()}
+            className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 disabled:bg-gray-300 transition"
+          >
+            전송
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};

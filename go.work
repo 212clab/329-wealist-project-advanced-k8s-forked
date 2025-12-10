@@ -1,0 +1,10 @@
+go 1.24.0
+
+use (
+	./services/board-service
+	./services/chat-service
+	./services/noti-service
+	./services/storage-service
+	./services/user-service
+	./services/video-service
+)

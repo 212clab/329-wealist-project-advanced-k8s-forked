@@ -1,0 +1,56 @@
+# Storage Service - Standalone Docker Compose
+# 인프라(postgres, redis, minio)가 외부에서 실행 중일 때 단독 실행용
+#
+# 사용법:
+#   docker compose up
+#
+# 주의: 먼저 인프라를 시작하세요
+#   cd ../../docker && ./scripts/dev.sh infra
+
+services:
+  storage-service:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+    image: wealist/storage-service:local
+    container_name: wealist-storage-service-standalone
+    ports:
+      - "8003:8003"
+    environment:
+      - ENV=dev
+      - PORT=8003
+      - STORAGE_SERVICE_PORT=8003
+      - LOG_LEVEL=debug
+      # Database
+      - DATABASE_URL=postgresql://storage_service:storage_service_pass@host.docker.internal:5432/wealist_storage_db?sslmode=disable
+      # JWT
+      - SECRET_KEY=dev-jwt-secret-key-change-in-production
+      # Service URLs
+      - AUTH_SERVICE_URL=http://host.docker.internal:8080
+      # S3/MinIO
+      - S3_BUCKET=wealist-dev-files
+      - S3_REGION=ap-northeast-2
+      - S3_ENDPOINT=http://host.docker.internal:9000
+      - S3_PUBLIC_ENDPOINT=http://localhost:9000
+      - S3_ACCESS_KEY=minioadmin
+      - S3_SECRET_KEY=minioadmin
+      # CORS
+      - CORS_ORIGINS=http://localhost:3000,http://localhost:8003
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "wget",
+          "--no-verbose",
+          "--tries=1",
+          "-O",
+          "/dev/null",
+          "http://localhost:8003/health",
+        ]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 10s
+    restart: unless-stopped
