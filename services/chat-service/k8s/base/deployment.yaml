@@ -29,13 +29,13 @@ spec:
               value: "postgresql://chat_service:chat_service_password@postgres:5432/wealist_chat_db?sslmode=disable"
           livenessProbe:
             httpGet:
-              path: /health
+              path: /health/live
               port: 8001
             initialDelaySeconds: 10
             periodSeconds: 10
           readinessProbe:
             httpGet:
-              path: /ready
+              path: /health/ready
               port: 8001
             initialDelaySeconds: 5
             periodSeconds: 5

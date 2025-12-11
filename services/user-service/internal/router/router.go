@@ -8,6 +8,7 @@ import (
 	"go.uber.org/zap"
 	"gorm.io/gorm"
 
+	commonhealth "github.com/OrangesCloud/wealist-advanced-go-pkg/health"
 	commonmw "github.com/OrangesCloud/wealist-advanced-go-pkg/middleware"
 	"user-service/internal/client"
 	"user-service/internal/handler"
@@ -39,26 +40,9 @@ func Setup(cfg Config) *gin.Engine {
 	// Prometheus metrics endpoint
 	r.GET("/metrics", gin.WrapH(promhttp.Handler()))
 
-	// Health check routes
-	r.GET("/health", func(c *gin.Context) {
-		c.JSON(200, gin.H{"status": "healthy", "service": "user-service"})
-	})
-	r.GET("/ready", func(c *gin.Context) {
-		if cfg.DB == nil {
-			c.JSON(503, gin.H{"status": "not ready", "service": "user-service"})
-			return
-		}
-		sqlDB, err := cfg.DB.DB()
-		if err != nil {
-			c.JSON(503, gin.H{"status": "not ready", "service": "user-service"})
-			return
-		}
-		if err := sqlDB.Ping(); err != nil {
-			c.JSON(503, gin.H{"status": "not ready", "service": "user-service"})
-			return
-		}
-		c.JSON(200, gin.H{"status": "ready", "service": "user-service"})
-	})
+	// Health check routes (using common package)
+	healthChecker := commonhealth.NewHealthChecker(cfg.DB, nil)
+	healthChecker.RegisterRoutes(r, cfg.BasePath)
 
 	// Swagger documentation (disabled for faster builds)
 	// r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))

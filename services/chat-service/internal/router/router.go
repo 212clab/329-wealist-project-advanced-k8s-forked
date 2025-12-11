@@ -17,6 +17,7 @@ import (
 	"go.uber.org/zap"
 	"gorm.io/gorm"
 
+	commonhealth "github.com/OrangesCloud/wealist-advanced-go-pkg/health"
 	commonmw "github.com/OrangesCloud/wealist-advanced-go-pkg/middleware"
 )
 
@@ -61,11 +62,12 @@ func Setup(cfg *config.Config, db *gorm.DB, redisClient *redis.Client, logger *z
 	chatHandler := handler.NewChatHandler(chatService, presenceService, logger)
 	messageHandler := handler.NewMessageHandler(chatService, logger)
 	presenceHandler := handler.NewPresenceHandler(presenceService, logger)
-	healthHandler := handler.NewHealthHandler(db, redisClient)
 
-	// Health endpoints (no auth)
-	r.GET("/health", healthHandler.Health)
-	r.GET("/ready", healthHandler.Ready)
+	// Health check routes (using common package)
+	healthChecker := commonhealth.NewHealthChecker(db, redisClient)
+	healthChecker.RegisterRoutes(r, cfg.Server.BasePath)
+
+	// Prometheus metrics endpoint
 	r.GET("/metrics", gin.WrapH(promhttp.Handler()))
 
 	// Swagger documentation (disabled for faster builds)
@@ -74,9 +76,6 @@ func Setup(cfg *config.Config, db *gorm.DB, redisClient *redis.Client, logger *z
 	// API routes with base path
 	api := r.Group(cfg.Server.BasePath)
 	{
-		// Health under base path
-		api.GET("/health", healthHandler.Health)
-		api.GET("/ready", healthHandler.Ready)
 
 		// WebSocket endpoints (static route must come before dynamic route)
 		api.GET("/ws/presence", wsHub.HandlePresenceWebSocket)
