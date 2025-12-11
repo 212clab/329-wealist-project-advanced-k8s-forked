@@ -29,6 +29,8 @@ spec:
             - secretRef:
                 name: wealist-shared-secrets
           env:
+            - name: LIVEKIT_WS_URL
+              value: "wss://local.wealist.co.kr/svc/livekit"
             - name: DATABASE_URL
               value: "postgresql://video_service:video_service_password@postgres:5432/wealist_video_db?sslmode=disable"
           resources:
