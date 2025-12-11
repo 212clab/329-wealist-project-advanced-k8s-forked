@@ -1,6 +1,7 @@
 package router
 
 import (
+	"chat-service/internal/client"
 	"chat-service/internal/config"
 	"chat-service/internal/handler"
 	"chat-service/internal/middleware"
@@ -37,8 +38,17 @@ func Setup(cfg *config.Config, db *gorm.DB, redisClient *redis.Client, logger *z
 	messageRepo := repository.NewMessageRepository(db)
 	presenceRepo := repository.NewPresenceRepository(db)
 
+	// Initialize user client for workspace validation
+	var userClient client.UserClient
+	if cfg.UserAPI.BaseURL != "" {
+		userClient = client.NewUserClient(cfg.UserAPI.BaseURL, cfg.UserAPI.Timeout, logger)
+		logger.Info("User client initialized", zap.String("url", cfg.UserAPI.BaseURL))
+	} else {
+		logger.Warn("User service URL not configured, workspace validation will be skipped")
+	}
+
 	// Initialize services
-	chatService := service.NewChatService(chatRepo, messageRepo, redisClient, logger)
+	chatService := service.NewChatService(chatRepo, messageRepo, userClient, redisClient, logger)
 	presenceService := service.NewPresenceService(presenceRepo, redisClient, logger)
 
 	// Initialize validator

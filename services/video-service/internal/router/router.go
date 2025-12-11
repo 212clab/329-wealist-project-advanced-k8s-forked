@@ -35,9 +35,11 @@ func Setup(cfg *config.Config, db *gorm.DB, redisClient *redis.Client, logger *z
 
 	// Initialize user client for workspace validation
 	var userClient client.UserClient
-	if cfg.Services.UserServiceURL != "" {
-		userClient = client.NewUserClient(cfg.Services.UserServiceURL, logger)
-		logger.Info("User client initialized", zap.String("url", cfg.Services.UserServiceURL))
+	if cfg.UserAPI.BaseURL != "" {
+		userClient = client.NewUserClient(cfg.UserAPI.BaseURL, cfg.UserAPI.Timeout, logger)
+		logger.Info("User client initialized",
+			zap.String("url", cfg.UserAPI.BaseURL),
+			zap.Duration("timeout", cfg.UserAPI.Timeout))
 	} else {
 		logger.Warn("User service URL not configured, workspace validation will be skipped")
 	}

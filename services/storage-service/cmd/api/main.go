@@ -113,6 +113,17 @@ func main() {
 		logger.Info("Auth client initialized", zap.String("auth_api_url", cfg.AuthAPI.BaseURL))
 	}
 
+	// Initialize User API client
+	var userClient client.UserClient
+	if cfg.UserAPI.BaseURL != "" {
+		userClient = client.NewUserClient(cfg.UserAPI.BaseURL, cfg.UserAPI.Timeout, logger)
+		logger.Info("User API client initialized",
+			zap.String("url", cfg.UserAPI.BaseURL),
+			zap.Duration("timeout", cfg.UserAPI.Timeout))
+	} else {
+		logger.Warn("User API base URL not configured, workspace validation disabled")
+	}
+
 	// Setup router
 	r := router.Setup(router.Config{
 		DB:         db,
@@ -121,6 +132,7 @@ func main() {
 		BasePath:   cfg.Server.BasePath,
 		S3Client:   s3Client,
 		AuthClient: authClient,
+		UserClient: userClient,
 	})
 
 	// Create HTTP server

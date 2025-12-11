@@ -3,6 +3,7 @@ package config
 import (
 	"os"
 	"strconv"
+	"time"
 
 	"gopkg.in/yaml.v3"
 )
@@ -12,6 +13,7 @@ type Config struct {
 	Database DatabaseConfig `yaml:"database"`
 	Redis    RedisConfig    `yaml:"redis"`
 	Auth     AuthConfig     `yaml:"auth"`
+	UserAPI  UserAPIConfig  `yaml:"user_api"`
 	Services ServicesConfig `yaml:"services"`
 }
 
@@ -40,6 +42,11 @@ type AuthConfig struct {
 
 type ServicesConfig struct {
 	UserServiceURL string `yaml:"user_service_url"`
+}
+
+type UserAPIConfig struct {
+	BaseURL string        `yaml:"base_url"`
+	Timeout time.Duration `yaml:"timeout"`
 }
 
 func Load(path string) (*Config, error) {
@@ -104,6 +111,15 @@ func Load(path string) (*Config, error) {
 	}
 	if userURL := os.Getenv("USER_SERVICE_URL"); userURL != "" {
 		cfg.Services.UserServiceURL = userURL
+		cfg.UserAPI.BaseURL = userURL
+	}
+	if timeout := os.Getenv("USER_API_TIMEOUT"); timeout != "" {
+		if d, err := time.ParseDuration(timeout); err == nil {
+			cfg.UserAPI.Timeout = d
+		}
+	}
+	if cfg.UserAPI.Timeout == 0 {
+		cfg.UserAPI.Timeout = 5 * time.Second
 	}
 
 	return cfg, nil

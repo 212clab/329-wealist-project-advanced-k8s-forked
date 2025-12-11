@@ -22,6 +22,7 @@ type Config struct {
 	BasePath   string
 	S3Client   *client.S3Client
 	AuthClient *client.AuthClient
+	UserClient client.UserClient
 }
 
 // Setup sets up the router with all routes

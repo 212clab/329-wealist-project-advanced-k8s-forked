@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -28,25 +29,64 @@ type WorkspaceValidationResponse struct {
 type userClient struct {
 	baseURL    string
 	httpClient *http.Client
+	timeout    time.Duration
 	logger     *zap.Logger
 }
 
 // NewUserClient creates a new user-service client
-func NewUserClient(baseURL string, logger *zap.Logger) UserClient {
+func NewUserClient(baseURL string, timeout time.Duration, logger *zap.Logger) UserClient {
 	return &userClient{
 		baseURL: baseURL,
 		httpClient: &http.Client{
-			Timeout: 5 * time.Second,
+			Timeout: timeout,
 		},
-		logger: logger,
+		timeout: timeout,
+		logger:  logger,
 	}
+}
+
+// buildURL constructs the full URL for User Service API calls
+// It intelligently handles base URLs that may or may not include context path
+//
+// Examples:
+//   - baseURL: http://user-service:8080/api/users, endpoint: /workspaces/123
+//     -> http://user-service:8080/api/users/api/workspaces/123
+//   - baseURL: http://user-service:8080, endpoint: /workspaces/123
+//     -> http://user-service:8080/api/workspaces/123
+func (c *userClient) buildURL(endpoint string) string {
+	// Ensure endpoint starts with /
+	if !strings.HasPrefix(endpoint, "/") {
+		endpoint = "/" + endpoint
+	}
+
+	// Check if baseURL already contains context path (e.g., /api/users)
+	hasContextPath := strings.Contains(c.baseURL, "/api/users") || strings.Contains(c.baseURL, "/api/boards")
+
+	var finalURL string
+	if hasContextPath {
+		// Base URL already has context path, add /api before endpoint
+		// This handles service-to-service communication in Docker where
+		// user-service has context-path: /api/users
+		finalURL = c.baseURL + "/api" + endpoint
+	} else {
+		// Base URL doesn't have context path (local development)
+		// Just add /api before endpoint
+		finalURL = c.baseURL + "/api" + endpoint
+	}
+
+	c.logger.Debug("Built URL for User Service",
+		zap.String("base_url", c.baseURL),
+		zap.String("endpoint", endpoint),
+		zap.String("final_url", finalURL),
+		zap.Bool("has_context_path", hasContextPath),
+	)
+
+	return finalURL
 }
 
 // ValidateWorkspaceMember checks if a user is a member of a workspace
 func (c *userClient) ValidateWorkspaceMember(ctx context.Context, workspaceID, userID uuid.UUID, token string) (bool, error) {
-	// baseURL is expected to be like "http://user-service:8080/api"
-	// The endpoint is at /workspaces/{workspaceId}/validate-member/{userId}
-	url := fmt.Sprintf("%s/workspaces/%s/validate-member/%s", c.baseURL, workspaceID.String(), userID.String())
+	url := c.buildURL(fmt.Sprintf("/workspaces/%s/validate-member/%s", workspaceID.String(), userID.String()))
 
 	c.logger.Debug("Validating workspace member",
 		zap.String("url", url),

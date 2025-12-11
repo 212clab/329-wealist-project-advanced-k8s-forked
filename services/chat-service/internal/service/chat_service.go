@@ -1,6 +1,7 @@
 package service
 
 import (
+	"chat-service/internal/client"
 	"chat-service/internal/domain"
 	"chat-service/internal/repository"
 	"context"
@@ -16,6 +17,7 @@ import (
 type ChatService struct {
 	chatRepo    *repository.ChatRepository
 	messageRepo *repository.MessageRepository
+	userClient  client.UserClient
 	redis       *redis.Client
 	logger      *zap.Logger
 }
@@ -23,12 +25,14 @@ type ChatService struct {
 func NewChatService(
 	chatRepo *repository.ChatRepository,
 	messageRepo *repository.MessageRepository,
+	userClient client.UserClient,
 	redis *redis.Client,
 	logger *zap.Logger,
 ) *ChatService {
 	return &ChatService{
 		chatRepo:    chatRepo,
 		messageRepo: messageRepo,
+		userClient:  userClient,
 		redis:       redis,
 		logger:      logger,
 	}

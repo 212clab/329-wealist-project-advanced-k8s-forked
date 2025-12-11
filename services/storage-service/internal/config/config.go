@@ -17,6 +17,7 @@ type Config struct {
 	Logger   LoggerConfig   `yaml:"logger"`
 	JWT      JWTConfig      `yaml:"jwt"`
 	AuthAPI  AuthAPIConfig  `yaml:"auth_api"`
+	UserAPI  UserAPIConfig  `yaml:"user_api"`
 	CORS     CORSConfig     `yaml:"cors"`
 	S3       S3Config       `yaml:"s3"`
 }
@@ -57,6 +58,12 @@ type JWTConfig struct {
 
 // AuthAPIConfig holds Auth Service configuration for token validation
 type AuthAPIConfig struct {
+	BaseURL string        `yaml:"base_url"`
+	Timeout time.Duration `yaml:"timeout"`
+}
+
+// UserAPIConfig holds User Service configuration
+type UserAPIConfig struct {
 	BaseURL string        `yaml:"base_url"`
 	Timeout time.Duration `yaml:"timeout"`
 }
@@ -213,6 +220,19 @@ func (c *Config) overrideFromEnv() {
 	// Auth API
 	if baseURL := os.Getenv("AUTH_SERVICE_URL"); baseURL != "" {
 		c.AuthAPI.BaseURL = baseURL
+	}
+
+	// User API
+	if baseURL := os.Getenv("USER_SERVICE_URL"); baseURL != "" {
+		c.UserAPI.BaseURL = baseURL
+	}
+	if timeout := os.Getenv("USER_API_TIMEOUT"); timeout != "" {
+		if d, err := time.ParseDuration(timeout); err == nil {
+			c.UserAPI.Timeout = d
+		}
+	}
+	if c.UserAPI.Timeout == 0 {
+		c.UserAPI.Timeout = 5 * time.Second
 	}
 
 	// CORS
