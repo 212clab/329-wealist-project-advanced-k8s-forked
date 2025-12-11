@@ -13,7 +13,9 @@ COPY packages/wealist-advanced-go-pkg/ ./packages/wealist-advanced-go-pkg/
 
 # Copy service files
 WORKDIR /workspace/services/chat-service
-COPY services/chat-service/go.mod services/chat-service/go.sum ./
+
+# Copy source code first (needed for go mod tidy to work)
+COPY services/chat-service/ ./
 
 # Add replace directive for local package
 RUN echo 'replace github.com/OrangesCloud/wealist-advanced-go-pkg => ../../packages/wealist-advanced-go-pkg' >> go.mod
@@ -22,9 +24,6 @@ RUN echo 'replace github.com/OrangesCloud/wealist-advanced-go-pkg => ../../packa
 RUN --mount=type=cache,target=/go/pkg/mod \
     GOWORK=off go mod tidy && \
     GOWORK=off go mod download
-
-# Copy service source code
-COPY services/chat-service/ ./
 
 # Build with cache mount (use GOWORK=off)
 RUN --mount=type=cache,target=/go/pkg/mod \

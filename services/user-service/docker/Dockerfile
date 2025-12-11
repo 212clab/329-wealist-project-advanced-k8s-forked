@@ -13,26 +13,17 @@ COPY packages/wealist-advanced-go-pkg/ ./packages/wealist-advanced-go-pkg/
 
 # Copy service files
 WORKDIR /workspace/services/user-service
-COPY services/user-service/go.mod services/user-service/go.sum ./
+
+# Copy source code first (needed for go mod tidy to work)
+COPY services/user-service/ ./
 
 # Add replace directive for local package
 RUN echo 'replace github.com/OrangesCloud/wealist-advanced-go-pkg => ../../packages/wealist-advanced-go-pkg' >> go.mod
 
-# Debug: Check if go.mod was updated and local package exists
-RUN echo "=== DEBUG: go.mod content ===" && \
-    cat go.mod | tail -5 && \
-    echo "=== DEBUG: Local package exists? ===" && \
-    ls -la ../../packages/wealist-advanced-go-pkg/health/
-
 # Tidy and download dependencies with cache mount (use GOWORK=off to ignore go.work)
 RUN --mount=type=cache,target=/go/pkg/mod \
     GOWORK=off go mod tidy && \
-    GOWORK=off go mod download && \
-    echo "=== DEBUG: Module list ===" && \
-    GOWORK=off go list -m all | grep wealist
-
-# Copy service source code
-COPY services/user-service/ ./
+    GOWORK=off go mod download
 
 # Build with cache mount (use GOWORK=off)
 RUN --mount=type=cache,target=/go/pkg/mod \
