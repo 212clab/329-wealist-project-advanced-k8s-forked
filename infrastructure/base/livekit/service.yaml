@@ -15,6 +15,14 @@ spec:
       targetPort: 7881
       protocol: TCP
       name: rtc-tcp
+    - port: 3478
+      targetPort: 3478
+      protocol: TCP
+      name: turn-tcp
+    - port: 3478
+      targetPort: 3478
+      protocol: UDP
+      name: turn-udp
   selector:
     app: livekit
 ---
