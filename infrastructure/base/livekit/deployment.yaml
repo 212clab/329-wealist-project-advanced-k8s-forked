@@ -16,11 +16,6 @@ spec:
         app: livekit
         tier: infrastructure
     spec:
-      # 1. hostNetwork와 dnsPolicy는 spec 바로 아래에 위치해야 합니다.
-      hostNetwork: true
-      dnsPolicy: ClusterFirstWithHostNet
-      
-      # 2. 컨테이너 정의는 반드시 'containers' 리스트 아래에 와야 합니다.
       containers:
         - name: livekit
           image: livekit/livekit-server:v1.5
