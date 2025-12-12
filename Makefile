@@ -100,14 +100,23 @@ kind-apply: kind-tls-secret
 	@sed -i.bak 's/__LOCAL_DOMAIN__/$(LOCAL_DOMAIN)/g' \
 		k8s/overlays/develop-registry/all-services/ingress.yaml \
 		k8s/overlays/develop-registry/all-services/kustomization.yaml \
-		services/auth-service/k8s/base/configmap.yaml
+		services/auth-service/k8s/base/configmap.yaml \
+		k8s/base/namespace-dev/configmap.yaml \
+		services/video-service/k8s/base/deployment.yaml \
+		infrastructure/base/livekit/configmap.yaml
 	@kubectl apply -k k8s/overlays/develop-registry/all-services || \
 		(mv k8s/overlays/develop-registry/all-services/ingress.yaml.bak \
 			k8s/overlays/develop-registry/all-services/ingress.yaml && \
 		 mv k8s/overlays/develop-registry/all-services/kustomization.yaml.bak \
 			k8s/overlays/develop-registry/all-services/kustomization.yaml && \
 		 mv services/auth-service/k8s/base/configmap.yaml.bak \
-			services/auth-service/k8s/base/configmap.yaml && exit 1)
+			services/auth-service/k8s/base/configmap.yaml && \
+		 mv k8s/base/namespace-dev/configmap.yaml.bak \
+			k8s/base/namespace-dev/configmap.yaml && \
+		 mv services/video-service/k8s/base/deployment.yaml.bak \
+			services/video-service/k8s/base/deployment.yaml && \
+		 mv infrastructure/base/livekit/configmap.yaml.bak \
+			infrastructure/base/livekit/configmap.yaml && exit 1)
 	@# Restore template files
 	@mv k8s/overlays/develop-registry/all-services/ingress.yaml.bak \
 		k8s/overlays/develop-registry/all-services/ingress.yaml
@@ -115,6 +124,12 @@ kind-apply: kind-tls-secret
 		k8s/overlays/develop-registry/all-services/kustomization.yaml
 	@mv services/auth-service/k8s/base/configmap.yaml.bak \
 		services/auth-service/k8s/base/configmap.yaml
+	@mv k8s/base/namespace-dev/configmap.yaml.bak \
+		k8s/base/namespace-dev/configmap.yaml
+	@mv services/video-service/k8s/base/deployment.yaml.bak \
+		services/video-service/k8s/base/deployment.yaml
+	@mv infrastructure/base/livekit/configmap.yaml.bak \
+		infrastructure/base/livekit/configmap.yaml
 	@echo ""
 	@echo "✅ Done! Access: https://$(LOCAL_DOMAIN)"
 	@echo "(Self-signed cert - browser will show warning, click 'Advanced' → 'Proceed')"
