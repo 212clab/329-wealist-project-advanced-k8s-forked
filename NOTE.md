@@ -14,7 +14,21 @@
 
 ### 사전 준비
 
-`k8s/base/shared/secret-shared.yaml`, `services/auth-service/k8s/base/secret.yaml`에 Google OAuth 관련 설정 필요
+1. **Secret 파일 생성** (최초 1회)
+   ```bash
+   # 템플릿 복사
+   cp k8s/base/namespace-dev/secret.yaml.example k8s/base/namespace-dev/secret.yaml
+
+   # Google OAuth 등 실제 값으로 수정
+   vi k8s/base/namespace-dev/secret.yaml
+   ```
+
+2. **Auth 서비스 Secret** (필요시)
+   ```bash
+   cp services/auth-service/k8s/base/secret.yaml.example services/auth-service/k8s/base/secret.yaml
+   ```
+
+> secret.yaml 파일은 .gitignore에 의해 커밋되지 않음
 
 ### 3단계 배포
 
@@ -48,6 +62,23 @@ cd docker/scripts/dev/certs/
 mkcert <서버IP> wonny.wealist.co.kr local.wealist.co.kr localhost 127.0.0.1
 
 # 생성된 .pem 파일들이 자동으로 인식됨
+```
+
+---
+
+## 프로젝트 구조
+
+```
+k8s/
+├── base/
+│   ├── namespace-dev/        # Dev 환경 전용
+│   │   ├── configmap.yaml    # wealist-config
+│   │   ├── secret.yaml       # wealist-secrets (gitignore)
+│   │   └── secret.yaml.example
+│   └── namespace-prod/       # Prod는 Vault 사용 예정
+└── overlays/
+    ├── develop-registry/     # Kind 로컬 개발용
+    └── prod/
 ```
 
 ---

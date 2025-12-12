@@ -1,5 +1,41 @@
-# TLS 인증서 파일 (보안상 git에 올리지 않음)
-*.pem
+# =============================================================================
+# Secrets & Credentials
+# =============================================================================
+# K8s secrets (use .example files as templates)
+k8s/base/namespace-dev/secret.yaml
+k8s/base/namespace-prod/secret.yaml
+services/*/k8s/base/secret.yaml
 
-# README는 유지
+# TLS certificates
+*.pem
+docker/scripts/dev/certs/*.pem
+
+# Environment files with secrets
+.env
+.env.local
+.env.*.local
+docker/env/.env.dev
+docker/env/.env.prod
+
+# =============================================================================
+# IDE & OS
+# =============================================================================
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# =============================================================================
+# Build outputs
+# =============================================================================
+*.log
+tmp/
+temp/
+
+# =============================================================================
+# Keep these files
+# =============================================================================
+!*.example
 !README.md
