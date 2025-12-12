@@ -4,6 +4,8 @@ Usage in service chart:
   {{- include "wealist-common.deployment" . }}
 */}}
 {{- define "wealist-common.deployment" -}}
+{{/* Validate required values */}}
+{{- include "wealist-common.validateRequired" (dict "values" .Values "required" (list "image.repository" "service.port" "service.targetPort")) }}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -11,7 +13,11 @@ metadata:
   labels:
     {{- include "wealist-common.labels" . | nindent 4 }}
 spec:
+  {{- if not .Values.autoscaling }}
+  {{- if not .Values.autoscaling.enabled }}
   replicas: {{ .Values.replicaCount | default 1 }}
+  {{- end }}
+  {{- end }}
   selector:
     matchLabels:
       {{- include "wealist-common.selectorLabels" . | nindent 6 }}
@@ -19,19 +25,34 @@ spec:
     metadata:
       labels:
         {{- include "wealist-common.selectorLabels" . | nindent 8 }}
-      {{- if .Values.podAnnotations }}
       annotations:
+        {{- if .Values.podAnnotations }}
         {{- toYaml .Values.podAnnotations | nindent 8 }}
-      {{- end }}
+        {{- end }}
+        {{/* Auto-add Prometheus annotations if metrics enabled */}}
+        {{- if .Values.metrics }}
+        {{- if .Values.metrics.enabled }}
+        {{- include "wealist-common.prometheusAnnotations" (dict "port" .Values.service.targetPort "path" (.Values.metrics.path | default "/metrics")) | nindent 8 }}
+        {{- end }}
+        {{- end }}
     spec:
       {{- if .Values.imagePullSecrets }}
       imagePullSecrets:
         {{- toYaml .Values.imagePullSecrets | nindent 8 }}
       {{- end }}
+      serviceAccountName: {{ include "wealist-common.serviceAccountName" . }}
+      {{- if .Values.podSecurityContext }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      {{- end }}
       containers:
         - name: {{ .Chart.Name }}
           image: {{ include "wealist-common.image" . | quote }}
           imagePullPolicy: {{ .Values.image.pullPolicy | default "Always" }}
+          {{- if .Values.securityContext }}
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          {{- end }}
           ports:
             - name: http
               containerPort: {{ .Values.service.targetPort }}

@@ -73,3 +73,89 @@ Combines global registry with image repository and tag
 {{- printf "%s:%s" .Values.image.repository (.Values.image.tag | default .Chart.AppVersion) }}
 {{- end }}
 {{- end }}
+
+{{/*
+Validate required values
+Usage: {{ include "wealist-common.validateRequired" (dict "values" .Values "required" (list "image.repository" "service.port")) }}
+*/}}
+{{- define "wealist-common.validateRequired" -}}
+{{- $values := .values -}}
+{{- $required := .required -}}
+{{- range $required }}
+  {{- $path := . }}
+  {{- $parts := splitList "." $path }}
+  {{- $current := $values }}
+  {{- $found := true }}
+  {{- range $parts }}
+    {{- if hasKey $current . }}
+      {{- $current = index $current . }}
+    {{- else }}
+      {{- $found = false }}
+    {{- end }}
+  {{- end }}
+  {{- if not $found }}
+    {{- fail (printf "Required value '%s' is not set" $path) }}
+  {{- end }}
+  {{/* Check if value is empty - only for string types */}}
+  {{- if kindIs "string" $current }}
+    {{- if eq $current "" }}
+      {{- fail (printf "Required value '%s' cannot be empty" $path) }}
+    {{- end }}
+  {{- end }}
+  {{/* Check if value is nil */}}
+  {{- if kindIs "invalid" $current }}
+    {{- fail (printf "Required value '%s' is nil" $path) }}
+  {{- end }}
+{{- end }}
+{{- end }}
+
+{{/*
+Environment-specific configuration merger
+Merges global and service-specific config
+*/}}
+{{- define "wealist-common.envConfig" -}}
+{{- $global := .Values.global | default dict }}
+{{- $local := .Values.config | default dict }}
+{{- merge $local $global | toYaml }}
+{{- end }}
+
+{{/*
+Standard security context
+*/}}
+{{- define "wealist-common.securityContext" -}}
+runAsNonRoot: true
+runAsUser: 1000
+fsGroup: 1000
+capabilities:
+  drop:
+    - ALL
+readOnlyRootFilesystem: false
+allowPrivilegeEscalation: false
+{{- end }}
+
+{{/*
+Resource naming with environment prefix
+Usage: {{ include "wealist-common.resourceName" (dict "name" "my-resource" "context" .) }}
+*/}}
+{{- define "wealist-common.resourceName" -}}
+{{- $name := .name -}}
+{{- $context := .context -}}
+{{- if $context.Values.global }}
+{{- if $context.Values.global.environment }}
+{{- printf "%s-%s" $context.Values.global.environment $name | trunc 63 | trimSuffix "-" }}
+{{- else }}
+{{- $name | trunc 63 | trimSuffix "-" }}
+{{- end }}
+{{- else }}
+{{- $name | trunc 63 | trimSuffix "-" }}
+{{- end }}
+{{- end }}
+
+{{/*
+Standard Prometheus annotations
+*/}}
+{{- define "wealist-common.prometheusAnnotations" -}}
+prometheus.io/scrape: "true"
+prometheus.io/port: {{ .port | quote }}
+prometheus.io/path: {{ .path | default "/metrics" | quote }}
+{{- end }}
