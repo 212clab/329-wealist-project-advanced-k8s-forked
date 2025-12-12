@@ -1,0 +1,37 @@
+# Development values for user-service (local registry + local.wealist.co.kr)
+
+global:
+  namespace: wealist-dev
+  environment: develop
+  imageRegistry: localhost:5001
+
+# Image configuration (local registry)
+image:
+  repository: user-service
+  tag: latest
+
+# Application configuration overrides
+config:
+  ENV: "dev"
+  LOG_LEVEL: "debug"
+
+  # Server base path for ingress routing
+  SERVER_BASE_PATH: "/api"
+
+  # S3 public endpoint for local.wealist.co.kr domain
+  S3_PUBLIC_ENDPOINT: "https://local.wealist.co.kr/minio"
+
+# Health check configuration with SERVER_BASE_PATH
+healthCheck:
+  liveness:
+    enabled: true
+    path: /api/health/live
+    port: 8081
+    initialDelaySeconds: 30
+    periodSeconds: 10
+  readiness:
+    enabled: true
+    path: /api/health/ready
+    port: 8081
+    initialDelaySeconds: 5
+    periodSeconds: 5
