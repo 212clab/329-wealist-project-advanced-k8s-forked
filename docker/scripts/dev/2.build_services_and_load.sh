@@ -45,11 +45,11 @@ trap "rm -rf $TEMP_DIR" EXIT
 declare -a SERVICES=(
     "auth-service|services/auth-service|Dockerfile"
     "board-service|services/board-service|docker/Dockerfile"
-    "chat-service|services/chat-service|docker/Dockerfile"
+    "chat-service|.|services/chat-service/docker/Dockerfile"
     "frontend|services/frontend|Dockerfile"
     "noti-service|services/noti-service|docker/Dockerfile"
     "storage-service|services/storage-service|docker/Dockerfile"
-    "user-service|services/user-service|docker/Dockerfile"
+    "user-service|.|services/user-service/docker/Dockerfile"
     "video-service|services/video-service|docker/Dockerfile"
 )
 
