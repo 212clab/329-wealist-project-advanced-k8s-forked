@@ -142,11 +142,11 @@ declare global {
 }
 
 // Helper component to render video track
-const VideoTrackRenderer: React.FC<{ track?: Track | null; isLocal: boolean; isMirrored: boolean }> = ({
-  track,
-  isLocal,
-  isMirrored,
-}) => {
+const VideoTrackRenderer: React.FC<{
+  track?: Track | null;
+  isLocal: boolean;
+  isMirrored: boolean;
+}> = ({ track, isLocal, isMirrored }) => {
   const videoRef = useRef<HTMLVideoElement>(null);
 
   useEffect(() => {
@@ -159,7 +159,12 @@ const VideoTrackRenderer: React.FC<{ track?: Track | null; isLocal: boolean; isM
     }
   }, [track]);
 
-  if (!track) return <div className="w-full h-full bg-gray-800 flex items-center justify-center text-gray-500">카메라 꺼짐</div>;
+  if (!track)
+    return (
+      <div className="w-full h-full bg-gray-800 flex items-center justify-center text-gray-500">
+        카메라 꺼짐
+      </div>
+    );
 
   return (
     <video
@@ -244,7 +249,12 @@ export const VideoRoom: React.FC<VideoRoomProps> = ({
 
     const connect = async () => {
       try {
-        console.log('[VideoRoom] Connecting with WS URL:', wsUrl, 'Token:', token?.slice(0, 10) + '...');
+        console.log(
+          '[VideoRoom] Connecting with WS URL:',
+          wsUrl,
+          'Token:',
+          token?.slice(0, 10) + '...',
+        );
         await room.connect(wsUrl, token);
         setConnectionState('connected');
         updateParticipants();
@@ -266,10 +276,9 @@ export const VideoRoom: React.FC<VideoRoomProps> = ({
           await room.localParticipant.setMicrophoneEnabled(true);
           setIsMuted(false);
         } catch (e) {
-          console.warn("Autoplay policy prevented microphone connect", e);
+          console.warn('Autoplay policy prevented microphone connect', e);
           setIsMuted(true);
         }
-
       } catch (e) {
         console.error('Failed to connect', e);
         setConnectionState('error');
@@ -293,7 +302,7 @@ export const VideoRoom: React.FC<VideoRoomProps> = ({
     const onTrackSubscribed = (
       _track: RemoteTrack,
       _publication: RemoteTrackPublication,
-      _participant: RemoteParticipant
+      _participant: RemoteParticipant,
     ) => {
       updateParticipants(); // Trigger re-render to show video
     };
@@ -301,26 +310,30 @@ export const VideoRoom: React.FC<VideoRoomProps> = ({
     const onTrackUnsubscribed = (
       _track: RemoteTrack,
       _publication: RemoteTrackPublication,
-      _participant: RemoteParticipant
+      _participant: RemoteParticipant,
     ) => {
       updateParticipants();
     };
 
     const onLocalTrackPublished = (
       _publication: LocalTrackPublication,
-      _participant: LocalParticipant
+      _participant: LocalParticipant,
     ) => {
       updateParticipants();
-    }
+    };
 
     const onLocalTrackUnpublished = (
       _publication: LocalTrackPublication,
-      _participant: LocalParticipant
+      _participant: LocalParticipant,
     ) => {
       updateParticipants();
-    }
+    };
 
-    const onDataReceived = (payload: Uint8Array, participant?: RemoteParticipant, _kind?: DataPacket_Kind) => {
+    const onDataReceived = (
+      payload: Uint8Array,
+      participant?: RemoteParticipant,
+      _kind?: DataPacket_Kind,
+    ) => {
       const str = new TextDecoder().decode(payload);
       try {
         const data = JSON.parse(str) as DataMessage;
@@ -334,14 +347,15 @@ export const VideoRoom: React.FC<VideoRoomProps> = ({
             timestamp: new Date(),
             isLocal: false,
           };
-          setChatMessages(prev => [...prev, newMessage]);
+          setChatMessages((prev) => [...prev, newMessage]);
         } else if (data.type === 'subtitle' && data.text) {
           // Handle subtitle from other participants
           const speakerId = data.speakerId || participant?.identity || 'unknown';
-          const speakerName = data.speakerName || participant?.name || participant?.identity || 'Unknown';
+          const speakerName =
+            data.speakerName || participant?.name || participant?.identity || 'Unknown';
 
           // Update remote subtitles map
-          setRemoteSubtitles(prev => {
+          setRemoteSubtitles((prev) => {
             const newMap = new Map(prev);
             newMap.set(speakerId, {
               speakerId,
@@ -362,11 +376,11 @@ export const VideoRoom: React.FC<VideoRoomProps> = ({
               timestamp: new Date(),
               isFinal: true,
             };
-            setTranscript(prev => [...prev, newLine]);
+            setTranscript((prev) => [...prev, newLine]);
 
             // Clear this speaker's subtitle after a short delay
             setTimeout(() => {
-              setRemoteSubtitles(prev => {
+              setRemoteSubtitles((prev) => {
                 const newMap = new Map(prev);
                 newMap.delete(speakerId);
                 return newMap;
@@ -375,14 +389,14 @@ export const VideoRoom: React.FC<VideoRoomProps> = ({
           }
         }
       } catch (e) {
-        console.error("Failed to parse data message", e);
+        console.error('Failed to parse data message', e);
       }
     };
 
     const onActiveSpeakersChanged = (speakers: Participant[]) => {
-      setActiveSpeakers(speakers.map(s => s.identity));
+      setActiveSpeakers(speakers.map((s) => s.identity));
       updateParticipants(); // Re-render to show speaking indicator if needed
-    }
+    };
 
     room.on(RoomEvent.ParticipantConnected, onParticipantConnected);
     room.on(RoomEvent.ParticipantDisconnected, onParticipantDisconnected);
@@ -397,7 +411,6 @@ export const VideoRoom: React.FC<VideoRoomProps> = ({
     room.on(RoomEvent.TrackMuted, updateParticipants);
     room.on(RoomEvent.TrackUnmuted, updateParticipants);
 
-
     return () => {
       room.off(RoomEvent.ParticipantConnected, onParticipantConnected);
       room.off(RoomEvent.ParticipantDisconnected, onParticipantDisconnected);
@@ -410,7 +423,6 @@ export const VideoRoom: React.FC<VideoRoomProps> = ({
       room.on(RoomEvent.TrackMuted, updateParticipants);
       room.on(RoomEvent.TrackUnmuted, updateParticipants);
     };
-
   }, [room, token, wsUrl]);
 
   const updateParticipants = useCallback(() => {
@@ -419,16 +431,15 @@ export const VideoRoom: React.FC<VideoRoomProps> = ({
     setParticipants([room.localParticipant, ...remotes]);
   }, [room]);
 
-
   const toggleMute = useCallback(async () => {
     if (!room) return;
-    // const enable = !isMuted; 
+    // const enable = !isMuted;
 
     try {
       await room.localParticipant.setMicrophoneEnabled(isMuted);
       setIsMuted(!isMuted);
     } catch (e) {
-      console.error("Failed to toggle mute", e);
+      console.error('Failed to toggle mute', e);
     }
   }, [room, isMuted]);
 
@@ -438,7 +449,7 @@ export const VideoRoom: React.FC<VideoRoomProps> = ({
       await room.localParticipant.setCameraEnabled(!isVideoEnabled);
       setIsVideoEnabled(!isVideoEnabled);
     } catch (e) {
-      console.error("Failed to toggle video", e);
+      console.error('Failed to toggle video', e);
     }
   }, [room, isVideoEnabled]);
 
@@ -448,7 +459,7 @@ export const VideoRoom: React.FC<VideoRoomProps> = ({
       await room.localParticipant.setScreenShareEnabled(!isScreenSharing);
       setIsScreenSharing(!isScreenSharing);
     } catch (e) {
-      console.error("Failed to toggle screen share", e);
+      console.error('Failed to toggle screen share', e);
       setIsScreenSharing(false);
     }
   }, [room, isScreenSharing]);
@@ -464,7 +475,7 @@ export const VideoRoom: React.FC<VideoRoomProps> = ({
 
     const msgData = {
       type: 'chat',
-      message: chatInput.trim()
+      message: chatInput.trim(),
     };
 
     try {
@@ -483,7 +494,7 @@ export const VideoRoom: React.FC<VideoRoomProps> = ({
       setChatMessages((prev) => [...prev, newMessage]);
       setChatInput('');
     } catch (e) {
-      console.error("Failed to send message", e);
+      console.error('Failed to send message', e);
     }
   }, [chatInput, room]);
 
@@ -512,30 +523,33 @@ export const VideoRoom: React.FC<VideoRoomProps> = ({
   };
 
   // Broadcast subtitle to other participants
-  const broadcastSubtitle = useCallback(async (text: string, isFinal: boolean) => {
-    if (!room || !text) return;
+  const broadcastSubtitle = useCallback(
+    async (text: string, isFinal: boolean) => {
+      if (!room || !text) return;
 
-    const myName = getMyDisplayName();
-    const myId = userProfile?.id || room.localParticipant.identity;
+      const myName = getMyDisplayName();
+      const myId = userProfile?.id || room.localParticipant.identity;
 
-    const subtitleData: DataMessage = {
-      type: 'subtitle',
-      text,
-      speakerId: myId,
-      speakerName: myName,
-      isFinal,
-    };
+      const subtitleData: DataMessage = {
+        type: 'subtitle',
+        text,
+        speakerId: myId,
+        speakerName: myName,
+        isFinal,
+      };
 
-    try {
-      const encoder = new TextEncoder();
-      await room.localParticipant.publishData(
-        encoder.encode(JSON.stringify(subtitleData)),
-        { reliable: isFinal } // Use reliable for final subtitles
-      );
-    } catch (e) {
-      console.error('Failed to broadcast subtitle:', e);
-    }
-  }, [room, userProfile, getMyDisplayName]);
+      try {
+        const encoder = new TextEncoder();
+        await room.localParticipant.publishData(
+          encoder.encode(JSON.stringify(subtitleData)),
+          { reliable: isFinal }, // Use reliable for final subtitles
+        );
+      } catch (e) {
+        console.error('Failed to broadcast subtitle:', e);
+      }
+    },
+    [room, userProfile, getMyDisplayName],
+  );
 
   // Speech Recognition (Subtitle) functions - Keeping logic but needs audio stream source updates ideally
   // For now, we'll keep the browser Native Speech API as it uses the physical mic independently of WebRTC
@@ -759,14 +773,17 @@ export const VideoRoom: React.FC<VideoRoomProps> = ({
             <div className="flex items-center gap-2 flex-1">
               <GripHorizontal className="w-4 h-4 text-gray-500" />
               <div
-                className={`w-2 h-2 rounded-full ${connectionState === 'connected'
-                  ? 'bg-green-500'
-                  : connectionState === 'connecting'
+                className={`w-2 h-2 rounded-full ${
+                  connectionState === 'connected'
+                    ? 'bg-green-500'
+                    : connectionState === 'connecting'
                     ? 'bg-yellow-500 animate-pulse'
                     : 'bg-red-500'
-                  }`}
+                }`}
               />
-              <span className="text-white text-sm font-medium truncate flex-1">{roomInfo.name}</span>
+              <span className="text-white text-sm font-medium truncate flex-1">
+                {roomInfo.name}
+              </span>
             </div>
             <button
               onClick={toggleDisplayMode}
@@ -778,12 +795,8 @@ export const VideoRoom: React.FC<VideoRoomProps> = ({
           </div>
 
           <div className="relative flex-1" style={{ height: 'calc(100% - 88px)' }}>
-            <VideoTrackRenderer
-              track={localVideoTrack}
-              isLocal={true}
-              isMirrored={isMirrored}
-            />
-            {(!localVideoTrack) && (
+            <VideoTrackRenderer track={localVideoTrack} isLocal={true} isMirrored={isMirrored} />
+            {!localVideoTrack && (
               <div className="absolute inset-0 flex items-center justify-center bg-gray-800">
                 <div className="w-16 h-16 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-xl font-bold text-white border-2 border-gray-600">
                   {localP?.name?.[0]?.toUpperCase() || '나'}
@@ -799,20 +812,22 @@ export const VideoRoom: React.FC<VideoRoomProps> = ({
           <div className="flex items-center justify-center gap-2 py-2 bg-gray-800">
             <button
               onClick={toggleMute}
-              className={`p-2 rounded-full transition ${isMuted
-                ? 'bg-red-500 hover:bg-red-600 text-white'
-                : 'bg-gray-700 hover:bg-gray-600 text-white'
-                }`}
+              className={`p-2 rounded-full transition ${
+                isMuted
+                  ? 'bg-red-500 hover:bg-red-600 text-white'
+                  : 'bg-gray-700 hover:bg-gray-600 text-white'
+              }`}
             >
               {isMuted ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
             </button>
 
             <button
               onClick={toggleVideo}
-              className={`p-2 rounded-full transition ${!isVideoEnabled
-                ? 'bg-red-500 hover:bg-red-600 text-white'
-                : 'bg-gray-700 hover:bg-gray-600 text-white'
-                }`}
+              className={`p-2 rounded-full transition ${
+                !isVideoEnabled
+                  ? 'bg-red-500 hover:bg-red-600 text-white'
+                  : 'bg-gray-700 hover:bg-gray-600 text-white'
+              }`}
             >
               {isVideoEnabled ? <Video className="w-4 h-4" /> : <VideoOff className="w-4 h-4" />}
             </button>
@@ -845,12 +860,13 @@ export const VideoRoom: React.FC<VideoRoomProps> = ({
       <div className="flex items-center justify-between px-4 py-3 bg-gray-800">
         <div className="flex items-center gap-3">
           <div
-            className={`w-3 h-3 rounded-full ${connectionState === 'connected'
-              ? 'bg-green-500'
-              : connectionState === 'connecting'
+            className={`w-3 h-3 rounded-full ${
+              connectionState === 'connected'
+                ? 'bg-green-500'
+                : connectionState === 'connecting'
                 ? 'bg-yellow-500 animate-pulse'
                 : 'bg-red-500'
-              }`}
+            }`}
           />
           <h1 className="text-white font-medium">{roomInfo.name}</h1>
           <span className="text-gray-400 text-sm">({participants.length}명 참여중)</span>
@@ -872,17 +888,19 @@ export const VideoRoom: React.FC<VideoRoomProps> = ({
           </button>
           <button
             onClick={() => setShowParticipants(!showParticipants)}
-            className={`p-2 rounded-lg transition ${showParticipants
-              ? 'bg-blue-600 text-white'
-              : 'bg-gray-700 hover:bg-gray-600 text-white'
-              }`}
+            className={`p-2 rounded-lg transition ${
+              showParticipants
+                ? 'bg-blue-600 text-white'
+                : 'bg-gray-700 hover:bg-gray-600 text-white'
+            }`}
           >
             <Users className="w-5 h-5" />
           </button>
           <button
             onClick={() => setShowChat(!showChat)}
-            className={`p-2 rounded-lg transition relative ${showChat ? 'bg-blue-600 text-white' : 'bg-gray-700 hover:bg-gray-600 text-white'
-              }`}
+            className={`p-2 rounded-lg transition relative ${
+              showChat ? 'bg-blue-600 text-white' : 'bg-gray-700 hover:bg-gray-600 text-white'
+            }`}
           >
             <MessageSquare className="w-5 h-5" />
             {/* Unread badge could be added here */}
@@ -899,10 +917,12 @@ export const VideoRoom: React.FC<VideoRoomProps> = ({
               const isLocal = p.identity === room?.localParticipant?.identity;
               const videoTrack = getParticipantVideoTrack(p);
               const metadata = getParticipantMetadata(p);
-              const profileImageUrl = isLocal ? userProfile?.profileImageUrl : metadata?.profileImageUrl;
+              const profileImageUrl = isLocal
+                ? userProfile?.profileImageUrl
+                : metadata?.profileImageUrl;
               const displayName = isLocal
-                ? (userProfile?.nickName || p.name || p.identity)
-                : (metadata?.nickName || p.name || p.identity);
+                ? userProfile?.nickName || p.name || p.identity
+                : metadata?.nickName || p.name || p.identity;
               // Check if audio is muted
               const isAudioMuted = p.getTrackPublication(Track.Source.Microphone)?.isMuted ?? true;
               const speaking = isSpeaking(p);
@@ -916,7 +936,11 @@ export const VideoRoom: React.FC<VideoRoomProps> = ({
                       : 'border border-gray-700'
                   }`}
                 >
-                  <VideoTrackRenderer track={videoTrack} isLocal={isLocal} isMirrored={isLocal && isMirrored} />
+                  <VideoTrackRenderer
+                    track={videoTrack}
+                    isLocal={isLocal}
+                    isMirrored={isLocal && isMirrored}
+                  />
 
                   {/* Speaking indicator */}
                   {speaking && (
@@ -928,7 +952,9 @@ export const VideoRoom: React.FC<VideoRoomProps> = ({
 
                   {/* Status Overlay */}
                   <div className="absolute bottom-3 left-3 flex items-center gap-2 bg-black/60 px-3 py-1.5 rounded-full backdrop-blur-sm">
-                    <span className="text-white text-sm font-medium">{displayName} {isLocal && '(나)'}</span>
+                    <span className="text-white text-sm font-medium">
+                      {displayName} {isLocal && '(나)'}
+                    </span>
                     {isAudioMuted ? (
                       <MicOff className="w-3 h-3 text-red-400" />
                     ) : (
@@ -937,7 +963,7 @@ export const VideoRoom: React.FC<VideoRoomProps> = ({
                   </div>
 
                   {/* Avatar when no video */}
-                  {(!videoTrack) && (
+                  {!videoTrack && (
                     <div className="absolute inset-0 flex items-center justify-center">
                       {profileImageUrl ? (
                         <img
@@ -948,16 +974,18 @@ export const VideoRoom: React.FC<VideoRoomProps> = ({
                           }`}
                         />
                       ) : (
-                        <div className={`w-20 h-20 rounded-full bg-gradient-to-br from-gray-600 to-gray-700 flex items-center justify-center text-2xl font-bold text-white border-4 ${
-                          speaking ? 'border-green-500' : 'border-gray-600'
-                        }`}>
+                        <div
+                          className={`w-20 h-20 rounded-full bg-gradient-to-br from-gray-600 to-gray-700 flex items-center justify-center text-2xl font-bold text-white border-4 ${
+                            speaking ? 'border-green-500' : 'border-gray-600'
+                          }`}
+                        >
                           {displayName?.[0]?.toUpperCase() || '?'}
                         </div>
                       )}
                     </div>
                   )}
                 </div>
-              )
+              );
             })}
           </div>
         </div>
@@ -966,7 +994,11 @@ export const VideoRoom: React.FC<VideoRoomProps> = ({
         {(showParticipants || showChat) && (
           <div className="w-80 bg-gray-800 border-l border-gray-700 flex flex-col transition-all duration-300">
             {showParticipants && (
-              <div className={`flex-1 flex flex-col ${showChat ? 'h-1/2 border-b border-gray-700' : 'h-full'}`}>
+              <div
+                className={`flex-1 flex flex-col ${
+                  showChat ? 'h-1/2 border-b border-gray-700' : 'h-full'
+                }`}
+              >
                 <div className="p-4 border-b border-gray-700 bg-gray-800/50">
                   <h3 className="text-white font-medium flex items-center gap-2">
                     <Users className="w-4 h-4" />
@@ -977,18 +1009,23 @@ export const VideoRoom: React.FC<VideoRoomProps> = ({
                   {participants.map((p) => {
                     const isLocal = p.identity === room?.localParticipant?.identity;
                     const metadata = getParticipantMetadata(p);
-                    const profileImageUrl = isLocal ? userProfile?.profileImageUrl : metadata?.profileImageUrl;
+                    const profileImageUrl = isLocal
+                      ? userProfile?.profileImageUrl
+                      : metadata?.profileImageUrl;
                     const displayName = isLocal
-                      ? (userProfile?.nickName || p.name || p.identity)
-                      : (metadata?.nickName || p.name || p.identity);
+                      ? userProfile?.nickName || p.name || p.identity
+                      : metadata?.nickName || p.name || p.identity;
                     const speaking = isSpeaking(p);
-                    const isAudioMuted = p.getTrackPublication(Track.Source.Microphone)?.isMuted ?? true;
+                    const isAudioMuted =
+                      p.getTrackPublication(Track.Source.Microphone)?.isMuted ?? true;
 
                     return (
                       <div
                         key={p.identity}
                         className={`flex items-center justify-between p-2 rounded-lg transition-all ${
-                          speaking ? 'bg-green-500/20 ring-1 ring-green-500' : 'hover:bg-gray-700/50'
+                          speaking
+                            ? 'bg-green-500/20 ring-1 ring-green-500'
+                            : 'hover:bg-gray-700/50'
                         }`}
                       >
                         <div className="flex items-center gap-3">
@@ -1001,9 +1038,11 @@ export const VideoRoom: React.FC<VideoRoomProps> = ({
                               }`}
                             />
                           ) : (
-                            <div className={`w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center text-white text-sm font-medium border-2 ${
-                              speaking ? 'border-green-500' : 'border-transparent'
-                            }`}>
+                            <div
+                              className={`w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center text-white text-sm font-medium border-2 ${
+                                speaking ? 'border-green-500' : 'border-transparent'
+                              }`}
+                            >
                               {displayName?.[0]?.toUpperCase() || '?'}
                             </div>
                           )}
@@ -1015,7 +1054,11 @@ export const VideoRoom: React.FC<VideoRoomProps> = ({
                             <p className="text-xs text-gray-400">
                               {speaking ? (
                                 <span className="text-green-400">말하는 중</span>
-                              ) : isAudioMuted ? '음소거됨' : '대기 중'}
+                              ) : isAudioMuted ? (
+                                '음소거됨'
+                              ) : (
+                                '대기 중'
+                              )}
                             </p>
                           </div>
                         </div>
@@ -1053,13 +1096,16 @@ export const VideoRoom: React.FC<VideoRoomProps> = ({
                     >
                       <div className="flex items-baseline gap-2 mb-1">
                         <span className="text-xs text-gray-300 font-medium">{msg.senderName}</span>
-                        <span className="text-[10px] text-gray-500">{formatChatTime(msg.timestamp)}</span>
+                        <span className="text-[10px] text-gray-500">
+                          {formatChatTime(msg.timestamp)}
+                        </span>
                       </div>
                       <div
-                        className={`px-3 py-2 rounded-lg text-sm max-w-[85%] break-words ${msg.isLocal
-                          ? 'bg-blue-600 text-white rounded-br-none'
-                          : 'bg-gray-700 text-gray-100 rounded-bl-none'
-                          }`}
+                        className={`px-3 py-2 rounded-lg text-sm max-w-[85%] break-words ${
+                          msg.isLocal
+                            ? 'bg-blue-600 text-white rounded-br-none'
+                            : 'bg-gray-700 text-gray-100 rounded-bl-none'
+                        }`}
                       >
                         {msg.message}
                       </div>
@@ -1117,7 +1163,9 @@ export const VideoRoom: React.FC<VideoRoomProps> = ({
       {/* Footer Controls */}
       <div className="h-20 bg-gray-800 border-t border-gray-700 px-4 flex items-center justify-between">
         <div className="flex items-center gap-4 text-white">
-          <span className="text-xl font-bold tracking-tight">{new Date().toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })}</span>
+          <span className="text-xl font-bold tracking-tight">
+            {new Date().toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })}
+          </span>
           <div className="h-8 w-px bg-gray-600" />
           <div className="flex items-center gap-2">
             <span className="text-sm text-gray-300 truncate max-w-[200px]">{roomInfo.name}</span>
@@ -1127,10 +1175,11 @@ export const VideoRoom: React.FC<VideoRoomProps> = ({
         <div className="flex items-center gap-3 absolute left-1/2 transform -translate-x-1/2">
           <button
             onClick={toggleMute}
-            className={`p-3 rounded-full transition duration-200 transform hover:scale-105 ${isMuted
-              ? 'bg-red-500 hover:bg-red-600 text-white shadow-lg shadow-red-500/20'
-              : 'bg-gray-700 hover:bg-gray-600 text-white'
-              }`}
+            className={`p-3 rounded-full transition duration-200 transform hover:scale-105 ${
+              isMuted
+                ? 'bg-red-500 hover:bg-red-600 text-white shadow-lg shadow-red-500/20'
+                : 'bg-gray-700 hover:bg-gray-600 text-white'
+            }`}
             title={isMuted ? '마이크 켜기' : '마이크 끄기'}
           >
             {isMuted ? <MicOff className="w-6 h-6" /> : <Mic className="w-6 h-6" />}
@@ -1138,10 +1187,11 @@ export const VideoRoom: React.FC<VideoRoomProps> = ({
 
           <button
             onClick={toggleVideo}
-            className={`p-3 rounded-full transition duration-200 transform hover:scale-105 ${!isVideoEnabled
-              ? 'bg-red-500 hover:bg-red-600 text-white shadow-lg shadow-red-500/20'
-              : 'bg-gray-700 hover:bg-gray-600 text-white'
-              }`}
+            className={`p-3 rounded-full transition duration-200 transform hover:scale-105 ${
+              !isVideoEnabled
+                ? 'bg-red-500 hover:bg-red-600 text-white shadow-lg shadow-red-500/20'
+                : 'bg-gray-700 hover:bg-gray-600 text-white'
+            }`}
             title={isVideoEnabled ? '카메라 끄기' : '카메라 켜기'}
           >
             {isVideoEnabled ? <Video className="w-6 h-6" /> : <VideoOff className="w-6 h-6" />}
@@ -1149,10 +1199,11 @@ export const VideoRoom: React.FC<VideoRoomProps> = ({
 
           <button
             onClick={toggleScreenShare}
-            className={`p-3 rounded-full transition duration-200 transform hover:scale-105 ${isScreenSharing
-              ? 'bg-green-500 hover:bg-green-600 text-white shadow-lg shadow-green-500/20'
-              : 'bg-gray-700 hover:bg-gray-600 text-white'
-              }`}
+            className={`p-3 rounded-full transition duration-200 transform hover:scale-105 ${
+              isScreenSharing
+                ? 'bg-green-500 hover:bg-green-600 text-white shadow-lg shadow-green-500/20'
+                : 'bg-gray-700 hover:bg-gray-600 text-white'
+            }`}
             title="화면 공유"
           >
             <Monitor className="w-6 h-6" />
@@ -1160,21 +1211,27 @@ export const VideoRoom: React.FC<VideoRoomProps> = ({
 
           <button
             onClick={toggleSubtitle}
-            className={`p-3 rounded-full transition duration-200 transform hover:scale-105 ${isSubtitleEnabled
-              ? 'bg-purple-500 hover:bg-purple-600 text-white shadow-lg shadow-purple-500/20'
-              : 'bg-gray-700 hover:bg-gray-600 text-white'
-              }`}
+            className={`p-3 rounded-full transition duration-200 transform hover:scale-105 ${
+              isSubtitleEnabled
+                ? 'bg-purple-500 hover:bg-purple-600 text-white shadow-lg shadow-purple-500/20'
+                : 'bg-gray-700 hover:bg-gray-600 text-white'
+            }`}
             title="자막"
           >
-            {isSubtitleEnabled ? <Captions className="w-6 h-6" /> : <CaptionsOff className="w-6 h-6" />}
+            {isSubtitleEnabled ? (
+              <Captions className="w-6 h-6" />
+            ) : (
+              <CaptionsOff className="w-6 h-6" />
+            )}
           </button>
 
           <button
             onClick={() => setIsMirrored(!isMirrored)}
-            className={`p-3 rounded-full transition duration-200 transform hover:scale-105 ${isMirrored
-              ? 'bg-blue-500 hover:bg-blue-600 text-white shadow-lg shadow-blue-500/20'
-              : 'bg-gray-700 hover:bg-gray-600 text-white'
-              }`}
+            className={`p-3 rounded-full transition duration-200 transform hover:scale-105 ${
+              isMirrored
+                ? 'bg-blue-500 hover:bg-blue-600 text-white shadow-lg shadow-blue-500/20'
+                : 'bg-gray-700 hover:bg-gray-600 text-white'
+            }`}
             title="좌우 반전"
           >
             <FlipHorizontal className="w-6 h-6" />
