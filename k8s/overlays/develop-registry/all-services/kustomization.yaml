@@ -16,8 +16,7 @@ resources:
   - ../../../../infrastructure/overlays/develop
 
   # Dev environment (configmap + secrets)
-  - ../../../base/namespace-dev/configmap.yaml
-  - ../../../base/namespace-dev/secret.yaml
+  - ../../../base/namespace-dev
 
   # Ingress
   - ingress.yaml
