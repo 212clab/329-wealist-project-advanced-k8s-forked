@@ -96,7 +96,7 @@ build_service() {
         echo "Image: $image_name"
         echo ""
 
-        if docker build -t "$image_name" -f "$path/$dockerfile" "$path" 2>&1; then
+        if docker build -t "$image_name" -f "$path/$dockerfile" . 2>&1; then
             echo ""
             echo "Pushing to local registry..."
             if docker push "$image_name" 2>&1; then
