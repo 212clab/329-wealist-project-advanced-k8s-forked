@@ -28,19 +28,20 @@ nodes:
         hostPort: 8080
         listenAddress: "0.0.0.0"
         protocol: TCP
-      # LiveKit WebRTC ports
-      - containerPort: 30881
+      # LiveKit WebRTC TCP fallback
+      - containerPort: 7881
         hostPort: 7881
         listenAddress: "0.0.0.0"
         protocol: TCP
-      # TURN server ports (standard port 3478 for NAT traversal)
-      - containerPort: 30488
-        hostPort: 3478
-        listenAddress: "0.0.0.0"
-        protocol: TCP
-      - containerPort: 30489
+      # LiveKit TURN UDP
+      - containerPort: 3478
         hostPort: 3478
         listenAddress: "0.0.0.0"
         protocol: UDP
+      # LiveKit TURN TCP (UDP 차단 환경용)
+      - containerPort: 3478
+        hostPort: 3478
+        listenAddress: "0.0.0.0"
+        protocol: TCP
   - role: worker
   - role: worker
