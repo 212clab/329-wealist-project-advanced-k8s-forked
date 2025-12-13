@@ -42,14 +42,15 @@ TEMP_DIR=$(mktemp -d)
 trap "rm -rf $TEMP_DIR" EXIT
 
 # Detect if service uses common packages (requires project root context)
+# All Go services use common packages, only auth-service (Spring Boot) and frontend (React) don't
 uses_common_packages() {
     local name="$1"
     case "$name" in
-        chat-service|user-service)
-            return 0  # true - uses common packages
+        auth-service|frontend)
+            return 1  # false - Spring Boot and React don't use Go packages
             ;;
         *)
-            return 1  # false - doesn't use common packages
+            return 0  # true - all Go services use common packages
             ;;
     esac
 }
