@@ -361,9 +361,10 @@ export const getChatWebSocketUrl = (chatId: string, token: string): string => {
   if (isIngressMode) {
     const apiDomain = getApiDomain();
     // API_DOMAIN이 설정되어 있으면 CloudFront 우회하여 직접 연결
+    // ingress 경로: /svc/chat/api/chats/... → chat-service/api/chats/...
     if (apiDomain) {
       const protocol = getWebSocketProtocol();
-      return `${protocol}//${apiDomain}/api/chats/ws/${chatId}?token=${encodedToken}`;
+      return `${protocol}//${apiDomain}/svc/chat/api/chats/ws/${chatId}?token=${encodedToken}`;
     }
     // API_DOMAIN 없으면 CloudFront 통해 연결 시도 (fallback)
     const protocol = getWebSocketProtocol();
@@ -402,9 +403,10 @@ export const getPresenceWebSocketUrl = (token: string): string => {
   if (isIngressMode) {
     const apiDomain = getApiDomain();
     // API_DOMAIN이 설정되어 있으면 CloudFront 우회하여 직접 연결
+    // ingress 경로: /svc/chat/api/chats/... → chat-service/api/chats/...
     if (apiDomain) {
       const protocol = getWebSocketProtocol();
-      return `${protocol}//${apiDomain}/api/chats/ws/presence?token=${encodedToken}`;
+      return `${protocol}//${apiDomain}/svc/chat/api/chats/ws/presence?token=${encodedToken}`;
     }
     // API_DOMAIN 없으면 CloudFront 통해 연결 시도 (fallback)
     const protocol = getWebSocketProtocol();
@@ -442,12 +444,13 @@ export const getBoardWebSocketUrl = (projectId: string, token: string): string =
 
   // K8s ingress 모드 (CloudFront + API origin)
   // board-service WebSocket 경로: /ws/project/:projectId (not /api/boards/ws/...)
+  // ingress 경로: /svc/board/ws/... → board-service/ws/...
   if (isIngressMode) {
     const apiDomain = getApiDomain();
     // API_DOMAIN이 설정되어 있으면 CloudFront 우회하여 직접 연결
     if (apiDomain) {
       const protocol = getWebSocketProtocol();
-      return `${protocol}//${apiDomain}/ws/project/${projectId}?token=${encodedToken}`;
+      return `${protocol}//${apiDomain}/svc/board/ws/project/${projectId}?token=${encodedToken}`;
     }
     // API_DOMAIN 없으면 CloudFront 통해 연결 시도 (fallback)
     const protocol = getWebSocketProtocol();
@@ -487,9 +490,10 @@ export const getNotificationSSEUrl = (token?: string): string => {
   if (isIngressMode) {
     const apiDomain = getApiDomain();
     // API_DOMAIN이 설정되어 있으면 CloudFront 우회하여 직접 연결
+    // ingress 경로: /svc/noti/api/... → noti-service/api/...
     if (apiDomain) {
       const protocol = window.location.protocol; // https: or http:
-      return `${protocol}//${apiDomain}/api/notifications/stream?token=${encodedToken}`;
+      return `${protocol}//${apiDomain}/svc/noti/api/notifications/stream?token=${encodedToken}`;
     }
     // API_DOMAIN 없으면 CloudFront 통해 연결 시도 (fallback)
     return `${window.location.origin}/svc/noti/api/notifications/stream?token=${encodedToken}`;

@@ -158,11 +158,11 @@ patches:
         path: /data/S3_PUBLIC_ENDPOINT
         value: "https://__PUBLIC_DOMAIN__/minio"
 
-  # Video service: LiveKit WebSocket URL for custom domain
+  # Video service: LiveKit WebSocket URL for custom domain (direct to API, bypass CloudFront)
   - target:
       kind: ConfigMap
       name: video-service-config
     patch: |-
       - op: replace
         path: /data/LIVEKIT_WS_URL
-        value: "wss://__PUBLIC_DOMAIN__/svc/livekit"
+        value: "wss://__API_DOMAIN__/svc/livekit"
