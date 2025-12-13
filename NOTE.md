@@ -120,3 +120,8 @@ make auth-service-redeploy  # k8s 롤아웃 재시작
 ```
 
 > 프론트엔드는 CloudFront + S3에서 호스팅되므로 K8s 배포 대상이 아님
+
+## 적용되었는지 확인
+
+kubectl get secret -n wealist-dev -o yaml | grep -A1 GOOGLE_CLIENT_ID
+kubectl exec -n wealist-dev deploy/auth-service -- env | grep -E "GOOGLE|OAUTH"
