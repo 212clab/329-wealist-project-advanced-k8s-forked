@@ -2,7 +2,7 @@
 // This file is loaded before the main app bundle
 //
 // Environments:
-//   - local (docker-compose): Set API_BASE_URL = "http://localhost"
+//   - local (docker-compose): Set API_BASE_URL = "http://localhost"!
 //   - production (CloudFront + K8s): Set API_BASE_URL = "" (empty = relative paths)
 //
 // WebSocket/SSE connections bypass CloudFront and connect directly to API_DOMAIN
