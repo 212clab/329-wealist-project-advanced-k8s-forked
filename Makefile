@@ -54,12 +54,24 @@ help:
 	@echo ""
 	@echo "  Helm Charts (Recommended):"
 	@echo "    make helm-lint           - Lint all Helm charts"
-	@echo "    make helm-install-infra  - Install infrastructure chart"
-	@echo "    make helm-install-services - Install all service charts"
 	@echo "    make helm-install-all    - Install infrastructure + services"
 	@echo "    make helm-upgrade-all    - Upgrade all charts"
 	@echo "    make helm-uninstall-all  - Uninstall all charts"
 	@echo "    make helm-validate       - Run comprehensive validation"
+	@echo ""
+	@echo "  Helm Environment Selection (ENV=<env>):"
+	@echo "    make helm-install-all ENV=local-kind   - Kind cluster (wealist-kind-local)"
+	@echo "    make helm-install-all ENV=local-ubuntu - Ubuntu dev (wealist-dev)"
+	@echo "    make helm-install-all ENV=dev          - Dev server (wealist-dev)"
+	@echo "    make helm-install-all ENV=staging      - Staging (wealist-staging)"
+	@echo "    make helm-install-all ENV=prod         - Production (wealist-prod)"
+	@echo ""
+	@echo "  Quick Environment Switches:"
+	@echo "    make helm-local-kind     - Deploy to local Kind cluster"
+	@echo "    make helm-local-ubuntu   - Deploy to local Ubuntu (default)"
+	@echo "    make helm-dev            - Deploy to dev server"
+	@echo "    make helm-staging        - Deploy to staging"
+	@echo "    make helm-prod           - Deploy to production"
 	@echo ""
 	@echo "  Utility:"
 	@echo "    make status       - Show pods status"
@@ -340,9 +352,31 @@ clean:
 
 .PHONY: helm-lint helm-install-infra helm-install-services helm-install-all
 .PHONY: helm-upgrade-all helm-uninstall-all helm-validate
+.PHONY: helm-local-kind helm-local-ubuntu helm-dev helm-staging helm-prod
 
-HELM_NAMESPACE ?= wealist-dev
-HELM_VALUES_FILE ?= values-develop-registry-local.yaml
+# Environment configuration
+# Usage: make helm-install-all ENV=local-kind
+ENV ?= local-ubuntu
+
+# Environment to namespace mapping
+ifeq ($(ENV),local-kind)
+  HELM_NAMESPACE = wealist-kind-local
+else ifeq ($(ENV),local-ubuntu)
+  HELM_NAMESPACE = wealist-dev
+else ifeq ($(ENV),dev)
+  HELM_NAMESPACE = wealist-dev
+else ifeq ($(ENV),staging)
+  HELM_NAMESPACE = wealist-staging
+else ifeq ($(ENV),prod)
+  HELM_NAMESPACE = wealist-prod
+else
+  HELM_NAMESPACE = wealist-dev
+endif
+
+# Helm values files
+HELM_BASE_VALUES = ./helm/environments/base.yaml
+HELM_ENV_VALUES = ./helm/environments/$(ENV).yaml
+
 SERVICES = auth-service user-service board-service chat-service noti-service storage-service video-service frontend
 
 helm-lint:
@@ -356,41 +390,49 @@ helm-lint:
 	@echo "✅ All charts linted successfully!"
 
 helm-install-infra:
-	@echo "📦 Installing infrastructure chart..."
+	@echo "📦 Installing infrastructure (ENV=$(ENV), NS=$(HELM_NAMESPACE))..."
 	helm install wealist-infrastructure ./helm/charts/wealist-infrastructure \
-		-f ./helm/charts/wealist-infrastructure/$(HELM_VALUES_FILE) \
+		-f $(HELM_BASE_VALUES) \
+		-f $(HELM_ENV_VALUES) \
+		-f ./helm/charts/wealist-infrastructure/values.yaml \
 		-n $(HELM_NAMESPACE) --create-namespace
 	@echo "✅ Infrastructure installed!"
 
 helm-install-services:
-	@echo "📦 Installing all service charts..."
+	@echo "📦 Installing services (ENV=$(ENV), NS=$(HELM_NAMESPACE))..."
 	@for service in $(SERVICES); do \
 		echo "Installing $$service..."; \
 		helm install $$service ./helm/charts/$$service \
-			-f ./helm/charts/$$service/$(HELM_VALUES_FILE) \
+			-f $(HELM_BASE_VALUES) \
+			-f $(HELM_ENV_VALUES) \
+			-f ./helm/charts/$$service/values.yaml \
 			-n $(HELM_NAMESPACE); \
 	done
 	@echo "✅ All services installed!"
 
 helm-install-all: helm-install-infra
 	@sleep 5
-	@$(MAKE) helm-install-services
+	@$(MAKE) helm-install-services ENV=$(ENV)
 
 helm-upgrade-all:
-	@echo "🔄 Upgrading all charts..."
+	@echo "🔄 Upgrading all charts (ENV=$(ENV), NS=$(HELM_NAMESPACE))..."
 	@helm upgrade wealist-infrastructure ./helm/charts/wealist-infrastructure \
-		-f ./helm/charts/wealist-infrastructure/$(HELM_VALUES_FILE) \
+		-f $(HELM_BASE_VALUES) \
+		-f $(HELM_ENV_VALUES) \
+		-f ./helm/charts/wealist-infrastructure/values.yaml \
 		-n $(HELM_NAMESPACE)
 	@for service in $(SERVICES); do \
 		echo "Upgrading $$service..."; \
 		helm upgrade $$service ./helm/charts/$$service \
-			-f ./helm/charts/$$service/$(HELM_VALUES_FILE) \
+			-f $(HELM_BASE_VALUES) \
+			-f $(HELM_ENV_VALUES) \
+			-f ./helm/charts/$$service/values.yaml \
 			-n $(HELM_NAMESPACE); \
 	done
 	@echo "✅ All charts upgraded!"
 
 helm-uninstall-all:
-	@echo "🗑️  Uninstalling all charts..."
+	@echo "🗑️  Uninstalling all charts (ENV=$(ENV), NS=$(HELM_NAMESPACE))..."
 	@for service in $(SERVICES); do \
 		echo "Uninstalling $$service..."; \
 		helm uninstall $$service -n $(HELM_NAMESPACE) 2>/dev/null || true; \
@@ -404,3 +446,23 @@ helm-validate:
 	@echo ""
 	@echo "🔍 Running ArgoCD Applications validation..."
 	@./argocd/scripts/validate-applications.sh
+
+# =============================================================================
+# Quick Environment Switches
+# =============================================================================
+# Usage: make helm-local-kind (equivalent to make helm-install-all ENV=local-kind)
+
+helm-local-kind:
+	@$(MAKE) helm-install-all ENV=local-kind
+
+helm-local-ubuntu:
+	@$(MAKE) helm-install-all ENV=local-ubuntu
+
+helm-dev:
+	@$(MAKE) helm-install-all ENV=dev
+
+helm-staging:
+	@$(MAKE) helm-install-all ENV=staging
+
+helm-prod:
+	@$(MAKE) helm-install-all ENV=prod

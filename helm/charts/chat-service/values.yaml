@@ -42,36 +42,20 @@ service:
   annotations: {}
 
 # -----------------------------------------------------------------------------
-# Application Configuration
+# Application Configuration (Service-Specific Only)
 # -----------------------------------------------------------------------------
+# Note: Common config (ENV, LOG_LEVEL, DB_HOST, DB_PORT, REDIS_HOST, REDIS_PORT,
+# S3_*, AUTH_SERVICE_URL, USER_SERVICE_URL, etc.) comes from
+# helm/environments/*.yaml via shared.config section.
+# Only service-specific values should be defined here.
 config:
+  # Server (service-specific port)
   PORT: "8001"
   SERVER_PORT: "8001"
-  ENV: "production"
-  LOG_LEVEL: "info"
-
-  # Server base path for routing
   SERVER_BASE_PATH: "/api/chats"
 
-  # Database configuration
-  DB_HOST: "postgres"
-  DB_PORT: "5432"
+  # Database (service-specific database name)
   DB_NAME: "wealist_chat_service_db"
-  DB_SSL_MODE: "require"
-
-  # Redis configuration
-  REDIS_HOST: "redis"
-  REDIS_PORT: "6379"
-
-  # S3 configuration
-  S3_ENDPOINT: "http://minio:9000"
-  S3_PUBLIC_ENDPOINT: "https://wealist.co.kr/minio"
-  S3_BUCKET: "wealist-files"
-  S3_REGION: "ap-northeast-2"
-
-  # Service URLs
-  AUTH_SERVICE_URL: "http://auth-service:8080"
-  USER_SERVICE_URL: "http://user-service:8081"
 
 # -----------------------------------------------------------------------------
 # External Secrets

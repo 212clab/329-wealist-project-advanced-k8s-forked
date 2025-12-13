@@ -43,8 +43,11 @@ service:
   annotations: {}
 
 # -----------------------------------------------------------------------------
-# Application Configuration
+# Application Configuration (Service-Specific Only)
 # -----------------------------------------------------------------------------
+# Note: Common config (ENV, LOG_LEVEL, CORS_ORIGINS, etc.) comes from
+# helm/environments/*.yaml via shared.config section.
+# Only service-specific values should be defined here.
 config:
   # Build-time environment variables (injected during Docker build)
   VITE_API_URL: "/api"

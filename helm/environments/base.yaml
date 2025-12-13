@@ -1,0 +1,154 @@
+# =============================================================================
+# Helm Base Configuration - Common defaults for all environments
+# =============================================================================
+# This file contains shared configuration inherited by all environments.
+# Override specific values in environment-specific files (local-kind.yaml, etc.)
+
+# -----------------------------------------------------------------------------
+# Global Settings (override per environment)
+# -----------------------------------------------------------------------------
+global:
+  namespace: wealist-dev
+  environment: develop
+  domain: localhost
+  imageRegistry: localhost:5001
+
+# -----------------------------------------------------------------------------
+# Default Deployment Settings
+# -----------------------------------------------------------------------------
+replicaCount: 1
+
+image:
+  pullPolicy: IfNotPresent
+
+# -----------------------------------------------------------------------------
+# Default Resource Limits (Go services)
+# -----------------------------------------------------------------------------
+resources:
+  requests:
+    memory: "128Mi"
+    cpu: "50m"
+  limits:
+    memory: "256Mi"
+    cpu: "200m"
+
+# -----------------------------------------------------------------------------
+# Default Health Check Settings
+# -----------------------------------------------------------------------------
+healthCheck:
+  liveness:
+    initialDelaySeconds: 30
+    periodSeconds: 10
+    timeoutSeconds: 5
+    failureThreshold: 3
+  readiness:
+    initialDelaySeconds: 10
+    periodSeconds: 5
+    timeoutSeconds: 3
+    failureThreshold: 3
+
+# -----------------------------------------------------------------------------
+# Autoscaling (disabled by default, enable in prod)
+# -----------------------------------------------------------------------------
+autoscaling:
+  enabled: false
+  minReplicas: 2
+  maxReplicas: 10
+  targetCPUUtilizationPercentage: 80
+
+# -----------------------------------------------------------------------------
+# Security Context Defaults (production-ready)
+# -----------------------------------------------------------------------------
+podSecurityContext:
+  runAsNonRoot: true
+  fsGroup: 1000
+
+securityContext:
+  allowPrivilegeEscalation: false
+  runAsNonRoot: true
+  readOnlyRootFilesystem: true
+  capabilities:
+    drop:
+      - ALL
+
+# -----------------------------------------------------------------------------
+# Service Account
+# -----------------------------------------------------------------------------
+serviceAccount:
+  create: false
+  name: ""
+  annotations: {}
+
+# -----------------------------------------------------------------------------
+# Network Policy (disabled by default, enable in prod)
+# -----------------------------------------------------------------------------
+networkPolicy:
+  enabled: false
+
+# -----------------------------------------------------------------------------
+# Pod Disruption Budget (disabled by default, enable in prod)
+# -----------------------------------------------------------------------------
+podDisruptionBudget:
+  enabled: false
+  minAvailable: 1
+
+# -----------------------------------------------------------------------------
+# Metrics & Monitoring
+# -----------------------------------------------------------------------------
+metrics:
+  enabled: true
+  port: 9090
+  path: /metrics
+
+# -----------------------------------------------------------------------------
+# Pod Annotations
+# -----------------------------------------------------------------------------
+podAnnotations: {}
+
+# -----------------------------------------------------------------------------
+# Node Selector & Tolerations (for prod)
+# -----------------------------------------------------------------------------
+nodeSelector: {}
+tolerations: []
+affinity: {}
+
+# -----------------------------------------------------------------------------
+# Shared Configuration (used by config templates)
+# -----------------------------------------------------------------------------
+# These values are available to all services via shared.config
+# Service-specific config in charts/*/values.yaml will override these
+shared:
+  config:
+    # Environment
+    ENV: "production"
+    LOG_LEVEL: "info"
+
+    # Infrastructure URLs (K8s internal DNS)
+    POSTGRES_HOST: "postgres"
+    POSTGRES_PORT: "5432"
+    DB_HOST: "postgres"
+    DB_PORT: "5432"
+    REDIS_HOST: "redis"
+    REDIS_PORT: "6379"
+
+    # Service URLs
+    AUTH_SERVICE_URL: "http://auth-service:8080"
+    USER_SERVICE_URL: "http://user-service:8081"
+    BOARD_SERVICE_URL: "http://board-service:8000"
+    CHAT_SERVICE_URL: "http://chat-service:8001"
+    NOTI_SERVICE_URL: "http://noti-service:8002"
+    STORAGE_SERVICE_URL: "http://storage-service:8003"
+    VIDEO_SERVICE_URL: "http://video-service:8004"
+
+    # S3/MinIO Configuration
+    S3_ENDPOINT: "http://minio:9000"
+    S3_PUBLIC_ENDPOINT: "http://minio:9000"
+    S3_BUCKET: "wealist-files"
+    S3_REGION: "ap-northeast-2"
+
+    # Security & CORS
+    CORS_ORIGINS: "*"
+    INTERNAL_API_KEY: "internal-key-change-me"
+
+    # LiveKit (WebRTC)
+    LIVEKIT_WS_URL: "ws://localhost/svc/livekit"

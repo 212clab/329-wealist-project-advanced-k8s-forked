@@ -45,33 +45,26 @@ service:
   annotations: {}
 
 # -----------------------------------------------------------------------------
-# Application Configuration
+# Application Configuration (Service-Specific Only)
 # -----------------------------------------------------------------------------
+# Note: Common config (ENV, LOG_LEVEL, REDIS_HOST, REDIS_PORT, CORS_ORIGINS, etc.)
+# comes from helm/environments/*.yaml via shared.config section.
+# Only service-specific values should be defined here.
 config:
-  # Server configuration
+  # Server (service-specific port)
   PORT: "8080"
   SERVER_PORT: "8080"
-  ENV: "production"
-  LOG_LEVEL: "info"
 
   # Spring Boot specific
   SPRING_PROFILES_ACTIVE: "production"
 
-  # Redis configuration
-  REDIS_HOST: "redis"
-  REDIS_PORT: "6379"
-
-  # JWT configuration
+  # JWT configuration (service-specific)
   JWT_EXPIRATION: "3600000"  # 1 hour in milliseconds
   JWT_REFRESH_EXPIRATION: "86400000"  # 24 hours
 
   # OAuth2 configuration (environment-specific overrides)
   OAUTH2_REDIRECT_URL_ENV: ""
   OAUTH2_CLIENT_REDIRECT_URI: ""
-
-  # CORS configuration
-  CORS_ALLOWED_ORIGINS: "https://wealist.co.kr"
-  CORS_ALLOWED_METHODS: "GET,POST,PUT,DELETE,OPTIONS"
 
 # -----------------------------------------------------------------------------
 # External Secrets (for production credentials)

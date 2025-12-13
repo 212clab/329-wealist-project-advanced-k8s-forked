@@ -1,0 +1,88 @@
+# =============================================================================
+# Local Kind Cluster Environment
+# =============================================================================
+# For team members running on local Kind cluster (localhost)
+# Namespace: wealist-kind-local
+
+# -----------------------------------------------------------------------------
+# Global Settings
+# -----------------------------------------------------------------------------
+global:
+  namespace: wealist-kind-local
+  environment: local
+  domain: localhost
+  imageRegistry: localhost:5001
+
+# -----------------------------------------------------------------------------
+# Deployment Settings
+# -----------------------------------------------------------------------------
+replicaCount: 1
+
+image:
+  pullPolicy: Always  # Always pull for development
+
+# -----------------------------------------------------------------------------
+# Resources (Lower for local development)
+# -----------------------------------------------------------------------------
+resources:
+  requests:
+    memory: "64Mi"
+    cpu: "25m"
+  limits:
+    memory: "256Mi"
+    cpu: "200m"
+
+# -----------------------------------------------------------------------------
+# Health Check (Faster startup in local)
+# -----------------------------------------------------------------------------
+healthCheck:
+  liveness:
+    initialDelaySeconds: 15
+  readiness:
+    initialDelaySeconds: 5
+
+# -----------------------------------------------------------------------------
+# Security (Relaxed for local development)
+# -----------------------------------------------------------------------------
+podSecurityContext:
+  runAsNonRoot: false
+
+securityContext:
+  allowPrivilegeEscalation: false
+  runAsNonRoot: false
+  readOnlyRootFilesystem: false
+
+# -----------------------------------------------------------------------------
+# Features Disabled for Local
+# -----------------------------------------------------------------------------
+autoscaling:
+  enabled: false
+
+serviceAccount:
+  create: false
+
+networkPolicy:
+  enabled: false
+
+podDisruptionBudget:
+  enabled: false
+
+# -----------------------------------------------------------------------------
+# Shared Configuration
+# -----------------------------------------------------------------------------
+shared:
+  config:
+    ENV: "local"
+    LOG_LEVEL: "debug"
+    CORS_ORIGINS: "*"
+    S3_PUBLIC_ENDPOINT: "http://localhost/minio"
+    LIVEKIT_WS_URL: "ws://localhost/svc/livekit"
+
+# -----------------------------------------------------------------------------
+# Ingress (localhost, no TLS)
+# -----------------------------------------------------------------------------
+ingress:
+  enabled: true
+  hosts:
+    - host: localhost
+  tls: []

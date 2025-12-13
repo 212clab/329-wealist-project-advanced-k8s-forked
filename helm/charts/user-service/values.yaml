@@ -46,33 +46,21 @@ service:
   # cloud.google.com/load-balancer-type: "Internal"
 
 # -----------------------------------------------------------------------------
-# Application Configuration
+# Application Configuration (Service-Specific Only)
 # -----------------------------------------------------------------------------
+# Note: Common config (ENV, LOG_LEVEL, S3_*, CORS_ORIGINS, etc.) comes from
+# helm/environments/*.yaml via shared.config section.
+# Only service-specific values should be defined here.
 config:
-  # Server
+  # Server (service-specific port)
   PORT: "8081"
   SERVER_PORT: "8081"
-  ENV: "production"
-  LOG_LEVEL: "info"
-  SERVER_BASE_PATH: ""  # Set in environment-specific values if needed
+  SERVER_BASE_PATH: "/api"
 
-  # Database
-  DB_HOST: "postgres"
-  DB_PORT: "5432"
+  # Database (service-specific database name)
   DB_NAME: "wealist_user_db"
 
-  # Redis
-  REDIS_HOST: "redis"
-  REDIS_PORT: "6379"
-
-  # Service URLs
-  AUTH_SERVICE_URL: "http://auth-service:8080"
-
-  # S3/MinIO Configuration
-  S3_BUCKET: "wealist-files"
-  S3_REGION: "ap-northeast-2"
-  S3_ENDPOINT: "http://minio:9000"
-  S3_PUBLIC_ENDPOINT: "https://wealist.co.kr/minio"
+  # Service-specific URLs (if any)
 
 # -----------------------------------------------------------------------------
 # Secrets (DO NOT COMMIT ACTUAL VALUES)
