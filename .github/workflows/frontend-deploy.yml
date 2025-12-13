@@ -80,9 +80,11 @@ jobs:
 
       - name: Inject runtime config
         env:
-          API_DOMAIN: ${{ secrets.API_DOMAIN }}
+          API_DOMAIN_RAW: ${{ secrets.API_DOMAIN }}
         run: |
           # Inject API_DOMAIN for WebSocket/SSE direct connection (bypasses CloudFront)
+          # Trim whitespace/newlines from secret value
+          API_DOMAIN=$(echo "$API_DOMAIN_RAW" | tr -d '[:space:]')
           if [ -n "$API_DOMAIN" ]; then
             printf 'window.__ENV__ = {\n  API_BASE_URL: "",\n  API_DOMAIN: "%s"\n};\n' "$API_DOMAIN" > dist/config.js
             echo "Injected API_DOMAIN: $API_DOMAIN"
