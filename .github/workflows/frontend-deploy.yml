@@ -19,23 +19,23 @@ name: Frontend Deploy
 on:
   push:
     branches:
-      - main
+      - dev-frontend
     paths:
-      - 'services/frontend/**'
+      - "services/frontend/**"
   workflow_dispatch:
     inputs:
       environment:
-        description: 'Deployment environment'
+        description: "Deployment environment"
         required: true
-        default: 'dev'
+        default: "dev"
         type: choice
         options:
           - dev
           - prod
 
 env:
-  NODE_VERSION: '20'
-  PNPM_VERSION: '8'
+  NODE_VERSION: "20"
+  PNPM_VERSION: "8"
 
 # OIDC requires these permissions
 permissions:
@@ -63,7 +63,7 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
-          cache: 'pnpm'
+          cache: "pnpm"
           cache-dependency-path: services/frontend/pnpm-lock.yaml
 
       - name: Install dependencies
