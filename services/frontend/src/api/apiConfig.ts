@@ -341,15 +341,6 @@ const getWebSocketProtocol = (baseUrl?: string): 'wss:' | 'ws:' => {
 };
 
 /**
- * API Domain 가져오기 (WebSocket/SSE용 - CloudFront 우회)
- * CloudFront를 통한 WebSocket은 HTTP/2 프로토콜 충돌 등 이슈가 있어서
- * 직접 API origin으로 연결해야 함
- */
-const getApiDomain = (): string | null => {
-  return window.__ENV__?.API_DOMAIN || null;
-};
-
-/**
  * Chat WebSocket URL 생성
  * @param chatId - 채팅방 ID
  * @param token - 액세스 토큰
