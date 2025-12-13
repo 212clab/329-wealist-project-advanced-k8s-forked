@@ -1,15 +1,18 @@
 # =============================================================================
-# Frontend Deploy to S3 + CloudFront
+# Frontend Deploy to S3 + CloudFront (OIDC)
 # =============================================================================
 # Triggers on push to main branch (services/frontend/ changes only)
 # Builds React app and deploys to S3, then invalidates CloudFront cache
 #
+# Uses GitHub OIDC for AWS authentication (no stored credentials!)
+#
 # Required Secrets:
-#   AWS_ACCESS_KEY_ID
-#   AWS_SECRET_ACCESS_KEY
+#   AWS_ROLE_ARN (e.g., arn:aws:iam::123456789012:role/github-actions-frontend-deploy)
 #   AWS_S3_BUCKET (e.g., wealist-frontend-dev)
 #   AWS_CLOUDFRONT_DISTRIBUTION_ID
-#   VITE_API_BASE_URL (optional, defaults to /svc)
+#
+# Optional Secrets:
+#   VITE_API_BASE_URL (defaults to /svc)
 
 name: Frontend Deploy
 
@@ -33,6 +36,11 @@ on:
 env:
   NODE_VERSION: '20'
   PNPM_VERSION: '8'
+
+# OIDC requires these permissions
+permissions:
+  id-token: write
+  contents: read
 
 jobs:
   build-and-deploy:
@@ -69,11 +77,10 @@ jobs:
         env:
           VITE_API_BASE_URL: ${{ secrets.VITE_API_BASE_URL || '/svc' }}
 
-      - name: Configure AWS Credentials
+      - name: Configure AWS Credentials (OIDC)
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
           aws-region: ap-northeast-2
 
       - name: Deploy to S3
