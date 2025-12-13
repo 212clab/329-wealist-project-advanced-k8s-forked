@@ -100,6 +100,23 @@ func (s *roomService) CreateRoom(ctx context.Context, req *domain.CreateRoomRequ
 		maxParticipants = 10
 	}
 
+	// Generate room ID first (before creating in LiveKit)
+	roomID := uuid.New()
+
+	// Create room in LiveKit FIRST (so we fail fast if LiveKit is unavailable)
+	if s.lkClient != nil {
+		_, err := s.lkClient.CreateRoom(ctx, &livekit.CreateRoomRequest{
+			Name:            roomID.String(),
+			EmptyTimeout:    300, // 5 minutes
+			MaxParticipants: uint32(maxParticipants),
+		})
+		if err != nil {
+			s.logger.Error("Failed to create LiveKit room", zap.Error(err))
+			return nil, fmt.Errorf("failed to create video room: LiveKit server unavailable")
+		}
+	}
+
+	// Now create room in database (LiveKit room exists at this point)
 	room := &domain.Room{
 		Name:            req.Name,
 		WorkspaceID:     workspaceID,
@@ -107,21 +124,16 @@ func (s *roomService) CreateRoom(ctx context.Context, req *domain.CreateRoomRequ
 		MaxParticipants: maxParticipants,
 		IsActive:        true,
 	}
+	room.ID = roomID // Use the same ID we used for LiveKit
 
 	if err := s.roomRepo.Create(room); err != nil {
-		return nil, fmt.Errorf("failed to create room: %w", err)
-	}
-
-	// Create room in LiveKit
-	if s.lkClient != nil {
-		_, err := s.lkClient.CreateRoom(ctx, &livekit.CreateRoomRequest{
-			Name:            room.ID.String(),
-			EmptyTimeout:    300, // 5 minutes
-			MaxParticipants: uint32(maxParticipants),
-		})
-		if err != nil {
-			s.logger.Warn("Failed to create LiveKit room", zap.Error(err))
+		// If DB creation fails, try to clean up LiveKit room
+		if s.lkClient != nil {
+			s.lkClient.DeleteRoom(ctx, &livekit.DeleteRoomRequest{
+				Room: roomID.String(),
+			})
 		}
+		return nil, fmt.Errorf("failed to create room: %w", err)
 	}
 
 	response := room.ToResponse()

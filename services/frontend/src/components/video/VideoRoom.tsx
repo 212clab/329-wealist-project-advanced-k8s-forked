@@ -196,6 +196,8 @@ export const VideoRoom: React.FC<VideoRoomProps> = ({
   const [currentWsUrl, setCurrentWsUrl] = useState(initialWsUrl);
   const rejoinAttemptsRef = useRef(0);
   const maxRejoinAttempts = 3;
+  // Track if we've ever successfully connected (to distinguish initial failure from disconnection)
+  const hasConnectedOnceRef = useRef(false);
 
   // Local state
   const [isMuted, setIsMuted] = useState(false);
@@ -284,9 +286,19 @@ export const VideoRoom: React.FC<VideoRoomProps> = ({
       setCurrentToken(newCredentials.token);
       setCurrentWsUrl(newCredentials.wsUrl);
       console.log('[VideoRoom] Got new token, will reconnect');
-    } catch (e) {
+    } catch (e: any) {
       console.error('[VideoRoom] Failed to refresh token:', e);
-      // Try again with exponential backoff
+
+      // Check if room is gone (410) or not found (404) - don't retry
+      const status = e?.response?.status;
+      if (status === 410 || status === 404) {
+        console.log('[VideoRoom] Room is gone or ended, stopping rejoin attempts');
+        setConnectionState('error');
+        setError('통화가 종료되었습니다.');
+        return;
+      }
+
+      // Try again with exponential backoff for other errors
       const delay = Math.min(1000 * Math.pow(2, rejoinAttemptsRef.current), 10000);
       setTimeout(attemptRejoin, delay);
     }
@@ -306,6 +318,7 @@ export const VideoRoom: React.FC<VideoRoomProps> = ({
         );
         await room.connect(currentWsUrl, currentToken);
         setConnectionState('connected');
+        hasConnectedOnceRef.current = true; // Mark that we've successfully connected
         rejoinAttemptsRef.current = 0; // Reset rejoin attempts on successful connection
         updateParticipants();
 
@@ -455,6 +468,15 @@ export const VideoRoom: React.FC<VideoRoomProps> = ({
     const onDisconnected = (reason?: DisconnectReason) => {
       console.log('[VideoRoom] Disconnected from room, reason:', reason);
       setConnectionState('disconnected');
+
+      // Only attempt to rejoin if we've successfully connected at least once
+      // This prevents infinite reconnection loops when the initial connection fails
+      if (!hasConnectedOnceRef.current) {
+        console.log('[VideoRoom] Initial connection failed, not attempting rejoin');
+        setConnectionState('error');
+        setError('통화 연결에 실패했습니다. 다시 시도해주세요.');
+        return;
+      }
 
       // If we have a token refresh callback, attempt to rejoin
       // This handles cases where LiveKit's built-in reconnection fails
