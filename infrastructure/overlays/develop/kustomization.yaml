@@ -15,9 +15,7 @@ images:
   - name: redis
     newName: localhost:5001/redis
     newTag: 7-alpine
-  - name: coturn/coturn
-    newName: localhost:5001/coturn
-    newTag: "4.6"
+  # coturn removed - LiveKit has built-in TURN server
   - name: livekit/livekit-server
     newName: localhost:5001/livekit
     newTag: v1.5

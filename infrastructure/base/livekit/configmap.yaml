@@ -9,11 +9,8 @@ data:
       port_range_start: 50000
       port_range_end: 60000
       tcp_port: 7881
-      # Use external IP detection for WebRTC ICE candidates
+      # For Kind cluster, use the host machine's external IP
       use_external_ip: true
-      # Fallback node_ip (overridden by use_external_ip when it works)
-      # For NAT traversal, also enable TCP fallback
-      enable_loopback_candidate: false
 
     keys:
       devkey: devsecretkey1234567890abcdefghijk
@@ -28,6 +25,6 @@ data:
 
     turn:
       enabled: true
-      domain: __API_DOMAIN__
+      domain: dev.wealist.co.kr
       tls_port: 0
       udp_port: 3478

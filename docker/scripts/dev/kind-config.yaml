@@ -33,12 +33,13 @@ nodes:
         hostPort: 7881
         listenAddress: "0.0.0.0"
         protocol: TCP
+      # TURN server ports (standard port 3478 for NAT traversal)
       - containerPort: 30488
-        hostPort: 3488
+        hostPort: 3478
         listenAddress: "0.0.0.0"
         protocol: TCP
       - containerPort: 30489
-        hostPort: 3489
+        hostPort: 3478
         listenAddress: "0.0.0.0"
         protocol: UDP
   - role: worker
