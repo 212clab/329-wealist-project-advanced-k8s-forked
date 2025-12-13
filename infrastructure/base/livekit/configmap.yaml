@@ -6,10 +6,13 @@ data:
   livekit.yaml: |
     port: 7880
     rtc:
+      # TCP만 사용 (Kind 환경에서 UDP 포트 범위 노출이 어려움)
       tcp_port: 7881
       use_external_ip: true
-      node_ip: "39.119.192.15"      # ← 공인 IP
-      port_range_start: 7881        # ← TCP만 사용
+      # 명시적으로 공인 IP 설정 (집 IP)
+      node_ip: "39.119.192.15"
+      # UDP 비활성화를 위해 포트 범위를 TCP 포트와 동일하게
+      port_range_start: 7881
       port_range_end: 7881
 
     keys:
