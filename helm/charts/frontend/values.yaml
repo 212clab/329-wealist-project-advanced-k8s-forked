@@ -109,21 +109,9 @@ autoscaling:
 # -----------------------------------------------------------------------------
 # Security
 # -----------------------------------------------------------------------------
-podSecurityContext:
-  runAsNonRoot: true
-  runAsUser: 101  # nginx user
-  fsGroup: 101
-  seccompProfile:
-    type: RuntimeDefault
-
-securityContext:
-  allowPrivilegeEscalation: false
-  capabilities:
-    drop:
-      - ALL
-  readOnlyRootFilesystem: true  # NGINX can run with read-only root
-  runAsNonRoot: true
-  runAsUser: 101
+# Note: podSecurityContext and securityContext are inherited from
+# helm/environments/*.yaml files. NGINX needs write access to /var/cache/nginx
+# so readOnlyRootFilesystem must be false (set in local-kind.yaml, local-ubuntu.yaml)
 
 # -----------------------------------------------------------------------------
 # Service Account

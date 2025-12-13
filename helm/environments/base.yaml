@@ -128,8 +128,12 @@ shared:
     POSTGRES_PORT: "5432"
     DB_HOST: "postgres"
     DB_PORT: "5432"
+    DB_USER: "postgres"
+    DB_PASSWORD: "postgres"
+    DB_SSLMODE: "disable"
     REDIS_HOST: "redis"
     REDIS_PORT: "6379"
+    REDIS_PASSWORD: ""
 
     # Service URLs
     AUTH_SERVICE_URL: "http://auth-service:8080"
@@ -145,10 +149,16 @@ shared:
     S3_PUBLIC_ENDPOINT: "http://minio:9000"
     S3_BUCKET: "wealist-files"
     S3_REGION: "ap-northeast-2"
+    S3_ACCESS_KEY: "minioadmin"
+    S3_SECRET_KEY: "minioadmin"
 
     # Security & CORS
     CORS_ORIGINS: "*"
     INTERNAL_API_KEY: "internal-key-change-me"
+    JWT_SECRET: "dev-jwt-secret-change-in-production"
 
     # LiveKit (WebRTC)
+    LIVEKIT_URL: "http://livekit:7880"
     LIVEKIT_WS_URL: "ws://localhost/svc/livekit"
+    LIVEKIT_API_KEY: "devkey"
+    LIVEKIT_API_SECRET: "devsecret"

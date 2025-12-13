@@ -59,10 +59,10 @@ spec:
               protocol: TCP
           {{- if .Values.healthCheck }}
           {{- if .Values.healthCheck.liveness }}
-          {{- if .Values.healthCheck.liveness.enabled }}
+          {{- if ne (toString .Values.healthCheck.liveness.enabled) "false" }}
           livenessProbe:
             httpGet:
-              path: {{ .Values.healthCheck.liveness.path }}
+              path: {{ .Values.healthCheck.liveness.path | default "/health/live" }}
               port: {{ .Values.healthCheck.liveness.port | default .Values.service.targetPort }}
             initialDelaySeconds: {{ .Values.healthCheck.liveness.initialDelaySeconds | default 10 }}
             periodSeconds: {{ .Values.healthCheck.liveness.periodSeconds | default 10 }}
@@ -72,10 +72,10 @@ spec:
           {{- end }}
           {{- end }}
           {{- if .Values.healthCheck.readiness }}
-          {{- if .Values.healthCheck.readiness.enabled }}
+          {{- if ne (toString .Values.healthCheck.readiness.enabled) "false" }}
           readinessProbe:
             httpGet:
-              path: {{ .Values.healthCheck.readiness.path }}
+              path: {{ .Values.healthCheck.readiness.path | default "/health/ready" }}
               port: {{ .Values.healthCheck.readiness.port | default .Values.service.targetPort }}
             initialDelaySeconds: {{ .Values.healthCheck.readiness.initialDelaySeconds | default 5 }}
             periodSeconds: {{ .Values.healthCheck.readiness.periodSeconds | default 5 }}
@@ -89,8 +89,10 @@ spec:
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
           {{- end }}
-          {{- if .Values.envFrom }}
           envFrom:
+            - configMapRef:
+                name: {{ include "wealist-common.fullname" . }}-config
+          {{- if .Values.envFrom }}
             {{- toYaml .Values.envFrom | nindent 12 }}
           {{- end }}
           {{- if .Values.env }}
