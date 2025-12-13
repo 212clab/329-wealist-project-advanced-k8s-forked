@@ -29,12 +29,10 @@ spec:
             - secretRef:
                 name: wealist-secrets
           env:
-            - name: LIVEKIT_HOST
-              value: "http://livekit:7880"
-            - name: LIVEKIT_WS_URL
-              value: "wss://local.wealist.co.kr/svc/livekit"
+            # DATABASE_URL needs to be here (contains password, could move to secret later)
             - name: DATABASE_URL
               value: "postgresql://video_service:video_service_password@postgres:5432/wealist_video_db?sslmode=disable"
+            # LIVEKIT_HOST, LIVEKIT_WS_URL are from video-service-config configmap
           resources:
             requests:
               memory: "128Mi"

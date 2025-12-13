@@ -125,3 +125,7 @@ make auth-service-redeploy  # k8s 롤아웃 재시작
 
 kubectl get secret -n wealist-dev -o yaml | grep -A1 GOOGLE_CLIENT_ID
 kubectl exec -n wealist-dev deploy/auth-service -- env | grep -E "GOOGLE|OAUTH"
+
+# LIVEKIT_HOST 잘 들어갔는지 확인
+
+kubectl exec -n wealist-dev deployment/video-service -- env | grep LIVEKIT
