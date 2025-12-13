@@ -527,7 +527,7 @@ export const getOAuthBaseUrl = (): string => {
     return `${INJECTED_API_BASE_URL}/api/users`;
   }
 
-  // Fallback
+  // Fallback~
   return 'https://api.wealist.co.kr/api/users';
 };
 
