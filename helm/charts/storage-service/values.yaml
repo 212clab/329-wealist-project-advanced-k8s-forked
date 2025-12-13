@@ -61,17 +61,16 @@ externalSecrets:
 # -----------------------------------------------------------------------------
 # Health Check Configuration
 # -----------------------------------------------------------------------------
-# Note: storage-service only exposes /health (no separate /ready endpoint)
 healthCheck:
   liveness:
-    path: /health
+    path: /health/live
     initialDelaySeconds: 30
     periodSeconds: 10
     timeoutSeconds: 5
     successThreshold: 1
     failureThreshold: 3
   readiness:
-    path: /health
+    path: /health/ready
     initialDelaySeconds: 20
     periodSeconds: 5
     timeoutSeconds: 3

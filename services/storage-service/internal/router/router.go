@@ -6,6 +6,7 @@ import (
 	"go.uber.org/zap"
 	"gorm.io/gorm"
 
+	commonhealth "github.com/OrangesCloud/wealist-advanced-go-pkg/health"
 	commonmw "github.com/OrangesCloud/wealist-advanced-go-pkg/middleware"
 	"storage-service/internal/client"
 	"storage-service/internal/handler"
@@ -38,26 +39,9 @@ func Setup(cfg Config) *gin.Engine {
 	// Prometheus metrics endpoint
 	r.GET("/metrics", gin.WrapH(promhttp.Handler()))
 
-	// Health check routes
-	r.GET("/health", func(c *gin.Context) {
-		c.JSON(200, gin.H{"status": "healthy", "service": "storage-service"})
-	})
-	r.GET("/ready", func(c *gin.Context) {
-		if cfg.DB == nil {
-			c.JSON(503, gin.H{"status": "not ready", "service": "storage-service"})
-			return
-		}
-		sqlDB, err := cfg.DB.DB()
-		if err != nil {
-			c.JSON(503, gin.H{"status": "not ready", "service": "storage-service"})
-			return
-		}
-		if err := sqlDB.Ping(); err != nil {
-			c.JSON(503, gin.H{"status": "not ready", "service": "storage-service"})
-			return
-		}
-		c.JSON(200, gin.H{"status": "ready", "service": "storage-service"})
-	})
+	// Health check routes (using common package)
+	healthChecker := commonhealth.NewHealthChecker(cfg.DB, nil) // no Redis in storage-service
+	healthChecker.RegisterRoutes(r, cfg.BasePath)
 
 	// Initialize repositories
 	folderRepo := repository.NewFolderRepository(cfg.DB)
