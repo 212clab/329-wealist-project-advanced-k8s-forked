@@ -9,7 +9,7 @@ set -e
 REG_PORT="5001"
 LOCAL_REG="localhost:${REG_PORT}"
 TAG="${IMAGE_TAG:-latest}"  # 환경변수로 오버라이드 가능, 기본값 latest
-MAX_PARALLEL="${MAX_PARALLEL:-2}"  # 동시 빌드 수 (기본 2, 리소스 경쟁 줄이기)
+MAX_PARALLEL="${MAX_PARALLEL:-4}"  # 동시 빌드 수 (기본 4)
 
 # 색상 출력
 RED='\033[0;31m'
@@ -41,17 +41,30 @@ echo ""
 TEMP_DIR=$(mktemp -d)
 trap "rm -rf $TEMP_DIR" EXIT
 
-# 서비스 정보 배열 (빠른 빌드 먼저)
-# 순서: frontend(npm) → Go 서비스들 → auth-service(Gradle, 느림)
+# Detect if service uses common packages (requires project root context)
+# All Go services use common packages, only auth-service (Spring Boot) and frontend (React) don't
+uses_common_packages() {
+    local name="$1"
+    case "$name" in
+        auth-service|frontend)
+            return 1  # false - Spring Boot and React don't use Go packages
+            ;;
+        *)
+            return 0  # true - all Go services use common packages
+            ;;
+    esac
+}
+
+# 서비스 정보 배열
 declare -a SERVICES=(
-    "frontend|services/frontend|Dockerfile"
-    "video-service|services/video-service|docker/Dockerfile"
+    "auth-service|services/auth-service|Dockerfile"
     "board-service|services/board-service|docker/Dockerfile"
+    "chat-service|services/chat-service|docker/Dockerfile"
+    "frontend|services/frontend|Dockerfile"
     "noti-service|services/noti-service|docker/Dockerfile"
     "storage-service|services/storage-service|docker/Dockerfile"
-    "chat-service|.|services/chat-service/docker/Dockerfile"
-    "user-service|.|services/user-service/docker/Dockerfile"
-    "auth-service|services/auth-service|Dockerfile"
+    "user-service|services/user-service|docker/Dockerfile"
+    "video-service|services/video-service|docker/Dockerfile"
 )
 
 # 빌드할 서비스 선택
@@ -97,7 +110,17 @@ build_service() {
         echo "Image: $image_name"
         echo ""
 
-        if docker build -t "$image_name" -f "$path/$dockerfile" "$path" 2>&1; then
+        # Determine build context based on service type
+        local build_context
+        if uses_common_packages "$name"; then
+            build_context="."
+            echo "Using project root context (common packages)"
+        else
+            build_context="$path"
+            echo "Using service directory context"
+        fi
+
+        if docker build -t "$image_name" -f "$path/$dockerfile" "$build_context" 2>&1; then
             echo ""
             echo "Pushing to local registry..."
             if docker push "$image_name" 2>&1; then

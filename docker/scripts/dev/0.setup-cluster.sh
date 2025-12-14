@@ -43,18 +43,14 @@ nodes:
           kubeletExtraArgs:
             node-labels: "ingress-ready=true"
     extraPortMappings:
-      # listenAddress: 0.0.0.0 → 같은 네트워크의 다른 컴퓨터에서 접근 가능
       - containerPort: 80
         hostPort: 80
-        listenAddress: "0.0.0.0"
         protocol: TCP
       - containerPort: 443
         hostPort: 443
-        listenAddress: "0.0.0.0"
         protocol: TCP
       - containerPort: 30080
         hostPort: 8080
-        listenAddress: "0.0.0.0"
         protocol: TCP
   - role: worker
   - role: worker
@@ -86,13 +82,6 @@ EOF
 # 7. Ingress Nginx Controller 설치
 echo "⏳ Ingress Nginx Controller 설치 중..."
 kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/main/deploy/static/provider/kind/deploy.yaml
-
-# ingress-nginx를 control-plane 노드에서 실행하도록 설정 (포트 매핑이 control-plane에만 있음)
-echo "⚙️ Ingress Controller를 control-plane 노드로 설정 중..."
-kubectl patch deployment ingress-nginx-controller -n ingress-nginx --type='json' -p='[
-  {"op": "add", "path": "/spec/template/spec/nodeSelector", "value": {"ingress-ready": "true"}},
-  {"op": "add", "path": "/spec/template/spec/tolerations", "value": [{"key": "node-role.kubernetes.io/control-plane", "operator": "Exists", "effect": "NoSchedule"}]}
-]' 2>/dev/null || true
 
 echo "⏳ Ingress Controller 준비 대기 중..."
 kubectl wait --namespace ingress-nginx \

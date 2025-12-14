@@ -103,9 +103,7 @@ func (r *roomRepository) UpdateParticipant(participant *domain.RoomParticipant) 
 
 func (r *roomRepository) GetParticipant(roomID, userID uuid.UUID) (*domain.RoomParticipant, error) {
 	var participant domain.RoomParticipant
-	// Find participant regardless of active status (to handle rejoin case)
-	// This prevents duplicate records when a user leaves and rejoins
-	if err := r.db.Where("room_id = ? AND user_id = ?", roomID, userID).
+	if err := r.db.Where("room_id = ? AND user_id = ? AND is_active = ?", roomID, userID, true).
 		First(&participant).Error; err != nil {
 		return nil, err
 	}

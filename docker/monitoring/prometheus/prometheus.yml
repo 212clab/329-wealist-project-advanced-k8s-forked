@@ -86,3 +86,13 @@ scrape_configs:
     static_configs:
       - targets: ['minio:9000']
     metrics_path: '/minio/v2/metrics/cluster'
+
+  # ==========================================================================
+  # Code Quality Services
+  # ==========================================================================
+
+  # SonarQube
+  - job_name: 'sonarqube'
+    static_configs:
+      - targets: ['sonarqube:9000']
+    metrics_path: '/api/monitoring/metrics'

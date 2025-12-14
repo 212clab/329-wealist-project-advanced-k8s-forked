@@ -25,12 +25,12 @@ spec:
               protocol: TCP
           envFrom:
             - configMapRef:
-                name: wealist-config
+                name: wealist-shared-config
             - secretRef:
-                name: wealist-secrets
+                name: wealist-shared-secrets
           env:
             - name: LIVEKIT_WS_URL
-              value: "wss://__LOCAL_DOMAIN__/svc/livekit"
+              value: "wss://local.wealist.co.kr/svc/livekit"
             - name: DATABASE_URL
               value: "postgresql://video_service:video_service_password@postgres:5432/wealist_video_db?sslmode=disable"
           resources:

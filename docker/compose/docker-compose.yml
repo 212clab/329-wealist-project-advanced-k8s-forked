@@ -7,105 +7,52 @@
 #   ./docker/scripts/dev.sh up
 #   또는
 #   docker compose -f docker/compose/docker-compose.yml up
-#
-# 빌드 순서 최적화:
-#   빠른 빌드 → 느린 빌드 순서로 배치하여 순차 빌드 시 효율적으로 동작
-#   1. frontend (npm) → 2. Go services → 3. auth-service (Gradle, 가장 느림)
 # =============================================================================
 
 services:
   # ===========================================================================
-  # Backend Services (빌드 속도 순: 빠름 → 느림)
+  # Backend Services
   # ===========================================================================
 
-  # Frontend Service (React + Vite) - 빠른 빌드
-  frontend-service:
+  # User Service (Go)
+  user-service:
     build:
-      context: ../../services/frontend
-      dockerfile: Dockerfile
-      target: development
-    image: wealist/frontend:${VERSION:-latest}
-    container_name: wealist-frontend
-    hostname: frontend
-    env_file:
-      - ../env/.env.dev
-    ports:
-      - "${FRONTEND_HOST_PORT:-3000}:5173"
-
-    volumes:
-      # 소스코드 Hot Reload
-      - ../../services/frontend:/app
-      - /app/node_modules # node_modules는 컨테이너 내부 것 사용
-
-    command: pnpm dev --host 0.0.0.0 --port 5173 --strictPort
-
-    environment:
-      - NODE_ENV=development
-      - VITE_API_BASE_URL=http://localhost
-      - LOG_LEVEL=debug
-
-    networks:
-      - frontend-net
-      - backend-net
-
-    healthcheck:
-      test: ["CMD", "wget", "-q", "--spider", "http://localhost:5173/"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 30s
-
-    restart: unless-stopped
-
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "10m"
-        max-file: "3"
-
-  # Video Service (Go) - Video Call Room Management
-  video-service:
-    build:
-      context: ../../services/video-service
+      context: ../../services/user-service
       dockerfile: docker/Dockerfile
-    image: wealist/video-service:${VERSION:-latest}
-    container_name: wealist-video-service
-    hostname: video-service
+    image: wealist/user-service:${VERSION:-latest}
+    container_name: wealist-user-service
+    hostname: user-service
     env_file:
       - ../env/.env.dev
     ports:
-      - "${VIDEO_HOST_PORT:-8004}:8004"
+      - "${USER_HOST_PORT:-8081}:8081"
 
     environment:
       # Server Configuration
       - ENV=dev
-      - PORT=8004
-      - SERVER_BASE_PATH=/api/video
+      - SERVER_PORT=8081
+      - USER_SERVICE_PORT=8081
       - LOG_LEVEL=debug
 
       # Database Configuration
-      - DATABASE_URL=postgresql://${VIDEO_DB_USER}:${VIDEO_DB_PASSWORD}@postgres:5432/${VIDEO_DB_NAME}?sslmode=disable
+      - DATABASE_URL=postgresql://${USER_DB_USER}:${USER_DB_PASSWORD}@postgres:5432/${USER_DB_NAME}?sslmode=disable
 
-      # Redis Configuration
-      - REDIS_HOST=redis
-      - REDIS_PORT=6379
-      - REDIS_PASSWORD=${REDIS_PASSWORD}
-
-      # Auth Service
-      - AUTH_SERVICE_URL=http://auth-service:8080
+      # JWT Configuration
       - SECRET_KEY=${JWT_SECRET}
 
-      # User Service (base path for workspace validation)
-      - USER_SERVICE_URL=http://user-service:8081
+      # Service URLs
+      - AUTH_SERVICE_URL=http://auth-service:8080
 
       # CORS Configuration
       - CORS_ORIGINS=${CORS_ORIGINS}
 
-      # LiveKit Configuration
-      - LIVEKIT_HOST=http://livekit:7880
-      - LIVEKIT_API_KEY=${LIVEKIT_API_KEY}
-      - LIVEKIT_API_SECRET=${LIVEKIT_API_SECRET}
-      - LIVEKIT_WS_URL=${LIVEKIT_WS_URL:-ws://localhost:7880}
+      # S3/MinIO Configuration
+      - S3_BUCKET=${S3_BUCKET}
+      - S3_REGION=${S3_REGION}
+      - S3_ENDPOINT=${S3_ENDPOINT}
+      - S3_PUBLIC_ENDPOINT=${S3_PUBLIC_ENDPOINT}
+      - S3_ACCESS_KEY=${S3_ACCESS_KEY}
+      - S3_SECRET_KEY=${S3_SECRET_KEY}
 
     networks:
       - frontend-net
@@ -115,10 +62,8 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
-      redis:
+      minio:
         condition: service_healthy
-      livekit:
-        condition: service_started
 
     healthcheck:
       test:
@@ -129,12 +74,83 @@ services:
           "--tries=1",
           "-O",
           "/dev/null",
-          "http://localhost:8004/health",
+          "http://localhost:8081/health",
         ]
       interval: 30s
       timeout: 3s
       retries: 3
       start_period: 10s
+
+    restart: unless-stopped
+
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # Auth Service (Spring Boot) - 토큰 관리 전용
+  auth-service:
+    build:
+      context: ../../services/auth-service
+      dockerfile: Dockerfile
+    image: wealist/auth-service:${VERSION:-latest}
+    container_name: wealist-auth-service
+    hostname: auth-service
+    env_file:
+      - ../env/.env.dev
+    ports:
+      - "${AUTH_HOST_PORT:-8080}:8080"
+
+    environment:
+      # Server Configuration
+      - SERVER_PORT=8080
+      - AUTH_SERVICE_PORT=8080
+      - APP_NAME=${APP_NAME:-wealist-auth}
+
+      # Redis Configuration
+      - SPRING_REDIS_HOST=redis
+      - SPRING_REDIS_PORT=6379
+      - SPRING_REDIS_PASSWORD=${REDIS_PASSWORD}
+
+      # JWT Configuration
+      - JWT_SECRET=${JWT_SECRET}
+      - JWT_ACCESS_TOKEN_EXPIRATION_MS=${JWT_ACCESS_TOKEN_EXPIRATION_MS}
+      - JWT_REFRESH_TOKEN_EXPIRATION_MS=${JWT_REFRESH_TOKEN_EXPIRATION_MS}
+
+      # OAuth Configuration
+      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
+      - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}
+      - OAUTH2_CLIENT_REDIRECT_URI=${OAUTH2_CLIENT_REDIRECT_URI:-http://localhost:8080/login/oauth2/code/google}
+      - OAUTH2_REDIRECT_URL_ENV=${OAUTH2_REDIRECT_URL:-http://localhost:3000/oauth/callback}
+
+      # User Service URL (OAuth 로그인 시 유저 조회/생성용)
+      - USER_SERVICE_URL=http://user-service:8081
+
+      # Dev Settings
+      - SPRING_PROFILES_ACTIVE=dev
+      - LOGGING_LEVEL_ROOT=INFO
+      - LOGGING_LEVEL_ORG_SPRINGFRAMEWORK_SECURITY=DEBUG
+      - LOGGING_LEVEL_ORANGECLOUD=DEBUG
+
+      # Java Options
+      - JAVA_OPTS=-Xms128m -Xmx256m -XX:+UseContainerSupport -XX:MaxRAMPercentage=75.0
+
+    networks:
+      - frontend-net
+      - backend-net
+      - database-net
+
+    depends_on:
+      redis:
+        condition: service_healthy
+
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
 
     restart: unless-stopped
 
@@ -215,6 +231,66 @@ services:
           "-O",
           "/dev/null",
           "http://localhost:8000/health",
+        ]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 10s
+
+    restart: unless-stopped
+
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # Chat Service (Go)
+  chat-service:
+    build:
+      context: ../../services/chat-service
+      dockerfile: docker/Dockerfile
+    image: wealist/chat-service:${VERSION:-latest}
+    container_name: wealist-chat-service
+    hostname: chat-service
+    ports:
+      - "${CHAT_HOST_PORT:-8001}:8001"
+
+    environment:
+      - ENV=dev
+      - PORT=8001
+      - SERVER_BASE_PATH=/api/chats
+      - LOG_LEVEL=debug
+      - DATABASE_URL=postgresql://${CHAT_DB_USER}:${CHAT_DB_PASSWORD}@postgres:5432/${CHAT_DB_NAME}?sslmode=disable
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REDIS_PASSWORD=${REDIS_PASSWORD}
+      - USER_SERVICE_URL=http://user-service:8081
+      - AUTH_SERVICE_URL=http://auth-service:8080
+      - SECRET_KEY=${JWT_SECRET}
+      - CORS_ORIGINS=${CORS_ORIGINS}
+
+    networks:
+      - frontend-net
+      - backend-net
+      - database-net
+
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "wget",
+          "--no-verbose",
+          "--tries=1",
+          "-O",
+          "/dev/null",
+          "http://localhost:8001/health",
         ]
       interval: 30s
       timeout: 3s
@@ -371,105 +447,49 @@ services:
         max-size: "10m"
         max-file: "3"
 
-  # Chat Service (Go) - shared pkg 사용
-  chat-service:
+  # Video Service (Go) - Video Call Room Management
+  video-service:
     build:
-      context: ../..
-      dockerfile: services/chat-service/docker/Dockerfile
-    image: wealist/chat-service:${VERSION:-latest}
-    container_name: wealist-chat-service
-    hostname: chat-service
-    ports:
-      - "${CHAT_HOST_PORT:-8001}:8001"
-
-    environment:
-      - ENV=dev
-      - PORT=8001
-      - SERVER_BASE_PATH=/api/chats
-      - LOG_LEVEL=debug
-      - DATABASE_URL=postgresql://${CHAT_DB_USER}:${CHAT_DB_PASSWORD}@postgres:5432/${CHAT_DB_NAME}?sslmode=disable
-      - REDIS_HOST=redis
-      - REDIS_PORT=6379
-      - REDIS_PASSWORD=${REDIS_PASSWORD}
-      - USER_SERVICE_URL=http://user-service:8081
-      - AUTH_SERVICE_URL=http://auth-service:8080
-      - SECRET_KEY=${JWT_SECRET}
-      - CORS_ORIGINS=${CORS_ORIGINS}
-
-    networks:
-      - frontend-net
-      - backend-net
-      - database-net
-
-    depends_on:
-      postgres:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-
-    healthcheck:
-      test:
-        [
-          "CMD",
-          "wget",
-          "--no-verbose",
-          "--tries=1",
-          "-O",
-          "/dev/null",
-          "http://localhost:8001/health",
-        ]
-      interval: 30s
-      timeout: 3s
-      retries: 3
-      start_period: 10s
-
-    restart: unless-stopped
-
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "10m"
-        max-file: "3"
-
-  # User Service (Go) - shared pkg 사용
-  user-service:
-    build:
-      context: ../..
-      dockerfile: services/user-service/docker/Dockerfile
-    image: wealist/user-service:${VERSION:-latest}
-    container_name: wealist-user-service
-    hostname: user-service
+      context: ../../services/video-service
+      dockerfile: docker/Dockerfile
+    image: wealist/video-service:${VERSION:-latest}
+    container_name: wealist-video-service
+    hostname: video-service
     env_file:
       - ../env/.env.dev
     ports:
-      - "${USER_HOST_PORT:-8081}:8081"
+      - "${VIDEO_HOST_PORT:-8004}:8004"
 
     environment:
       # Server Configuration
       - ENV=dev
-      - SERVER_PORT=8081
-      - USER_SERVICE_PORT=8081
+      - PORT=8004
+      - SERVER_BASE_PATH=/api/video
       - LOG_LEVEL=debug
 
       # Database Configuration
-      - DATABASE_URL=postgresql://${USER_DB_USER}:${USER_DB_PASSWORD}@postgres:5432/${USER_DB_NAME}?sslmode=disable
+      - DATABASE_URL=postgresql://${VIDEO_DB_USER}:${VIDEO_DB_PASSWORD}@postgres:5432/${VIDEO_DB_NAME}?sslmode=disable
 
-      # JWT Configuration
+      # Redis Configuration
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REDIS_PASSWORD=${REDIS_PASSWORD}
+
+      # Auth Service
+      - AUTH_SERVICE_URL=http://auth-service:8080
       - SECRET_KEY=${JWT_SECRET}
 
-      # Service URLs
-      - AUTH_SERVICE_URL=http://auth-service:8080
+      # User Service (base path for workspace validation)
+      - USER_SERVICE_URL=http://user-service:8081
 
       # CORS Configuration
       - CORS_ORIGINS=${CORS_ORIGINS}
 
-      # S3/MinIO Configuration
-      - S3_BUCKET=${S3_BUCKET}
-      - S3_REGION=${S3_REGION}
-      - S3_ENDPOINT=${S3_ENDPOINT}
-      - S3_PUBLIC_ENDPOINT=${S3_PUBLIC_ENDPOINT}
-      - S3_ACCESS_KEY=${S3_ACCESS_KEY}
-      - S3_SECRET_KEY=${S3_SECRET_KEY}
+      # LiveKit Configuration
+      - LIVEKIT_HOST=http://livekit:7880
+      - LIVEKIT_API_KEY=${LIVEKIT_API_KEY}
+      - LIVEKIT_API_SECRET=${LIVEKIT_API_SECRET}
+      - LIVEKIT_WS_URL=${LIVEKIT_WS_URL:-ws://localhost:7880}
 
     networks:
       - frontend-net
@@ -479,8 +499,10 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
-      minio:
+      redis:
         condition: service_healthy
+      livekit:
+        condition: service_started
 
     healthcheck:
       test:
@@ -491,7 +513,7 @@ services:
           "--tries=1",
           "-O",
           "/dev/null",
-          "http://localhost:8081/health",
+          "http://localhost:8004/health",
         ]
       interval: 30s
       timeout: 3s
@@ -506,78 +528,7 @@ services:
         max-size: "10m"
         max-file: "3"
 
-  # Auth Service (Spring Boot) - 토큰 관리 전용, Gradle 빌드로 가장 느림
-  auth-service:
-    build:
-      context: ../../services/auth-service
-      dockerfile: Dockerfile
-    image: wealist/auth-service:${VERSION:-latest}
-    container_name: wealist-auth-service
-    hostname: auth-service
-    env_file:
-      - ../env/.env.dev
-    ports:
-      - "${AUTH_HOST_PORT:-8080}:8080"
-
-    environment:
-      # Server Configuration
-      - SERVER_PORT=8080
-      - AUTH_SERVICE_PORT=8080
-      - APP_NAME=${APP_NAME:-wealist-auth}
-
-      # Redis Configuration
-      - SPRING_REDIS_HOST=redis
-      - SPRING_REDIS_PORT=6379
-      - SPRING_REDIS_PASSWORD=${REDIS_PASSWORD}
-
-      # JWT Configuration
-      - JWT_SECRET=${JWT_SECRET}
-      - JWT_ACCESS_TOKEN_EXPIRATION_MS=${JWT_ACCESS_TOKEN_EXPIRATION_MS}
-      - JWT_REFRESH_TOKEN_EXPIRATION_MS=${JWT_REFRESH_TOKEN_EXPIRATION_MS}
-
-      # OAuth Configuration
-      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
-      - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}
-      - OAUTH2_CLIENT_REDIRECT_URI=${OAUTH2_CLIENT_REDIRECT_URI:-http://localhost:8080/login/oauth2/code/google}
-      - OAUTH2_REDIRECT_URL_ENV=${OAUTH2_REDIRECT_URL:-http://localhost:3000/oauth/callback}
-
-      # User Service URL (OAuth 로그인 시 유저 조회/생성용)
-      - USER_SERVICE_URL=http://user-service:8081
-
-      # Dev Settings
-      - SPRING_PROFILES_ACTIVE=dev
-      - LOGGING_LEVEL_ROOT=INFO
-      - LOGGING_LEVEL_ORG_SPRINGFRAMEWORK_SECURITY=DEBUG
-      - LOGGING_LEVEL_ORANGECLOUD=DEBUG
-
-      # Java Options
-      - JAVA_OPTS=-Xms128m -Xmx256m -XX:+UseContainerSupport -XX:MaxRAMPercentage=75.0
-
-    networks:
-      - frontend-net
-      - backend-net
-      - database-net
-
-    depends_on:
-      redis:
-        condition: service_healthy
-
-    healthcheck:
-      test: ["CMD", "wget", "-q", "--spider", "http://localhost:8080/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 60s
-
-    restart: unless-stopped
-
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "10m"
-        max-file: "3"
-
-  # LiveKit SFU Server - WebRTC Media Server (이미지 pull만)
+  # LiveKit SFU Server - WebRTC Media Server
   livekit:
     image: livekit/livekit-server:v1.5
     container_name: wealist-livekit
@@ -604,7 +555,7 @@ services:
         max-size: "10m"
         max-file: "3"
 
-  # coturn TURN/STUN Server - NAT Traversal (이미지 pull만)
+  # coturn TURN/STUN Server - NAT Traversal
   coturn:
     image: coturn/coturn:4.6
     container_name: wealist-coturn
@@ -623,6 +574,51 @@ services:
     networks:
       - frontend-net
       - backend-net
+
+    restart: unless-stopped
+
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # Frontend Service (React + Vite)
+  frontend-service:
+    build:
+      context: ../../services/frontend
+      dockerfile: Dockerfile
+      target: development
+    image: wealist/frontend:${VERSION:-latest}
+    container_name: wealist-frontend
+    hostname: frontend
+    env_file:
+      - ../env/.env.dev
+    ports:
+      - "${FRONTEND_HOST_PORT:-3000}:5173"
+
+    volumes:
+      # 소스코드 Hot Reload
+      - ../../services/frontend:/app
+      - /app/node_modules # node_modules는 컨테이너 내부 것 사용
+
+    command: pnpm dev --host 0.0.0.0 --port 5173 --strictPort
+
+    environment:
+      - NODE_ENV=development
+      - VITE_API_BASE_URL=http://localhost
+      - LOG_LEVEL=debug
+
+    networks:
+      - frontend-net
+      - backend-net
+
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:5173/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
 
     restart: unless-stopped
 
@@ -1042,6 +1038,53 @@ services:
         max-size: "10m"
         max-file: "3"
 
+  # =============================================================================
+  # Code Quality
+  # =============================================================================
+
+  # SonarQube - Code quality and security analysis
+  sonarqube:
+    image: sonarqube:10.3-community
+    container_name: wealist-sonarqube
+    hostname: sonarqube
+    ports:
+      - "${SONARQUBE_PORT:-9000}:9000"
+
+    environment:
+      - SONAR_JDBC_URL=jdbc:postgresql://postgres:5432/${SONARQUBE_DB_NAME}
+      - SONAR_JDBC_USERNAME=${SONARQUBE_DB_USER}
+      - SONAR_JDBC_PASSWORD=${SONARQUBE_DB_PASSWORD}
+      - SONAR_ES_BOOTSTRAP_CHECKS_DISABLE=true
+
+    volumes:
+      - sonarqube-data:/opt/sonarqube/data
+      - sonarqube-extensions:/opt/sonarqube/extensions
+      - sonarqube-logs:/opt/sonarqube/logs
+
+    networks:
+      - backend-net
+      - database-net
+      - monitoring-net
+
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:9000/api/system/status"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+
+    restart: unless-stopped
+
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
 # =============================================================================
 # Networks
 # =============================================================================
@@ -1088,4 +1131,16 @@ volumes:
 
   grafana-data:
     name: wealist-grafana-data
+    driver: local
+
+  sonarqube-data:
+    name: wealist-sonarqube-data
+    driver: local
+
+  sonarqube-extensions:
+    name: wealist-sonarqube-extensions
+    driver: local
+
+  sonarqube-logs:
+    name: wealist-sonarqube-logs
     driver: local

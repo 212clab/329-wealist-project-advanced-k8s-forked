@@ -12,6 +12,4 @@ data:
   AUTH_SERVICE_URL: "http://auth-service:8080"
   USER_SERVICE_URL: "http://user-service:8081"
   LIVEKIT_HOST: "http://livekit:7880"
-  # External URL for browser WebSocket connection via ingress
-  # Override in overlay for different domains (localhost vs local.wealist.co.kr)
-  LIVEKIT_WS_URL: "ws://localhost/svc/livekit"
+  LIVEKIT_WS_URL: "ws://livekit:7880"

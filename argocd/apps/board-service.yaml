@@ -8,7 +8,14 @@ spec:
   source:
     repoURL: https://github.com/your-org/wealist-project-advanced.git
     targetRevision: main
-    path: services/board-service/k8s/overlays/local
+    path: helm/charts/board-service
+    helm:
+      valueFiles:
+        - values.yaml
+        - values-develop-registry-local.yaml
+      parameters:
+        - name: image.tag
+          value: "latest"
   destination:
     server: https://kubernetes.default.svc
     namespace: wealist-dev

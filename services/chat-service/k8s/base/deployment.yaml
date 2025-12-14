@@ -21,9 +21,9 @@ spec:
             - containerPort: 8001
           envFrom:
             - configMapRef:
-                name: wealist-config
+                name: wealist-shared-config
             - secretRef:
-                name: wealist-secrets
+                name: wealist-shared-secrets
           env:
             - name: DATABASE_URL
               value: "postgresql://chat_service:chat_service_password@postgres:5432/wealist_chat_db?sslmode=disable"

@@ -1,4 +1,6 @@
 .PHONY: help dev-up dev-down dev-logs kind-setup kind-load-images kind-apply kind-delete status clean
+.PHONY: local-kind-apply local-tls-secret
+.PHONY: sonar-up sonar-down sonar-logs sonar-status sonar-restart sonar-clean
 .PHONY: auth-service-build auth-service-load auth-service-redeploy auth-service-all
 .PHONY: board-service-build board-service-load board-service-redeploy board-service-all
 .PHONY: chat-service-build chat-service-load chat-service-redeploy chat-service-all
@@ -11,9 +13,25 @@
 # Kind cluster name
 KIND_CLUSTER ?= wealist
 LOCAL_REGISTRY ?= localhost:5001
-K8S_NAMESPACE ?= wealist-dev
 IMAGE_TAG ?= latest
-LOCAL_DOMAIN ?= local.wealist.co.kr
+
+# Environment configuration (used across all commands)
+ENV ?= local-kind
+
+# Namespace based on environment
+ifeq ($(ENV),local-kind)
+  K8S_NAMESPACE = wealist-kind-local
+else ifeq ($(ENV),local-ubuntu)
+  K8S_NAMESPACE = wealist-dev
+else ifeq ($(ENV),dev)
+  K8S_NAMESPACE = wealist-dev
+else ifeq ($(ENV),staging)
+  K8S_NAMESPACE = wealist-staging
+else ifeq ($(ENV),prod)
+  K8S_NAMESPACE = wealist-prod
+else
+  K8S_NAMESPACE = wealist-kind-local
+endif
 
 help:
 	@echo "Wealist Project"
@@ -23,12 +41,23 @@ help:
 	@echo "    make dev-down     - Stop all services"
 	@echo "    make dev-logs     - View logs"
 	@echo ""
-	@echo "  Kubernetes (Kind) - 3 Step Setup:"
+	@echo "  SonarQube (Code Quality - Standalone):"
+	@echo "    make sonar-up     - Start SonarQube only (lightweight)"
+	@echo "    make sonar-down   - Stop SonarQube environment"
+	@echo "    make sonar-logs   - View SonarQube logs"
+	@echo "    make sonar-status - Check SonarQube status"
+	@echo "    make sonar-restart - Restart SonarQube environment"
+	@echo "    make sonar-clean  - Clean SonarQube data (destructive)"
+	@echo ""
+	@echo "  Kubernetes (Local - localhost) - 3 Step Setup:"
 	@echo "    make kind-setup       - 1. Create cluster + registry"
 	@echo "    make kind-load-images - 2. Build/pull all images (infra + services)"
-	@echo "    make kind-apply       - 3. Deploy to k8s (default: local.wealist.co.kr)"
-	@echo "    make kind-apply LOCAL_DOMAIN=<domain> - Deploy with custom domain"
+	@echo "    make kind-apply       - 3. Deploy all to k8s (localhost)"
 	@echo "    make kind-delete      - Delete cluster"
+	@echo ""
+	@echo "  Kubernetes (Local - local.wealist.co.kr):"
+	@echo "    make local-kind-apply - Deploy with local.wealist.co.kr domain"
+	@echo "    (Uses same cluster/images as kind-*, only ingress host differs)"
 	@echo ""
 	@echo "  Per-Service Commands:"
 	@echo "    make <service>-build    - Build image only"
@@ -39,6 +68,31 @@ help:
 	@echo "  Available services:"
 	@echo "    auth-service, board-service, chat-service, frontend,"
 	@echo "    noti-service, storage-service, user-service, video-service"
+	@echo ""
+	@echo "  Helm Charts (Recommended):"
+	@echo "    make helm-lint           - Lint all Helm charts"
+	@echo "    make helm-install-all    - Install cert-manager + infrastructure + services"
+	@echo "    make helm-upgrade-all    - Upgrade all charts"
+	@echo "    make helm-uninstall-all  - Uninstall all charts"
+	@echo "    make helm-validate       - Run comprehensive validation"
+	@echo ""
+	@echo "  TLS/cert-manager:"
+	@echo "    make helm-install-cert-manager  - Install cert-manager only"
+	@echo "    (HTTP01 challenge - no AWS credentials needed!)"
+	@echo ""
+	@echo "  Helm Environment Selection (ENV=<env>):"
+	@echo "    make helm-install-all ENV=local-kind   - Kind cluster (wealist-kind-local)"
+	@echo "    make helm-install-all ENV=local-ubuntu - Ubuntu dev (wealist-dev)"
+	@echo "    make helm-install-all ENV=dev          - Dev server (wealist-dev)"
+	@echo "    make helm-install-all ENV=staging      - Staging (wealist-staging)"
+	@echo "    make helm-install-all ENV=prod         - Production (wealist-prod)"
+	@echo ""
+	@echo "  Quick Environment Switches:"
+	@echo "    make helm-local-kind     - Deploy to local Kind cluster"
+	@echo "    make helm-local-ubuntu   - Deploy to local Ubuntu (default)"
+	@echo "    make helm-dev            - Deploy to dev server"
+	@echo "    make helm-staging        - Deploy to staging"
+	@echo "    make helm-prod           - Deploy to production"
 	@echo ""
 	@echo "  Utility:"
 	@echo "    make status       - Show pods status"
@@ -56,6 +110,32 @@ dev-down:
 
 dev-logs:
 	./docker/scripts/dev.sh logs
+
+# =============================================================================
+# SonarQube (Code Quality - Standalone Environment)
+# =============================================================================
+
+sonar-up:
+	@echo "🚀 Starting SonarQube standalone environment..."
+	./docker/scripts/sonar.sh up
+
+sonar-down:
+	@echo "⏹️  Stopping SonarQube standalone environment..."
+	./docker/scripts/sonar.sh down
+
+sonar-logs:
+	./docker/scripts/sonar.sh logs
+
+sonar-status:
+	./docker/scripts/sonar.sh status
+
+sonar-restart:
+	@echo "🔄 Restarting SonarQube standalone environment..."
+	./docker/scripts/sonar.sh restart
+
+sonar-clean:
+	@echo "🗑️  Cleaning SonarQube standalone environment..."
+	./docker/scripts/sonar.sh clean
 
 # =============================================================================
 # Kubernetes (Local - Kind)
@@ -80,12 +160,13 @@ kind-load-images:
 	@echo ""
 	@echo "✅ All images loaded!"
 	@echo ""
-	@echo "Next: make kind-apply"
-	@echo "  (Or: make kind-apply LOCAL_DOMAIN=dev.wealist.co.kr)"
+	@echo "Next step (choose one):"
+	@echo "  make kind-apply       - Deploy (localhost)"
+	@echo "  make local-kind-apply - Deploy (local.wealist.co.kr)"
 
 # Step 3: Deploy all to k8s
 kind-apply:
-	@echo "=== Step 3: Deploying to Kubernetes ($(LOCAL_DOMAIN)) ==="
+	@echo "=== Step 3: Deploying to Kubernetes ==="
 	@echo ""
 	@echo "--- Deploying infrastructure ---"
 	kubectl apply -k infrastructure/overlays/develop
@@ -94,48 +175,56 @@ kind-apply:
 	kubectl wait --namespace $(K8S_NAMESPACE) --for=condition=ready pod --selector=app=postgres --timeout=120s || true
 	kubectl wait --namespace $(K8S_NAMESPACE) --for=condition=ready pod --selector=app=redis --timeout=120s || true
 	@echo ""
-	@echo "--- Deploying services ($(LOCAL_DOMAIN)) ---"
-	@# Replace placeholder with actual domain in template files
-	@sed -i.bak 's/__LOCAL_DOMAIN__/$(LOCAL_DOMAIN)/g' \
-		k8s/overlays/develop-registry/all-services/ingress.yaml \
-		k8s/overlays/develop-registry/all-services/kustomization.yaml \
-		services/auth-service/k8s/base/configmap.yaml \
-		k8s/base/namespace-dev/configmap.yaml \
-		services/video-service/k8s/base/deployment.yaml \
-		infrastructure/base/livekit/configmap.yaml
-	@kubectl apply -k k8s/overlays/develop-registry/all-services || \
-		(mv k8s/overlays/develop-registry/all-services/ingress.yaml.bak \
-			k8s/overlays/develop-registry/all-services/ingress.yaml && \
-		 mv k8s/overlays/develop-registry/all-services/kustomization.yaml.bak \
-			k8s/overlays/develop-registry/all-services/kustomization.yaml && \
-		 mv services/auth-service/k8s/base/configmap.yaml.bak \
-			services/auth-service/k8s/base/configmap.yaml && \
-		 mv k8s/base/namespace-dev/configmap.yaml.bak \
-			k8s/base/namespace-dev/configmap.yaml && \
-		 mv services/video-service/k8s/base/deployment.yaml.bak \
-			services/video-service/k8s/base/deployment.yaml && \
-		 mv infrastructure/base/livekit/configmap.yaml.bak \
-			infrastructure/base/livekit/configmap.yaml && exit 1)
-	@# Restore template files
-	@mv k8s/overlays/develop-registry/all-services/ingress.yaml.bak \
-		k8s/overlays/develop-registry/all-services/ingress.yaml
-	@mv k8s/overlays/develop-registry/all-services/kustomization.yaml.bak \
-		k8s/overlays/develop-registry/all-services/kustomization.yaml
-	@mv services/auth-service/k8s/base/configmap.yaml.bak \
-		services/auth-service/k8s/base/configmap.yaml
-	@mv k8s/base/namespace-dev/configmap.yaml.bak \
-		k8s/base/namespace-dev/configmap.yaml
-	@mv services/video-service/k8s/base/deployment.yaml.bak \
-		services/video-service/k8s/base/deployment.yaml
-	@mv infrastructure/base/livekit/configmap.yaml.bak \
-		infrastructure/base/livekit/configmap.yaml
+	@echo "--- Deploying services ---"
+	kubectl apply -k k8s/overlays/develop-registry/all-services
 	@echo ""
-	@echo "✅ Done! Access: http://$(LOCAL_DOMAIN)"
-	@echo "Check: make status"
+	@echo "✅ Done! Check: make status"
 
 kind-delete:
 	kind delete cluster --name $(KIND_CLUSTER)
 	@docker rm -f kind-registry 2>/dev/null || true
+
+# =============================================================================
+# Kubernetes (Local - local.wealist.co.kr)
+# =============================================================================
+# Uses same cluster and images as kind-* commands
+# Only difference: ingress uses host: local.wealist.co.kr with TLS
+
+local-tls-secret:
+	@echo "=== Creating TLS secret for local.wealist.co.kr ==="
+	@if kubectl get secret local-wealist-tls -n $(K8S_NAMESPACE) >/dev/null 2>&1; then \
+		echo "TLS secret already exists, skipping..."; \
+	else \
+		echo "Generating self-signed certificate..."; \
+		openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
+			-keyout /tmp/local-wealist-tls.key \
+			-out /tmp/local-wealist-tls.crt \
+			-subj "/CN=local.wealist.co.kr/O=wealist" \
+			-addext "subjectAltName=DNS:local.wealist.co.kr"; \
+		kubectl create secret tls local-wealist-tls \
+			--cert=/tmp/local-wealist-tls.crt \
+			--key=/tmp/local-wealist-tls.key \
+			-n $(K8S_NAMESPACE); \
+		rm -f /tmp/local-wealist-tls.key /tmp/local-wealist-tls.crt; \
+		echo "✅ TLS secret created"; \
+	fi
+
+local-kind-apply: local-tls-secret
+	@echo "=== Deploying to Kubernetes (local.wealist.co.kr) ==="
+	@echo ""
+	@echo "--- Deploying infrastructure ---"
+	kubectl apply -k infrastructure/overlays/develop
+	@echo ""
+	@echo "Waiting for infra pods..."
+	kubectl wait --namespace $(K8S_NAMESPACE) --for=condition=ready pod --selector=app=postgres --timeout=120s || true
+	kubectl wait --namespace $(K8S_NAMESPACE) --for=condition=ready pod --selector=app=redis --timeout=120s || true
+	@echo ""
+	@echo "--- Deploying services (local.wealist.co.kr) ---"
+	kubectl apply -k k8s/overlays/develop-registry-local/all-services
+	@echo ""
+	@echo "✅ Done! Access: https://local.wealist.co.kr"
+	@echo "(Self-signed cert - browser will show warning, click 'Advanced' → 'Proceed')"
+	@echo "Check: make status"
 
 # =============================================================================
 # Per-Service Commands
@@ -216,10 +305,15 @@ frontend-all: frontend-load frontend-redeploy
 
 # --- noti-service ---
 noti-service-build:
-	$(call build-service,noti-service,services/noti-service,docker/Dockerfile)
+	@echo "Building noti-service..."
+	docker build -t $(LOCAL_REGISTRY)/noti-service:$(IMAGE_TAG) -f services/noti-service/docker/Dockerfile .
+	@echo "✅ Built $(LOCAL_REGISTRY)/noti-service:$(IMAGE_TAG)"
 
 noti-service-load:
-	$(call load-service,noti-service,services/noti-service,docker/Dockerfile)
+	@echo "Building and pushing noti-service to registry..."
+	docker build -t $(LOCAL_REGISTRY)/noti-service:$(IMAGE_TAG) -f services/noti-service/docker/Dockerfile .
+	docker push $(LOCAL_REGISTRY)/noti-service:$(IMAGE_TAG)
+	@echo "✅ Pushed $(LOCAL_REGISTRY)/noti-service:$(IMAGE_TAG)"
 
 noti-service-redeploy:
 	$(call redeploy-service,noti-service)
@@ -228,10 +322,15 @@ noti-service-all: noti-service-load noti-service-redeploy
 
 # --- storage-service ---
 storage-service-build:
-	$(call build-service,storage-service,services/storage-service,docker/Dockerfile)
+	@echo "Building storage-service..."
+	docker build -t $(LOCAL_REGISTRY)/storage-service:$(IMAGE_TAG) -f services/storage-service/docker/Dockerfile .
+	@echo "✅ Built $(LOCAL_REGISTRY)/storage-service:$(IMAGE_TAG)"
 
 storage-service-load:
-	$(call load-service,storage-service,services/storage-service,docker/Dockerfile)
+	@echo "Building and pushing storage-service to registry..."
+	docker build -t $(LOCAL_REGISTRY)/storage-service:$(IMAGE_TAG) -f services/storage-service/docker/Dockerfile .
+	docker push $(LOCAL_REGISTRY)/storage-service:$(IMAGE_TAG)
+	@echo "✅ Pushed $(LOCAL_REGISTRY)/storage-service:$(IMAGE_TAG)"
 
 storage-service-redeploy:
 	$(call redeploy-service,storage-service)
@@ -257,10 +356,15 @@ user-service-all: user-service-load user-service-redeploy
 
 # --- video-service ---
 video-service-build:
-	$(call build-service,video-service,services/video-service,docker/Dockerfile)
+	@echo "Building video-service..."
+	docker build -t $(LOCAL_REGISTRY)/video-service:$(IMAGE_TAG) -f services/video-service/docker/Dockerfile .
+	@echo "✅ Built $(LOCAL_REGISTRY)/video-service:$(IMAGE_TAG)"
 
 video-service-load:
-	$(call load-service,video-service,services/video-service,docker/Dockerfile)
+	@echo "Building and pushing video-service to registry..."
+	docker build -t $(LOCAL_REGISTRY)/video-service:$(IMAGE_TAG) -f services/video-service/docker/Dockerfile .
+	docker push $(LOCAL_REGISTRY)/video-service:$(IMAGE_TAG)
+	@echo "✅ Pushed $(LOCAL_REGISTRY)/video-service:$(IMAGE_TAG)"
 
 video-service-redeploy:
 	$(call redeploy-service,video-service)
@@ -272,8 +376,150 @@ video-service-all: video-service-load video-service-redeploy
 # =============================================================================
 
 status:
-	@echo "=== Kubernetes Pods ==="
-	@kubectl get pods -n wealist-dev 2>/dev/null || echo "Namespace not found"
+	@echo "=== Kubernetes Pods (ENV=$(ENV), NS=$(K8S_NAMESPACE)) ==="
+	@kubectl get pods -n $(K8S_NAMESPACE) 2>/dev/null || echo "Namespace not found"
 
 clean:
 	./docker/scripts/clean.sh
+
+# =============================================================================
+# Helm Charts
+# =============================================================================
+
+.PHONY: helm-lint helm-install-cert-manager helm-install-infra helm-install-services helm-install-all
+.PHONY: helm-upgrade-all helm-uninstall-all helm-validate
+.PHONY: helm-local-kind helm-local-ubuntu helm-dev helm-staging helm-prod
+.PHONY: helm-setup-route53-secret
+
+# Helm values files (uses K8S_NAMESPACE defined at top of file)
+HELM_BASE_VALUES = ./helm/environments/base.yaml
+HELM_ENV_VALUES = ./helm/environments/$(ENV).yaml
+HELM_SECRETS_VALUES = ./helm/environments/$(ENV)-secrets.yaml
+
+# Conditionally add secrets file if it exists
+HELM_SECRETS_FLAG = $(shell test -f $(HELM_SECRETS_VALUES) && echo "-f $(HELM_SECRETS_VALUES)")
+
+SERVICES = auth-service user-service board-service chat-service noti-service storage-service video-service frontend
+
+helm-lint:
+	@echo "🔍 Linting all Helm charts..."
+	@helm lint ./helm/charts/wealist-common
+	@helm lint ./helm/charts/wealist-infrastructure
+	@helm lint ./helm/charts/cert-manager-config 2>/dev/null || echo "⚠️  cert-manager-config: run 'helm dependency update' first"
+	@for service in $(SERVICES); do \
+		echo "Linting $$service..."; \
+		helm lint ./helm/charts/$$service; \
+	done
+	@echo "✅ All charts linted successfully!"
+
+# Helper to create Route53 credentials secret
+helm-setup-route53-secret:
+	@echo "🔐 Setting up Route53 credentials secret..."
+	@kubectl create namespace cert-manager 2>/dev/null || true
+	@if [ -z "$$AWS_SECRET_ACCESS_KEY" ]; then \
+		echo "❌ Error: AWS_SECRET_ACCESS_KEY environment variable not set"; \
+		echo "Usage: AWS_SECRET_ACCESS_KEY=xxx make helm-setup-route53-secret"; \
+		exit 1; \
+	fi
+	@kubectl create secret generic route53-credentials \
+		--namespace cert-manager \
+		--from-literal=secret-access-key=$$AWS_SECRET_ACCESS_KEY \
+		--dry-run=client -o yaml | kubectl apply -f -
+	@echo "✅ Route53 credentials secret created/updated!"
+
+# Install cert-manager (conditional based on environment)
+helm-install-cert-manager:
+	@echo "🔐 Checking cert-manager configuration (ENV=$(ENV))..."
+	@if grep -q "certManager:" "$(HELM_ENV_VALUES)" 2>/dev/null && \
+	   grep -A1 "certManager:" "$(HELM_ENV_VALUES)" | grep -q "enabled: true"; then \
+		echo "📦 Installing cert-manager-config..."; \
+		cd ./helm/charts/cert-manager-config && helm dependency update && cd -; \
+		helm upgrade --install cert-manager-config ./helm/charts/cert-manager-config \
+			-f $(HELM_BASE_VALUES) \
+			-f $(HELM_ENV_VALUES) $(HELM_SECRETS_FLAG) \
+			-n cert-manager --create-namespace --wait --timeout 5m; \
+		echo "✅ cert-manager installed!"; \
+		echo "⏳ Waiting for cert-manager webhook to be ready..."; \
+		sleep 10; \
+	else \
+		echo "⏭️  Skipping cert-manager (disabled for $(ENV))"; \
+	fi
+
+helm-install-infra:
+	@echo "📦 Installing infrastructure (ENV=$(ENV), NS=$(K8S_NAMESPACE))..."
+	helm install wealist-infrastructure ./helm/charts/wealist-infrastructure \
+		-f $(HELM_BASE_VALUES) \
+		-f $(HELM_ENV_VALUES) $(HELM_SECRETS_FLAG) \
+		-n $(K8S_NAMESPACE) --create-namespace
+	@echo "✅ Infrastructure installed!"
+
+helm-install-services:
+	@echo "📦 Installing services (ENV=$(ENV), NS=$(K8S_NAMESPACE))..."
+	@for service in $(SERVICES); do \
+		echo "Installing $$service..."; \
+		helm install $$service ./helm/charts/$$service \
+			-f $(HELM_BASE_VALUES) \
+			-f $(HELM_ENV_VALUES) $(HELM_SECRETS_FLAG) \
+			-n $(K8S_NAMESPACE); \
+	done
+	@echo "✅ All services installed!"
+
+helm-install-all: helm-install-cert-manager helm-install-infra
+	@sleep 5
+	@$(MAKE) helm-install-services ENV=$(ENV)
+
+helm-upgrade-all:
+	@echo "🔄 Upgrading all charts (ENV=$(ENV), NS=$(K8S_NAMESPACE))..."
+	@helm upgrade wealist-infrastructure ./helm/charts/wealist-infrastructure \
+		-f $(HELM_BASE_VALUES) \
+		-f $(HELM_ENV_VALUES) $(HELM_SECRETS_FLAG) \
+		-n $(K8S_NAMESPACE)
+	@for service in $(SERVICES); do \
+		echo "Upgrading $$service..."; \
+		helm upgrade $$service ./helm/charts/$$service \
+			-f $(HELM_BASE_VALUES) \
+			-f $(HELM_ENV_VALUES) $(HELM_SECRETS_FLAG) \
+			-n $(K8S_NAMESPACE); \
+	done
+	@echo "✅ All charts upgraded!"
+
+helm-uninstall-all:
+	@echo "🗑️  Uninstalling all charts (ENV=$(ENV), NS=$(K8S_NAMESPACE))..."
+	@for service in $(SERVICES); do \
+		echo "Uninstalling $$service..."; \
+		helm uninstall $$service -n $(K8S_NAMESPACE) 2>/dev/null || true; \
+	done
+	@helm uninstall wealist-infrastructure -n $(K8S_NAMESPACE) 2>/dev/null || true
+	@echo "🔐 Checking if cert-manager should be uninstalled..."
+	@if helm list -n cert-manager 2>/dev/null | grep -q cert-manager-config; then \
+		echo "Uninstalling cert-manager-config..."; \
+		helm uninstall cert-manager-config -n cert-manager 2>/dev/null || true; \
+	fi
+	@echo "✅ All charts uninstalled!"
+
+helm-validate:
+	@echo "🔍 Running comprehensive Helm validation..."
+	@./helm/scripts/validate-all-charts.sh
+	@echo ""
+	@echo "🔍 Running ArgoCD Applications validation..."
+	@./argocd/scripts/validate-applications.sh
+
+# =============================================================================
+# Quick Environment Switches
+# =============================================================================
+# Usage: make helm-local-kind (equivalent to make helm-install-all ENV=local-kind)
+
+helm-local-kind:
+	@$(MAKE) helm-install-all ENV=local-kind
+
+helm-local-ubuntu:
+	@$(MAKE) helm-install-all ENV=local-ubuntu
+
+helm-dev:
+	@$(MAKE) helm-install-all ENV=dev
+
+helm-staging:
+	@$(MAKE) helm-install-all ENV=staging
+
+helm-prod:
+	@$(MAKE) helm-install-all ENV=prod

@@ -8,7 +8,11 @@ spec:
   source:
     repoURL: https://github.com/your-org/wealist-project-advanced.git
     targetRevision: main
-    path: infrastructure/overlays/local
+    path: helm/charts/wealist-infrastructure
+    helm:
+      valueFiles:
+        - values.yaml
+        - values-develop-registry-local.yaml
   destination:
     server: https://kubernetes.default.svc
     namespace: wealist-dev

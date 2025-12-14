@@ -72,6 +72,17 @@ EOSQL
 
 echo "✅ Video 서비스 데이터베이스 생성 완료: ${VIDEO_DB_NAME:-wealist_video_db}"
 
+# SonarQube Database
+psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" <<-EOSQL
+    CREATE DATABASE ${SONARQUBE_DB_NAME};
+    CREATE USER ${SONARQUBE_DB_USER} WITH PASSWORD '${SONARQUBE_DB_PASSWORD}';
+    GRANT ALL PRIVILEGES ON DATABASE ${SONARQUBE_DB_NAME} TO ${SONARQUBE_DB_USER};
+    \c ${SONARQUBE_DB_NAME}
+    GRANT ALL ON SCHEMA public TO ${SONARQUBE_DB_USER};
+EOSQL
+
+echo "✅ SonarQube 데이터베이스 생성 완료: ${SONARQUBE_DB_NAME}"
+
 echo "🎉 모든 데이터베이스 초기화 완료!"
 echo "📋 생성된 데이터베이스:"
 echo "   - ${USER_DB_NAME} (User Service)"
@@ -80,3 +91,4 @@ echo "   - ${CHAT_DB_NAME} (Chat Service)"
 echo "   - ${NOTI_DB_NAME} (Notification Service)"
 echo "   - ${STORAGE_DB_NAME} (Storage Service)"
 echo "   - ${VIDEO_DB_NAME:-wealist_video_db} (Video Service)"
+echo "   - ${SONARQUBE_DB_NAME} (SonarQube - Code Quality)"

@@ -9,12 +9,14 @@ import (
 	"noti-service/internal/sse"
 
 	"github.com/gin-gonic/gin"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/redis/go-redis/v9"
 	// swaggerFiles "github.com/swaggo/files"
 	// ginSwagger "github.com/swaggo/gin-swagger"
 	"go.uber.org/zap"
 	"gorm.io/gorm"
 
+	commonhealth "github.com/OrangesCloud/wealist-advanced-go-pkg/health"
 	commonmw "github.com/OrangesCloud/wealist-advanced-go-pkg/middleware"
 )
 
@@ -38,12 +40,13 @@ func Setup(cfg *config.Config, db *gorm.DB, redisClient *redis.Client, logger *z
 	// Initialize handlers
 	validator := middleware.NewAuthServiceValidator(cfg.Auth.ServiceURL, cfg.Auth.SecretKey, logger)
 	notificationHandler := handler.NewNotificationHandler(notificationService, sseService, logger)
-	healthHandler := handler.NewHealthHandler(db, redisClient, sseService)
 
-	// Health endpoints (no auth)
-	r.GET("/health", healthHandler.Health)
-	r.GET("/ready", healthHandler.Ready)
-	r.GET("/metrics", healthHandler.Metrics)
+	// Health check routes (using common package)
+	healthChecker := commonhealth.NewHealthChecker(db, redisClient)
+	healthChecker.RegisterRoutes(r, "")
+
+	// Prometheus metrics endpoint
+	r.GET("/metrics", gin.WrapH(promhttp.Handler()))
 
 	// Swagger documentation (disabled for faster builds)
 	// r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
