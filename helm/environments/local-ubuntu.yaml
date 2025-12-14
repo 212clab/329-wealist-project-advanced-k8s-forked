@@ -93,15 +93,33 @@ podDisruptionBudget:
 # -----------------------------------------------------------------------------
 # Database Configuration (local-ubuntu specific)
 # -----------------------------------------------------------------------------
+# Use LOCAL PC's PostgreSQL and Redis instead of cluster's internal DB
+# This ensures data persistence across cluster resets
+#
+# Prerequisites:
+#   1. PostgreSQL installed on host: sudo apt install postgresql
+#   2. Redis installed on host: sudo apt install redis-server
+#   3. PostgreSQL pg_hba.conf allows connections from Docker network:
+#      host    all    all    172.17.0.0/16    md5
+#   4. PostgreSQL postgresql.conf: listen_addresses = '*'
+#   5. Redis redis.conf: bind 0.0.0.0, protected-mode no
+#
+# Note: 172.17.0.1 is the Docker bridge gateway IP on Linux
+#       This allows Kind pods to connect to host machine services
+
 postgres:
-  persistence:
+  enabled: false  # Disable internal PostgreSQL StatefulSet
+  external:
     enabled: true
-    size: 10Gi
+    host: "172.17.0.1"  # Docker bridge gateway (host machine)
+    port: 5432
 
 redis:
-  persistence:
+  enabled: false  # Disable internal Redis StatefulSet
+  external:
     enabled: true
-    size: 1Gi
+    host: "172.17.0.1"  # Docker bridge gateway (host machine)
+    port: 6379
 
 # -----------------------------------------------------------------------------
 # Shared Configuration
@@ -116,8 +134,23 @@ shared:
     # OAuth2 Redirect URLs (local.wealist.co.kr with TLS)
     OAUTH2_CLIENT_REDIRECT_URI: "https://local.wealist.co.kr/login/oauth2/code/google"
     OAUTH2_REDIRECT_URL_ENV: "https://local.wealist.co.kr/oauth/callback"
-    # Database Migration (enabled for local development)
-    DB_AUTO_MIGRATE: "true"
+    # Database Migration (disabled by default, enable for initial setup)
+    # 최초 배포 시: helm install ... --set shared.config.DB_AUTO_MIGRATE=true
+    DB_AUTO_MIGRATE: "false"
+
+    # External Database Configuration (Local PC's PostgreSQL/Redis)
+    # Services connect to "postgres" and "redis" K8s services which route to host
+    DB_HOST: "postgres"       # K8s Service name (routes to 172.17.0.1)
+    DB_PORT: "5432"
+    DB_USER: "postgres"       # Local PC PostgreSQL superuser
+    DB_SSLMODE: "disable"
+    REDIS_HOST: "redis"       # K8s Service name (routes to 172.17.0.1)
+    REDIS_PORT: "6379"
+
+  # Secrets for local-ubuntu environment (stored in K8s Secret)
+  secrets:
+    DB_PASSWORD: "postgres"   # Local PC PostgreSQL password
+    REDIS_PASSWORD: ""        # No password for local Redis
 
 # -----------------------------------------------------------------------------
 # Ingress (local.wealist.co.kr with TLS via cert-manager)

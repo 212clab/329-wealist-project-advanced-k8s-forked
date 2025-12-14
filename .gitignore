@@ -118,6 +118,7 @@ services/auth-service/k8s/base/secret.yaml
 
 # Helm - 프로덕션 values 파일 (실제 secrets 포함 가능)
 helm/environments/*-secrets.yaml
+helm/environments/secrets-*.yaml
 helm/charts/**/values-prod.yaml
 helm/charts/**/values-production.yaml
 helm/charts/**/secrets.yaml

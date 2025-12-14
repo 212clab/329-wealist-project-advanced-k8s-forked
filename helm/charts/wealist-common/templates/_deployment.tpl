@@ -92,6 +92,13 @@ spec:
           envFrom:
             - configMapRef:
                 name: {{ include "wealist-common.fullname" . }}-config
+            {{- /* Include shared secret if shared.secrets exists */}}
+            {{- if .Values.shared }}
+            {{- if .Values.shared.secrets }}
+            - secretRef:
+                name: wealist-shared-secret
+            {{- end }}
+            {{- end }}
           {{- if .Values.envFrom }}
             {{- toYaml .Values.envFrom | nindent 12 }}
           {{- end }}

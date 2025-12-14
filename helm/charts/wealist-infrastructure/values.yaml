@@ -8,6 +8,13 @@
 postgres:
   enabled: true
 
+  # External PostgreSQL (when internal is disabled)
+  # Use this to connect to host machine's PostgreSQL
+  external:
+    enabled: false
+    host: ""      # Host IP (e.g., 172.17.0.1 for Docker bridge gateway on Linux)
+    port: 5432
+
   image:
     repository: postgres
     tag: "17-alpine"
@@ -61,6 +68,13 @@ postgres:
 # Redis configuration
 redis:
   enabled: true
+
+  # External Redis (when internal is disabled)
+  # Use this to connect to host machine's Redis
+  external:
+    enabled: false
+    host: ""      # Host IP (e.g., 172.17.0.1 for Docker bridge gateway on Linux)
+    port: 6379
 
   image:
     repository: redis
