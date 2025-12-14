@@ -1,0 +1,14 @@
+[Unit]
+Description=Wealist Kind Cluster Auto-Recovery
+After=docker.service
+Requires=docker.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+User=resshome
+ExecStart=/home/resshome/tech-up/advanced-project/wealist-project-advanced-k8s/scripts/kind-recovery.sh
+ExecStop=/usr/local/bin/kind delete cluster --name wealist
+
+[Install]
+WantedBy=multi-user.target

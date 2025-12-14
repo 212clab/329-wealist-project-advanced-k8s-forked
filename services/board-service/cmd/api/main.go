@@ -133,15 +133,19 @@ func main() {
 	businessCollector.Start()
 	log.Info("Business metrics collector started")
 
-	// Run GORM auto-migration with retry logic
-	log.Info("Running GORM auto-migration with retry logic")
-	if err := database.SafeAutoMigrateWithRetry(db, log.Logger, 3); err != nil {
-		log.Fatal("Failed to run auto-migration",
-			zap.Error(err),
-			zap.String("hint", "Check database connection and schema conflicts"),
-		)
+	// Run GORM auto-migration with retry logic (conditional based on DB_AUTO_MIGRATE env)
+	if cfg.Database.AutoMigrate {
+		log.Info("Running GORM auto-migration with retry logic (DB_AUTO_MIGRATE=true)")
+		if err := database.SafeAutoMigrateWithRetry(db, log.Logger, 3); err != nil {
+			log.Fatal("Failed to run auto-migration",
+				zap.Error(err),
+				zap.String("hint", "Check database connection and schema conflicts"),
+			)
+		}
+		log.Info("Database schema migration completed successfully")
+	} else {
+		log.Info("Database auto-migration disabled (DB_AUTO_MIGRATE=false)")
 	}
-	log.Info("Database schema migration completed successfully")
 
 	if err := database.InitRedis(*cfg, log.Logger); err != nil {
 		log.Fatal("Failed to connect to Redis", zap.Error(err))

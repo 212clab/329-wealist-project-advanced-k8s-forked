@@ -91,6 +91,19 @@ podDisruptionBudget:
   enabled: false
 
 # -----------------------------------------------------------------------------
+# Database Configuration (local-ubuntu specific)
+# -----------------------------------------------------------------------------
+postgres:
+  persistence:
+    enabled: true
+    size: 10Gi
+
+redis:
+  persistence:
+    enabled: true
+    size: 1Gi
+
+# -----------------------------------------------------------------------------
 # Shared Configuration
 # -----------------------------------------------------------------------------
 shared:
@@ -103,6 +116,8 @@ shared:
     # OAuth2 Redirect URLs (local.wealist.co.kr with TLS)
     OAUTH2_CLIENT_REDIRECT_URI: "https://local.wealist.co.kr/login/oauth2/code/google"
     OAUTH2_REDIRECT_URL_ENV: "https://local.wealist.co.kr/oauth/callback"
+    # Database Migration (enabled for local development)
+    DB_AUTO_MIGRATE: "true"
 
 # -----------------------------------------------------------------------------
 # Ingress (local.wealist.co.kr with TLS via cert-manager)

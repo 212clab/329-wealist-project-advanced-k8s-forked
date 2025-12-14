@@ -172,3 +172,6 @@ shared:
     LIVEKIT_WS_URL: "ws://localhost/svc/livekit"
     LIVEKIT_API_KEY: "devkey"
     LIVEKIT_API_SECRET: "devsecret"
+
+    # Database Migration (default: disabled for safety)
+    DB_AUTO_MIGRATE: "false"

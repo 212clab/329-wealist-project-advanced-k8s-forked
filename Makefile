@@ -1,5 +1,6 @@
-.PHONY: help dev-up dev-down dev-logs kind-setup kind-load-images kind-apply kind-delete status clean
+.PHONY: help dev-up dev-down dev-logs kind-setup kind-load-images kind-apply kind-delete kind-recover status clean
 .PHONY: local-kind-apply local-tls-secret
+.PHONY: helm-deps-build
 .PHONY: sonar-up sonar-down sonar-logs sonar-status sonar-restart sonar-clean
 .PHONY: auth-service-build auth-service-load auth-service-redeploy auth-service-all
 .PHONY: board-service-build board-service-load board-service-redeploy board-service-all
@@ -54,6 +55,7 @@ help:
 	@echo "    make kind-load-images - 2. Build/pull all images (infra + services)"
 	@echo "    make kind-apply       - 3. Deploy all to k8s (localhost)"
 	@echo "    make kind-delete      - Delete cluster"
+	@echo "    make kind-recover     - Recover cluster after reboot"
 	@echo ""
 	@echo "  Kubernetes (Local - local.wealist.co.kr):"
 	@echo "    make local-kind-apply - Deploy with local.wealist.co.kr domain"
@@ -70,6 +72,7 @@ help:
 	@echo "    noti-service, storage-service, user-service, video-service"
 	@echo ""
 	@echo "  Helm Charts (Recommended):"
+	@echo "    make helm-deps-build     - Build all Helm dependencies"
 	@echo "    make helm-lint           - Lint all Helm charts"
 	@echo "    make helm-install-all    - Install cert-manager + infrastructure + services"
 	@echo "    make helm-upgrade-all    - Upgrade all charts"
@@ -183,6 +186,17 @@ kind-apply:
 kind-delete:
 	kind delete cluster --name $(KIND_CLUSTER)
 	@docker rm -f kind-registry 2>/dev/null || true
+
+# Kind 클러스터 복구 (재부팅 후)
+kind-recover:
+	@echo "🔄 Recovering Kind cluster..."
+	@docker restart $(KIND_CLUSTER)-control-plane $(KIND_CLUSTER)-worker $(KIND_CLUSTER)-worker2 kind-registry 2>/dev/null || true
+	@sleep 30
+	@kind export kubeconfig --name $(KIND_CLUSTER)
+	@echo "⏳ Waiting for API server..."
+	@until kubectl get nodes >/dev/null 2>&1; do sleep 5; done
+	@echo "✅ Cluster recovered!"
+	@kubectl get nodes
 
 # =============================================================================
 # Kubernetes (Local - local.wealist.co.kr)
@@ -400,6 +414,18 @@ HELM_SECRETS_VALUES = ./helm/environments/$(ENV)-secrets.yaml
 HELM_SECRETS_FLAG = $(shell test -f $(HELM_SECRETS_VALUES) && echo "-f $(HELM_SECRETS_VALUES)")
 
 SERVICES = auth-service user-service board-service chat-service noti-service storage-service video-service frontend
+
+# Helm 의존성 전체 빌드
+helm-deps-build:
+	@echo "📦 Building all Helm dependencies..."
+	@helm dependency update ./helm/charts/wealist-common 2>/dev/null || true
+	@for chart in $(SERVICES); do \
+		echo "Updating $$chart dependencies..."; \
+		helm dependency update ./helm/charts/$$chart; \
+	done
+	@helm dependency update ./helm/charts/wealist-infrastructure
+	@helm dependency update ./helm/charts/cert-manager-config 2>/dev/null || true
+	@echo "✅ All dependencies built!"
 
 helm-lint:
 	@echo "🔍 Linting all Helm charts..."

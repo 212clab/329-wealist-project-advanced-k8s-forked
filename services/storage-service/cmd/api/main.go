@@ -82,11 +82,16 @@ func main() {
 	} else {
 		logger.Info("Database connected successfully")
 
-		// Run auto migration
-		if err := database.AutoMigrate(db); err != nil {
-			logger.Warn("Failed to run database migrations", zap.Error(err))
+		// Run auto migration (conditional based on DB_AUTO_MIGRATE env)
+		if cfg.Database.AutoMigrate {
+			logger.Info("Running database migrations (DB_AUTO_MIGRATE=true)")
+			if err := database.AutoMigrate(db); err != nil {
+				logger.Warn("Failed to run database migrations", zap.Error(err))
+			} else {
+				logger.Info("Database migrations completed")
+			}
 		} else {
-			logger.Info("Database migrations completed")
+			logger.Info("Database auto-migration disabled (DB_AUTO_MIGRATE=false)")
 		}
 	}
 
