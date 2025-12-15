@@ -15,6 +15,22 @@ dev-down: ## Stop all services
 dev-logs: ## View logs
 	./docker/scripts/dev.sh logs
 
+##@ Monorepo Build (BuildKit Cache - Fast)
+
+.PHONY: dev-mono-up dev-mono-down dev-mono-build dev-mono-build-parallel
+
+dev-mono-up: ## Start with monorepo build (shared package 1회 컴파일)
+	./docker/scripts/dev-mono.sh up
+
+dev-mono-down: ## Stop monorepo dev environment
+	./docker/scripts/dev-mono.sh down
+
+dev-mono-build: ## Build Go services only (sequential, uses BuildKit cache)
+	./docker/scripts/dev-mono.sh build
+
+dev-mono-build-parallel: ## Build Go services in parallel (faster)
+	./docker/scripts/dev-mono.sh build-parallel
+
 ##@ SonarQube (Code Quality)
 
 .PHONY: sonar-up sonar-down sonar-logs sonar-status sonar-restart sonar-clean

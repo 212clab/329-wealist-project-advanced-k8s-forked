@@ -12,7 +12,7 @@
 # =============================================================================
 # Stage 1: Dependencies (모든 서비스 공통)
 # =============================================================================
-FROM golang:1.24-bookworm AS deps
+FROM golang:1.23-bookworm AS deps
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
     git ca-certificates tzdata \

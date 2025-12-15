@@ -4,7 +4,7 @@
 
 ##@ Kubernetes (Kind)
 
-.PHONY: kind-setup kind-load-images kind-apply kind-delete kind-recover
+.PHONY: kind-setup kind-load-images kind-load-images-mono kind-apply kind-delete kind-recover
 
 kind-setup: ## Create cluster + registry
 	@echo "=== Step 1: Creating Kind cluster with local registry ==="
@@ -22,6 +22,29 @@ kind-load-images: ## Build/pull all images (infra + services)
 	./docker/scripts/dev/2.build_services_and_load.sh
 	@echo ""
 	@echo "All images loaded!"
+	@echo ""
+	@echo "Next: make helm-install-all ENV=local-kind"
+
+kind-load-images-mono: ## Build Go services with monorepo pattern (faster rebuilds)
+	@echo "=== Loading images using Monorepo Build (BuildKit cache) ==="
+	@echo ""
+	@echo "--- Loading infrastructure images ---"
+	./docker/scripts/dev/1.load_infra_images.sh
+	@echo ""
+	@echo "--- Building Go services (monorepo pattern) ---"
+	./docker/scripts/dev-mono.sh build
+	@echo ""
+	@echo "--- Tagging and pushing to local registry ---"
+	@for svc in user-service board-service chat-service noti-service storage-service video-service; do \
+		echo "Pushing $$svc..."; \
+		docker tag wealist/$$svc:latest $(LOCAL_REGISTRY)/$$svc:$(IMAGE_TAG); \
+		docker push $(LOCAL_REGISTRY)/$$svc:$(IMAGE_TAG); \
+	done
+	@echo ""
+	@echo "--- Building auth-service and frontend ---"
+	@$(MAKE) auth-service-load frontend-load
+	@echo ""
+	@echo "All images loaded! (Monorepo pattern)"
 	@echo ""
 	@echo "Next: make helm-install-all ENV=local-kind"
 
