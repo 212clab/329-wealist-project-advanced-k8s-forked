@@ -4,7 +4,7 @@
 
 ##@ Kubernetes (Kind)
 
-.PHONY: kind-setup kind-load-images kind-load-images-mono kind-apply kind-delete kind-recover
+.PHONY: kind-setup kind-load-images kind-load-images-mono kind-delete kind-recover
 
 kind-setup: ## Create cluster + registry
 	@echo "=== Step 1: Creating Kind cluster with local registry ==="
@@ -48,21 +48,6 @@ kind-load-images-mono: ## Build Go services with monorepo pattern (faster rebuil
 	@echo ""
 	@echo "Next: make helm-install-all ENV=local-kind"
 
-kind-apply: ## Deploy all to k8s (localhost)
-	@echo "=== Step 3: Deploying to Kubernetes ==="
-	@echo ""
-	@echo "--- Deploying infrastructure ---"
-	kubectl apply -k infrastructure/overlays/develop
-	@echo ""
-	@echo "Waiting for infra pods..."
-	kubectl wait --namespace $(K8S_NAMESPACE) --for=condition=ready pod --selector=app=postgres --timeout=120s || true
-	kubectl wait --namespace $(K8S_NAMESPACE) --for=condition=ready pod --selector=app=redis --timeout=120s || true
-	@echo ""
-	@echo "--- Deploying services ---"
-	kubectl apply -k k8s/overlays/develop-registry/all-services
-	@echo ""
-	@echo "Done! Check: make status"
-
 kind-delete: ## Delete cluster
 	kind delete cluster --name $(KIND_CLUSTER)
 	@docker rm -f kind-registry 2>/dev/null || true
@@ -79,7 +64,7 @@ kind-recover: ## Recover cluster after reboot
 
 ##@ Local Domain (local.wealist.co.kr)
 
-.PHONY: local-tls-secret local-kind-apply
+.PHONY: local-tls-secret
 
 local-tls-secret: ## Create TLS secret for local.wealist.co.kr
 	@echo "=== Creating TLS secret for local.wealist.co.kr ==="
@@ -99,23 +84,6 @@ local-tls-secret: ## Create TLS secret for local.wealist.co.kr
 		rm -f /tmp/local-wealist-tls.key /tmp/local-wealist-tls.crt; \
 		echo "TLS secret created"; \
 	fi
-
-local-kind-apply: local-tls-secret ## Deploy with local.wealist.co.kr domain
-	@echo "=== Deploying to Kubernetes (local.wealist.co.kr) ==="
-	@echo ""
-	@echo "--- Deploying infrastructure ---"
-	kubectl apply -k infrastructure/overlays/develop
-	@echo ""
-	@echo "Waiting for infra pods..."
-	kubectl wait --namespace $(K8S_NAMESPACE) --for=condition=ready pod --selector=app=postgres --timeout=120s || true
-	kubectl wait --namespace $(K8S_NAMESPACE) --for=condition=ready pod --selector=app=redis --timeout=120s || true
-	@echo ""
-	@echo "--- Deploying services (local.wealist.co.kr) ---"
-	kubectl apply -k k8s/overlays/develop-registry-local/all-services
-	@echo ""
-	@echo "Done! Access: https://local.wealist.co.kr"
-	@echo "(Self-signed cert - browser will show warning)"
-	@echo "Check: make status"
 
 ##@ Local Database
 
