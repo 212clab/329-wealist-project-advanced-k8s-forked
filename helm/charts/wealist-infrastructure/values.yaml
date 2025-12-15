@@ -100,12 +100,14 @@ redis:
       cpu: "200m"
 
 # Ingress configuration
+# Note: These are LOCAL/DEV defaults. Production settings should be in
+# helm/environments/prod.yaml or staging.yaml.
 ingress:
   enabled: true
   className: nginx
 
   annotations:
-    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+    # Common annotations (used in all environments)
     nginx.ingress.kubernetes.io/rewrite-target: /$2
     nginx.ingress.kubernetes.io/use-regex: "true"
     # WebSocket support
@@ -115,13 +117,14 @@ ingress:
     nginx.ingress.kubernetes.io/websocket-services: "livekit"
     nginx.ingress.kubernetes.io/upstream-hash-by: "$request_uri"
     nginx.ingress.kubernetes.io/proxy-buffering: "off"
-    # SSL/TLS settings
-    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    # SSL/TLS - default off for local (override in prod/staging)
+    nginx.ingress.kubernetes.io/ssl-redirect: "false"
+    # cert-manager annotation should be added via environment files (prod.yaml, staging.yaml)
+    # NOT here - local/dev environments don't use cert-manager
 
+  # Default: localhost (override in environment files)
   hosts:
-    - host: wealist.co.kr
+    - host: localhost
 
-  tls:
-    - secretName: wealist-tls
-      hosts:
-        - wealist.co.kr
+  # Default: no TLS (override in environment files)
+  tls: []

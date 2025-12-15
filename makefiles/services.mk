@@ -60,7 +60,7 @@ auth-service-build: ## Build auth-service image
 board-service-build: ## Build board-service image
 	@echo "Building board-service..."
 	docker build -t $(LOCAL_REGISTRY)/board-service:$(IMAGE_TAG) \
-		-f services/board-service/docker/Dockerfile services/board-service
+		-f services/board-service/docker/Dockerfile .
 	@echo "Built $(LOCAL_REGISTRY)/board-service:$(IMAGE_TAG)"
 
 frontend-build: ## Build frontend image

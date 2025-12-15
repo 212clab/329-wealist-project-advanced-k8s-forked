@@ -91,14 +91,14 @@ externalSecrets:
 healthCheck:
   liveness:
     path: /actuator/health/liveness
-    initialDelaySeconds: 60    # Spring Boot needs more time to start
+    initialDelaySeconds: 90    # Spring Boot needs ~73s to start, give extra buffer
     periodSeconds: 10
     timeoutSeconds: 5
     successThreshold: 1
     failureThreshold: 5        # More retries for slow startup
   readiness:
     path: /actuator/health/readiness
-    initialDelaySeconds: 45    # Wait for app to be ready
+    initialDelaySeconds: 75    # Wait for app to be ready
     periodSeconds: 5
     timeoutSeconds: 3
     successThreshold: 1
