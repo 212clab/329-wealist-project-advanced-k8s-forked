@@ -406,6 +406,7 @@ services:
       - PORT=8001
       - SERVER_BASE_PATH=/api/chats
       - LOG_LEVEL=debug
+      - DB_AUTO_MIGRATE=true
       - DATABASE_URL=postgresql://${CHAT_DB_USER}:${CHAT_DB_PASSWORD}@postgres:5432/${CHAT_DB_NAME}?sslmode=disable
       - REDIS_HOST=redis
       - REDIS_PORT=6379
@@ -470,6 +471,7 @@ services:
       - ENV=dev
       - PORT=8002
       - LOG_LEVEL=debug
+      - DB_AUTO_MIGRATE=true
 
       # Database Configuration
       - DATABASE_URL=postgresql://${NOTI_DB_USER}:${NOTI_DB_PASSWORD}@postgres:5432/${NOTI_DB_NAME}?sslmode=disable
