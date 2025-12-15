@@ -86,17 +86,18 @@
 #     OAUTH2_CLIENT_REDIRECT_URI: "https://staging.wealist.co.kr/login/oauth2/code/google"
 #     OAUTH2_REDIRECT_URL_ENV: "https://staging.wealist.co.kr/oauth/callback"
 
-# # -----------------------------------------------------------------------------
-# # Ingress
-# # -----------------------------------------------------------------------------
-# ingress:
-#   enabled: true
-#   className: nginx
-#   annotations:
-#     cert-manager.io/cluster-issuer: letsencrypt-prod
-#   hosts:
-#     - host: staging.wealist.co.kr
-#   tls:
-#     - secretName: staging-wealist-tls
-#       hosts:
-#         - staging.wealist.co.kr
+# -----------------------------------------------------------------------------
+# Ingress
+# -----------------------------------------------------------------------------
+ingress:
+  enabled: true
+  className: nginx
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-staging  # Use staging issuer first
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+  hosts:
+    - host: staging.wealist.co.kr
+  tls:
+    - secretName: staging-wealist-tls
+      hosts:
+        - staging.wealist.co.kr

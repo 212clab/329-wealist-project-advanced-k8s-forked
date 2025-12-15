@@ -135,8 +135,8 @@ shared:
     # OAuth2 Redirect URLs (local.wealist.co.kr with TLS)
     OAUTH2_CLIENT_REDIRECT_URI: "https://local.wealist.co.kr/login/oauth2/code/google"
     OAUTH2_REDIRECT_URL_ENV: "https://local.wealist.co.kr/oauth/callback"
-    # Database Migration (disabled by default, enable for initial setup)
-    # 최초 배포 시: helm install ... --set shared.config.DB_AUTO_MIGRATE=true
+    # Database Migration (disabled - external DB has existing data)
+    # 최초 배포 시만: helm install ... --set shared.config.DB_AUTO_MIGRATE=true
     DB_AUTO_MIGRATE: "false"
 
     # External Database Configuration (Local PC's PostgreSQL/Redis)
