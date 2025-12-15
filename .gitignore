@@ -73,6 +73,7 @@ Thumbs.db
 .claude/
 .claudeignore
 CLAUDE.md
+.mcp.json
 
 # ai
 .kiro/
