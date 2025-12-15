@@ -8,18 +8,28 @@
 
 => k8s/base/shared/secret-shared.yaml, services/auth-service/k8s/base/secret.yaml 에 google_client 관련 설정해주세요!
 
-# 1. 클러스터 생성 (동일)
+## ####### 1. local에서 클러스터 생성 (동일)
 
+```
+# 1-1. 클러스터 생성
 make kind-setup
 
-# 2. 이미지 빌드/로드 (동일)
-
+# 1-2. 이미지 빌드 및 로드
 make kind-load-images
 
-# 3. 배포 (도메인 선택)
+# 1-3. Secrets 설정 (필수!)
+cp helm/environments/secrets.example.yaml helm/environments/local-kind-secrets.yaml
 
-make kind-apply # localhost 접속용
-make local-kind-apply # local.wealist.co.kr 접속용
+# 파일 편집하여 Google OAuth 자격증명 입력 (GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET)
+# 1-4. Helm으로 전체 배포
+
+make helm-install-all ENV=local-kind
+
+# 1-5. 상태 확인
+make status
+
+# 접속: http://localhost
+```
 
 ## 그 외
 

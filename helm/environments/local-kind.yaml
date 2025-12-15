@@ -29,15 +29,12 @@ image:
   tag: "latest"       # Local images use :latest tag
 
 # -----------------------------------------------------------------------------
-# Resources (Lower for local development)
+# Resources - Use service-specific defaults
 # -----------------------------------------------------------------------------
-resources:
-  requests:
-    memory: "64Mi"
-    cpu: "25m"
-  limits:
-    memory: "256Mi"
-    cpu: "200m"
+# Note: Removed global resource override. Each service uses its own values:
+# - Go services: 128Mi-256Mi (fast, low memory)
+# - auth-service (Spring Boot): 512Mi-1Gi (JVM needs more memory)
+# Overriding globally caused OOMKilled for Spring Boot services.
 
 # -----------------------------------------------------------------------------
 # Health Check - Use service-specific defaults
