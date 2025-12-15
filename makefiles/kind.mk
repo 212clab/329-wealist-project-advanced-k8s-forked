@@ -4,7 +4,7 @@
 
 ##@ Kubernetes (Kind)
 
-.PHONY: kind-setup kind-load-images kind-load-images-mono kind-apply kind-delete kind-recover
+.PHONY: kind-setup kind-load-images kind-load-images-backend kind-load-images-mono kind-apply kind-delete kind-recover
 
 kind-setup: ## Create cluster + registry
 	@echo "=== Step 1: Creating Kind cluster with local registry ==="
@@ -12,18 +12,33 @@ kind-setup: ## Create cluster + registry
 	@echo ""
 	@echo "Cluster ready! Next: make kind-load-images"
 
-kind-load-images: ## Build/pull all images (infra + services)
-	@echo "=== Step 2: Loading all images ==="
+kind-load-images: ## Build/pull all images (infra + services + frontend)
+	@echo "=== Step 2: Loading all images (including frontend) ==="
 	@echo ""
 	@echo "--- Loading infrastructure images ---"
 	./docker/scripts/dev/1.load_infra_images.sh
 	@echo ""
 	@echo "--- Building service images ---"
+	@# Frontend is included for local-kind (localhost) environment
 	./docker/scripts/dev/2.build_services_and_load.sh
 	@echo ""
 	@echo "All images loaded!"
 	@echo ""
 	@echo "Next: make helm-install-all ENV=local-kind"
+
+kind-load-images-backend: ## Build/pull backend images only (no frontend, for cloud deployments)
+	@echo "=== Loading backend images only (no frontend) ==="
+	@echo "Frontend will be deployed via CDN/S3/Route53"
+	@echo ""
+	@echo "--- Loading infrastructure images ---"
+	./docker/scripts/dev/1.load_infra_images.sh
+	@echo ""
+	@echo "--- Building backend service images ---"
+	SKIP_FRONTEND=true ./docker/scripts/dev/2.build_services_and_load.sh
+	@echo ""
+	@echo "All backend images loaded!"
+	@echo ""
+	@echo "Next: make helm-install-all ENV=<your-env>"
 
 kind-load-images-mono: ## Build Go services with monorepo pattern (faster rebuilds)
 	@echo "=== Loading images using Monorepo Build (BuildKit cache) ==="
@@ -41,8 +56,15 @@ kind-load-images-mono: ## Build Go services with monorepo pattern (faster rebuil
 		docker push $(LOCAL_REGISTRY)/$$svc:$(IMAGE_TAG); \
 	done
 	@echo ""
-	@echo "--- Building auth-service and frontend ---"
-	@$(MAKE) auth-service-load frontend-load
+	@echo "--- Building auth-service ---"
+	@$(MAKE) auth-service-load
+	@echo ""
+	@# Frontend is only built for local-kind environment (localhost)
+	@# Cloud environments (dev, staging, prod) use CDN/S3/Route53 for frontend
+ifeq ($(ENV),local-kind)
+	@echo "--- Building frontend (local-kind only) ---"
+	@$(MAKE) frontend-load
+endif
 	@echo ""
 	@echo "All images loaded! (Monorepo pattern)"
 	@echo ""
