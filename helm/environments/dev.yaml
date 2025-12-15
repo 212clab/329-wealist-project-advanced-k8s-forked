@@ -1,7 +1,8 @@
 # =============================================================================
 # Development Server Environment
 # =============================================================================
-# Cloud-hosted development environment
+# Development environment with dev.wealist.co.kr domain
+# Uses local registry (localhost:5001) for Kind cluster
 # Namespace: wealist-dev
 
 # -----------------------------------------------------------------------------
@@ -11,7 +12,7 @@ global:
   namespace: wealist-dev
   environment: development
   domain: dev.wealist.co.kr
-  imageRegistry: ghcr.io/212clab
+  imageRegistry: localhost:5001
 
 # -----------------------------------------------------------------------------
 # Deployment Settings
