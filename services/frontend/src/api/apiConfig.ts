@@ -466,10 +466,19 @@ export const getNotificationSSEUrl = (token?: string): string => {
 
 /**
  * OAuth2 Base URL 생성 (Google 로그인 등)
+ * OAuth2는 세션 쿠키 도메인 일치를 위해 api.* 도메인에서 시작해야 함
  */
 export const getOAuthBaseUrl = (): string => {
-  // K8s ingress 모드: 상대 경로 사용 (같은 도메인)
+  // K8s ingress 모드: api.* 도메인 사용 (OAuth2 콜백과 도메인 일치 필요)
   if (isIngressMode) {
+    const hostname = window.location.hostname;
+    if (hostname === 'dev.wealist.co.kr') {
+      return 'https://api.dev.wealist.co.kr';
+    }
+    if (hostname === 'wealist.co.kr' || hostname === 'www.wealist.co.kr') {
+      return 'https://api.wealist.co.kr';
+    }
+    // local 환경 (localhost)
     return '';
   }
 
