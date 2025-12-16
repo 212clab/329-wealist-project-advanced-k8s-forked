@@ -119,7 +119,15 @@ spec:
                 port:
                   number: 9000
 
-          {{- if (dig "ingress" "includeFrontend" false .Values) }}
+          {{- $includeFrontend := false }}
+          {{- if .Values }}
+            {{- if .Values.ingress }}
+              {{- if .Values.ingress.includeFrontend }}
+                {{- $includeFrontend = .Values.ingress.includeFrontend }}
+              {{- end }}
+            {{- end }}
+          {{- end }}
+          {{- if $includeFrontend }}
           # Frontend (catch-all, must be last)
           # Only for local environments where frontend is deployed in K8s
           - path: /()(.*)
