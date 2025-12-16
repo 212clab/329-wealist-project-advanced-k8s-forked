@@ -4,7 +4,7 @@
 
 ##@ Kubernetes (Kind)
 
-.PHONY: kind-setup kind-load-images kind-load-images-backend kind-load-images-mono kind-apply kind-delete kind-recover
+.PHONY: kind-setup kind-load-images kind-load-images-mono kind-delete kind-recover
 
 kind-setup: ## Create cluster + registry
 	@echo "=== Step 1: Creating Kind cluster with local registry ==="
@@ -12,33 +12,18 @@ kind-setup: ## Create cluster + registry
 	@echo ""
 	@echo "Cluster ready! Next: make kind-load-images"
 
-kind-load-images: ## Build/pull all images (infra + services + frontend)
-	@echo "=== Step 2: Loading all images (including frontend) ==="
+kind-load-images: ## Build/pull all images (infra + services)
+	@echo "=== Step 2: Loading all images ==="
 	@echo ""
 	@echo "--- Loading infrastructure images ---"
 	./docker/scripts/dev/1.load_infra_images.sh
 	@echo ""
 	@echo "--- Building service images ---"
-	@# Frontend is included for local-kind (localhost) environment
 	./docker/scripts/dev/2.build_services_and_load.sh
 	@echo ""
 	@echo "All images loaded!"
 	@echo ""
 	@echo "Next: make helm-install-all ENV=local-kind"
-
-kind-load-images-backend: ## Build/pull backend images only (no frontend, for cloud deployments)
-	@echo "=== Loading backend images only (no frontend) ==="
-	@echo "Frontend will be deployed via CDN/S3/Route53"
-	@echo ""
-	@echo "--- Loading infrastructure images ---"
-	./docker/scripts/dev/1.load_infra_images.sh
-	@echo ""
-	@echo "--- Building backend service images ---"
-	SKIP_FRONTEND=true ./docker/scripts/dev/2.build_services_and_load.sh
-	@echo ""
-	@echo "All backend images loaded!"
-	@echo ""
-	@echo "Next: make helm-install-all ENV=<your-env>"
 
 kind-load-images-mono: ## Build Go services with monorepo pattern (faster rebuilds)
 	@echo "=== Loading images using Monorepo Build (BuildKit cache) ==="
@@ -56,34 +41,12 @@ kind-load-images-mono: ## Build Go services with monorepo pattern (faster rebuil
 		docker push $(LOCAL_REGISTRY)/$$svc:$(IMAGE_TAG); \
 	done
 	@echo ""
-	@echo "--- Building auth-service ---"
-	@$(MAKE) auth-service-load
-	@echo ""
-	@# Frontend is only built for local-kind environment (localhost)
-	@# Cloud environments (dev, staging, prod) use CDN/S3/Route53 for frontend
-ifeq ($(ENV),local-kind)
-	@echo "--- Building frontend (local-kind only) ---"
-	@$(MAKE) frontend-load
-endif
+	@echo "--- Building auth-service and frontend ---"
+	@$(MAKE) auth-service-load frontend-load
 	@echo ""
 	@echo "All images loaded! (Monorepo pattern)"
 	@echo ""
 	@echo "Next: make helm-install-all ENV=local-kind"
-
-kind-apply: ## Deploy all to k8s (localhost)
-	@echo "=== Step 3: Deploying to Kubernetes ==="
-	@echo ""
-	@echo "--- Deploying infrastructure ---"
-	kubectl apply -k infrastructure/overlays/develop
-	@echo ""
-	@echo "Waiting for infra pods..."
-	kubectl wait --namespace $(K8S_NAMESPACE) --for=condition=ready pod --selector=app=postgres --timeout=120s || true
-	kubectl wait --namespace $(K8S_NAMESPACE) --for=condition=ready pod --selector=app=redis --timeout=120s || true
-	@echo ""
-	@echo "--- Deploying services ---"
-	kubectl apply -k k8s/overlays/develop-registry/all-services
-	@echo ""
-	@echo "Done! Check: make status"
 
 kind-delete: ## Delete cluster
 	kind delete cluster --name $(KIND_CLUSTER)
@@ -99,12 +62,11 @@ kind-recover: ## Recover cluster after reboot
 	@echo "Cluster recovered!"
 	@kubectl get nodes
 
-##@ Local Domain (local.wealist.co.kr) - DEPRECATED-SOON: will be replaced by staging
+##@ Local Domain (local.wealist.co.kr)
 
-.PHONY: local-tls-secret local-kind-apply
+.PHONY: local-tls-secret
 
-# DEPRECATED-SOON: local.wealist.co.kr will be replaced by staging environment
-local-tls-secret: ## Create TLS secret for local.wealist.co.kr (DEPRECATED-SOON)
+local-tls-secret: ## Create TLS secret for local.wealist.co.kr
 	@echo "=== Creating TLS secret for local.wealist.co.kr ==="
 	@if kubectl get secret local-wealist-tls -n $(K8S_NAMESPACE) >/dev/null 2>&1; then \
 		echo "TLS secret already exists, skipping..."; \
@@ -123,30 +85,11 @@ local-tls-secret: ## Create TLS secret for local.wealist.co.kr (DEPRECATED-SOON)
 		echo "TLS secret created"; \
 	fi
 
-# DEPRECATED-SOON: local.wealist.co.kr will be replaced by staging environment
-local-kind-apply: local-tls-secret ## Deploy with local.wealist.co.kr domain (DEPRECATED-SOON)
-	@echo "=== Deploying to Kubernetes (local.wealist.co.kr) ==="
-	@echo ""
-	@echo "--- Deploying infrastructure ---"
-	kubectl apply -k infrastructure/overlays/develop
-	@echo ""
-	@echo "Waiting for infra pods..."
-	kubectl wait --namespace $(K8S_NAMESPACE) --for=condition=ready pod --selector=app=postgres --timeout=120s || true
-	kubectl wait --namespace $(K8S_NAMESPACE) --for=condition=ready pod --selector=app=redis --timeout=120s || true
-	@echo ""
-	@echo "--- Deploying services (local.wealist.co.kr) ---"
-	kubectl apply -k k8s/overlays/develop-registry-local/all-services
-	@echo ""
-	@echo "Done! Access: https://local.wealist.co.kr"
-	@echo "(Self-signed cert - browser will show warning)"
-	@echo "Check: make status"
-
-##@ Local Database - DEPRECATED-SOON: will be replaced by staging
+##@ Local Database
 
 .PHONY: init-local-db
 
-# DEPRECATED-SOON: local-ubuntu environment will be replaced by staging
-init-local-db: ## Init local PostgreSQL/Redis (DEPRECATED-SOON: use staging instead)
+init-local-db: ## Init local PostgreSQL/Redis (Ubuntu, ENV=local-ubuntu)
 	@echo "Initializing local PostgreSQL and Redis for Wealist..."
 	@echo ""
 	@echo "This will configure your local PostgreSQL and Redis to accept"

@@ -56,6 +56,9 @@ venv/
 .DS_Store
 Thumbs.db
 
+# SonarQube scanner cache
+.scannerwork/
+
 # Log files
 *.log
 
@@ -70,6 +73,7 @@ Thumbs.db
 .claude/
 .claudeignore
 CLAUDE.md
+.mcp.json
 
 # ai
 .kiro/
