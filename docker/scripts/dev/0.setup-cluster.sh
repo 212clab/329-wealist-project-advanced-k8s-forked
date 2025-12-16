@@ -97,11 +97,12 @@ echo "⚙️ Ingress Controller 설정 중..."
 kubectl patch configmap ingress-nginx-controller -n ingress-nginx \
   --type merge -p '{"data":{"allow-snippet-annotations":"true"}}' 2>/dev/null || true
 
-# hostNetwork 활성화 (Kind 포트 매핑과 연결)
+# hostNetwork 활성화 + control-plane 노드에서만 실행 (Kind 포트 매핑과 연결)
 kubectl patch deployment ingress-nginx-controller -n ingress-nginx \
   --type='json' -p='[
     {"op": "add", "path": "/spec/template/spec/hostNetwork", "value": true},
-    {"op": "replace", "path": "/spec/template/spec/dnsPolicy", "value": "ClusterFirstWithHostNet"}
+    {"op": "replace", "path": "/spec/template/spec/dnsPolicy", "value": "ClusterFirstWithHostNet"},
+    {"op": "add", "path": "/spec/template/spec/nodeSelector", "value": {"ingress-ready": "true"}}
   ]' 2>/dev/null || true
 
 echo "⏳ Ingress Controller 재시작 대기..."
