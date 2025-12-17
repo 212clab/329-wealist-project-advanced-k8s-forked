@@ -22,7 +22,8 @@ type ServerConfig struct {
 }
 
 type DatabaseConfig struct {
-	URL string `yaml:"url"`
+	URL         string `yaml:"url"`
+	AutoMigrate bool   `yaml:"auto_migrate"`
 }
 
 type RedisConfig struct {
@@ -85,6 +86,9 @@ func Load(path string) (*Config, error) {
 	}
 	if dbURL := os.Getenv("DATABASE_URL"); dbURL != "" {
 		cfg.Database.URL = dbURL
+	}
+	if autoMigrate := os.Getenv("DB_AUTO_MIGRATE"); autoMigrate != "" {
+		cfg.Database.AutoMigrate = autoMigrate == "true"
 	}
 	if redisHost := os.Getenv("REDIS_HOST"); redisHost != "" {
 		cfg.Redis.Host = redisHost

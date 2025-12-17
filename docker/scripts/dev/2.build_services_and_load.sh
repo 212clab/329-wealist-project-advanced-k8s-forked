@@ -9,7 +9,8 @@ set -e
 REG_PORT="5001"
 LOCAL_REG="localhost:${REG_PORT}"
 TAG="${IMAGE_TAG:-latest}"  # 환경변수로 오버라이드 가능, 기본값 latest
-MAX_PARALLEL="${MAX_PARALLEL:-2}"  # 동시 빌드 수 (기본 2, 리소스 경쟁 줄이기)
+MAX_PARALLEL="${MAX_PARALLEL:-4}"  # 동시 빌드 수 (기본 4)
+SKIP_FRONTEND="${SKIP_FRONTEND:-false}"  # 프론트엔드 제외 (CDN/S3 배포 환경용)
 
 # 색상 출력
 RED='\033[0;31m'
@@ -21,6 +22,7 @@ NC='\033[0m' # No Color
 echo "=== 서비스 이미지 빌드 & 로컬 레지스트리 푸시 (병렬) ==="
 echo "로컬 레지스트리: ${LOCAL_REG}"
 echo "동시 빌드 수: ${MAX_PARALLEL}"
+echo "프론트엔드 제외: ${SKIP_FRONTEND}"
 echo ""
 
 # 레지스트리 실행 확인
@@ -41,18 +43,41 @@ echo ""
 TEMP_DIR=$(mktemp -d)
 trap "rm -rf $TEMP_DIR" EXIT
 
-# 서비스 정보 배열 (빠른 빌드 먼저)
-# 순서: frontend(npm) → Go 서비스들 → auth-service(Gradle, 느림)
-declare -a SERVICES=(
-    "frontend|services/frontend|Dockerfile"
-    "video-service|services/video-service|docker/Dockerfile"
+# Detect if service uses common packages (requires project root context)
+# All Go services use common packages, only auth-service (Spring Boot) and frontend (React) don't
+uses_common_packages() {
+    local name="$1"
+    case "$name" in
+        auth-service|frontend)
+            return 1  # false - Spring Boot and React don't use Go packages
+            ;;
+        *)
+            return 0  # true - all Go services use common packages
+            ;;
+    esac
+}
+
+# 서비스 정보 배열 (backend services)
+declare -a BACKEND_SERVICES=(
+    "auth-service|services/auth-service|Dockerfile"
     "board-service|services/board-service|docker/Dockerfile"
+    "chat-service|services/chat-service|docker/Dockerfile"
     "noti-service|services/noti-service|docker/Dockerfile"
     "storage-service|services/storage-service|docker/Dockerfile"
-    "chat-service|.|services/chat-service/docker/Dockerfile"
-    "user-service|.|services/user-service/docker/Dockerfile"
-    "auth-service|services/auth-service|Dockerfile"
+    "user-service|services/user-service|docker/Dockerfile"
+    "video-service|services/video-service|docker/Dockerfile"
 )
+
+# Frontend service (only for local development, not for CDN/S3 deployments)
+declare -a FRONTEND_SERVICE=(
+    "frontend|services/frontend|Dockerfile"
+)
+
+# Build full service list based on SKIP_FRONTEND flag
+declare -a SERVICES=("${BACKEND_SERVICES[@]}")
+if [ "$SKIP_FRONTEND" != "true" ]; then
+    SERVICES+=("${FRONTEND_SERVICE[@]}")
+fi
 
 # 빌드할 서비스 선택
 if [ $# -eq 0 ]; then
@@ -97,7 +122,17 @@ build_service() {
         echo "Image: $image_name"
         echo ""
 
-        if docker build -t "$image_name" -f "$path/$dockerfile" "$path" 2>&1; then
+        # Determine build context based on service type
+        local build_context
+        if uses_common_packages "$name"; then
+            build_context="."
+            echo "Using project root context (common packages)"
+        else
+            build_context="$path"
+            echo "Using service directory context"
+        fi
+
+        if docker build -t "$image_name" -f "$path/$dockerfile" "$build_context" 2>&1; then
             echo ""
             echo "Pushing to local registry..."
             if docker push "$image_name" 2>&1; then
@@ -197,5 +232,5 @@ echo "로컬 레지스트리 이미지 확인:"
 echo "  curl -s http://${LOCAL_REG}/v2/_catalog"
 echo ""
 echo "배포 명령어:"
-echo "  make kind-apply"
+echo "  make helm-install-all ENV=local-kind"
 echo ""

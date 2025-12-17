@@ -30,7 +30,7 @@ const INJECTED_API_BASE_URL = isIngressMode
 // K8s ingress용 서비스 prefix 매핑
 // ingress가 /svc/{service}/* 로 라우팅하고, rewrite로 prefix 제거
 const getIngressServicePrefix = (path: string): string => {
-  if (path?.includes('/api/auth')) return '/svc/auth';
+  if (path?.includes('/api/auth')) return '/svc/auth/api/auth';
   if (path?.includes('/api/users')) return '/svc/user';
   if (path?.includes('/api/workspaces')) return '/svc/user';
   if (path?.includes('/api/profiles')) return '/svc/user';
@@ -56,18 +56,17 @@ const getApiBaseUrl = (path: string): string => {
     const isLocalDevelopment = INJECTED_API_BASE_URL.includes('localhost');
 
     if (isLocalDevelopment) {
-      // 🔥 로컬 개발: 각 서비스별 포트 지정
-      // auth-service: refresh 호출이 '/refresh'만 사용하므로 context path 포함
-      if (path?.includes('/api/auth')) return `${INJECTED_API_BASE_URL}:8080/api/auth`; // auth-service
-      // user-service: 요청이 full path 사용 (/api/users/*, /api/workspaces/*, /api/profiles/*)
-      if (path?.includes('/api/users')) return `${INJECTED_API_BASE_URL}:8081`; // user-service
-      if (path?.includes('/api/workspaces')) return `${INJECTED_API_BASE_URL}:8081`; // user-service (workspaces)
-      if (path?.includes('/api/profiles')) return `${INJECTED_API_BASE_URL}:8081`; // user-service (profiles)
-      if (path?.includes('/api/boards')) return `${INJECTED_API_BASE_URL}:8000/api`;
-      if (path?.includes('/api/chats')) return `${INJECTED_API_BASE_URL}:8001${path}`;
-      if (path?.includes('/api/notifications')) return `${INJECTED_API_BASE_URL}:8002`;
-      if (path?.includes('/api/storage')) return `${INJECTED_API_BASE_URL}:8003/api`; // storage-service (base path only)
-      if (path?.includes('/api/video')) return `${INJECTED_API_BASE_URL}:8004`;
+      // 🔥 로컬 개발: nginx를 통해 각 서비스로 라우팅 (포트 80)
+      // nginx가 /api/* 경로를 각 백엔드 서비스로 프록시
+      if (path?.includes('/api/auth')) return `${INJECTED_API_BASE_URL}/api/auth`; // → nginx → auth-service
+      if (path?.includes('/api/users')) return `${INJECTED_API_BASE_URL}`; // → nginx → user-service
+      if (path?.includes('/api/workspaces')) return `${INJECTED_API_BASE_URL}`; // → nginx → user-service
+      if (path?.includes('/api/profiles')) return `${INJECTED_API_BASE_URL}`; // → nginx → user-service
+      if (path?.includes('/api/boards')) return `${INJECTED_API_BASE_URL}/api/boards/api`; // → nginx → board-service
+      if (path?.includes('/api/chats')) return `${INJECTED_API_BASE_URL}${path}`; // → nginx → chat-service
+      if (path?.includes('/api/notifications')) return `${INJECTED_API_BASE_URL}`; // → nginx → noti-service
+      if (path?.includes('/api/storage')) return `${INJECTED_API_BASE_URL}/api/storage/api`; // → nginx → storage-service
+      if (path?.includes('/api/video')) return `${INJECTED_API_BASE_URL}`; // → nginx → video-service
     }
 
     return `${INJECTED_API_BASE_URL}${path}`;
@@ -473,10 +472,19 @@ export const getNotificationSSEUrl = (token?: string): string => {
 
 /**
  * OAuth2 Base URL 생성 (Google 로그인 등)
+ * OAuth2는 세션 쿠키 도메인 일치를 위해 api.* 도메인에서 시작해야 함
  */
 export const getOAuthBaseUrl = (): string => {
-  // K8s ingress 모드: 상대 경로 사용 (같은 도메인)
+  // K8s ingress 모드: api.* 도메인 사용 (OAuth2 콜백과 도메인 일치 필요)
   if (isIngressMode) {
+    const hostname = window.location.hostname;
+    if (hostname === 'dev.wealist.co.kr') {
+      return 'https://api.dev.wealist.co.kr';
+    }
+    if (hostname === 'wealist.co.kr' || hostname === 'www.wealist.co.kr') {
+      return 'https://api.wealist.co.kr';
+    }
+    // local 환경 (localhost)
     return '';
   }
 

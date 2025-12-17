@@ -14,6 +14,7 @@ import (
 	"go.uber.org/zap"
 	"gorm.io/gorm"
 
+	commonhealth "github.com/OrangesCloud/wealist-advanced-go-pkg/health"
 	commonmw "github.com/OrangesCloud/wealist-advanced-go-pkg/middleware"
 )
 
@@ -52,19 +53,17 @@ func Setup(cfg *config.Config, db *gorm.DB, redisClient *redis.Client, logger *z
 
 	// Initialize handlers
 	roomHandler := handler.NewRoomHandler(roomService, logger)
-	healthHandler := handler.NewHealthHandler(db, redisClient)
 
-	// Health endpoints (no auth)
-	r.GET("/health", healthHandler.Health)
-	r.GET("/ready", healthHandler.Ready)
+	// Health check routes (using common package)
+	healthChecker := commonhealth.NewHealthChecker(db, redisClient)
+	healthChecker.RegisterRoutes(r, cfg.Server.BasePath)
+
+	// Prometheus metrics endpoint
 	r.GET("/metrics", gin.WrapH(promhttp.Handler()))
 
 	// API routes with base path
 	api := r.Group(cfg.Server.BasePath)
 	{
-		// Health under base path
-		api.GET("/health", healthHandler.Health)
-		api.GET("/ready", healthHandler.Ready)
 
 		// Authenticated routes
 		authenticated := api.Group("")

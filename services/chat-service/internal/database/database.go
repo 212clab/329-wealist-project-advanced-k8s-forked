@@ -45,19 +45,25 @@ func NewDB(cfg *config.Config) (*gorm.DB, error) {
 	sqlDB.SetMaxOpenConns(100)
 	sqlDB.SetConnMaxLifetime(time.Hour)
 
-	// Auto migrate
-	if err := db.AutoMigrate(
-		&domain.Chat{},
-		&domain.ChatParticipant{},
-		&domain.Message{},
-		&domain.MessageRead{},
-		&domain.UserPresence{},
-	); err != nil {
-		return nil, err
-	}
+	// Auto migrate (conditional based on DB_AUTO_MIGRATE env)
+	if cfg.Database.AutoMigrate {
+		log.Println("Running database migrations (DB_AUTO_MIGRATE=true)")
+		if err := db.AutoMigrate(
+			&domain.Chat{},
+			&domain.ChatParticipant{},
+			&domain.Message{},
+			&domain.MessageRead{},
+			&domain.UserPresence{},
+		); err != nil {
+			return nil, err
+		}
 
-	// Create indexes and constraints
-	createIndexes(db)
+		// Create indexes and constraints
+		createIndexes(db)
+		log.Println("Database migrations completed successfully")
+	} else {
+		log.Println("Database auto-migration disabled (DB_AUTO_MIGRATE=false)")
+	}
 
 	return db, nil
 }

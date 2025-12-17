@@ -42,6 +42,7 @@ type DatabaseConfig struct {
 	MaxOpenConns    int           `yaml:"max_open_conns"`
 	MaxIdleConns    int           `yaml:"max_idle_conns"`
 	ConnMaxLifetime time.Duration `yaml:"conn_max_lifetime"`
+	AutoMigrate     bool          `yaml:"auto_migrate"`
 }
 
 // LoggerConfig holds logger configuration
@@ -129,6 +130,7 @@ func getDefaultConfig() Config {
 			MaxOpenConns:    25,
 			MaxIdleConns:    5,
 			ConnMaxLifetime: 5 * time.Minute,
+			AutoMigrate:     false,
 		},
 		Logger: LoggerConfig{
 			Level:      "info",
@@ -202,6 +204,11 @@ func (c *Config) overrideFromEnv() {
 	}
 	if dbname := os.Getenv("DB_NAME"); dbname != "" {
 		c.Database.DBName = dbname
+	}
+
+	// Database auto-migration
+	if autoMigrate := os.Getenv("DB_AUTO_MIGRATE"); autoMigrate != "" {
+		c.Database.AutoMigrate = autoMigrate == "true"
 	}
 
 	// Logger

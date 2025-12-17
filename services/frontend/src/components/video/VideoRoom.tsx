@@ -198,6 +198,8 @@ export const VideoRoom: React.FC<VideoRoomProps> = ({
   const maxRejoinAttempts = 3;
   // Track if we've ever successfully connected (to distinguish initial failure from disconnection)
   const hasConnectedOnceRef = useRef(false);
+  // Track intentional leave to prevent reconnection attempts
+  const isIntentionalLeaveRef = useRef(false);
 
   // Local state
   const [isMuted, setIsMuted] = useState(false);
@@ -469,6 +471,12 @@ export const VideoRoom: React.FC<VideoRoomProps> = ({
       console.log('[VideoRoom] Disconnected from room, reason:', reason);
       setConnectionState('disconnected');
 
+      // Skip reconnection if user intentionally left
+      if (isIntentionalLeaveRef.current) {
+        console.log('[VideoRoom] Intentional leave, skipping reconnection');
+        return;
+      }
+
       // Only attempt to rejoin if we've successfully connected at least once
       // This prevents infinite reconnection loops when the initial connection fails
       if (!hasConnectedOnceRef.current) {
@@ -574,6 +582,7 @@ export const VideoRoom: React.FC<VideoRoomProps> = ({
   }, [room, isScreenSharing]);
 
   const handleLeave = useCallback(() => {
+    isIntentionalLeaveRef.current = true; // Mark as intentional leave to prevent reconnection
     room?.disconnect();
     onLeave();
   }, [room, onLeave]);

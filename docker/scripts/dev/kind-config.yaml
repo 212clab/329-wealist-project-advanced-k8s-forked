@@ -15,14 +15,13 @@ nodes:
           kubeletExtraArgs:
             node-labels: "ingress-ready=true"
     extraPortMappings:
-      # listenAddress: 0.0.0.0 → 같은 네트워크의 다른 컴퓨터에서 접근 가능
       - containerPort: 80
         hostPort: 80
-        listenAddress: "0.0.0.0"
+        listenAddress: "0.0.0.0"  # Allow external access
         protocol: TCP
       - containerPort: 443
         hostPort: 443
-        listenAddress: "0.0.0.0"
+        listenAddress: "0.0.0.0"  # Allow external access
         protocol: TCP
       - containerPort: 30080
         hostPort: 8080
