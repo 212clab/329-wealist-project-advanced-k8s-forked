@@ -1,3 +1,7 @@
+// Package middleware provides HTTP middleware for video-service.
+//
+// This package includes authentication middleware that validates JWT tokens
+// either through the auth-service or locally using the configured secret key.
 package middleware
 
 import (
@@ -7,6 +11,7 @@ import (
 	"net/http"
 	"strings"
 	"time"
+	"video-service/internal/response"
 
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
@@ -14,10 +19,17 @@ import (
 	"go.uber.org/zap"
 )
 
+// TokenValidator defines the interface for JWT token validation.
+// It abstracts the token validation logic to allow different implementations.
 type TokenValidator interface {
+	// ValidateToken validates a JWT token and returns the user ID.
+	// Returns an error if the token is invalid or expired.
 	ValidateToken(ctx context.Context, token string) (uuid.UUID, error)
 }
 
+// AuthServiceValidator implements TokenValidator using auth-service with
+// local JWT fallback. It first attempts validation via auth-service API,
+// and falls back to local JWT parsing if the service is unavailable.
 type AuthServiceValidator struct {
 	authServiceURL string
 	secretKey      string
@@ -25,6 +37,8 @@ type AuthServiceValidator struct {
 	logger         *zap.Logger
 }
 
+// NewAuthServiceValidator creates a new AuthServiceValidator.
+// If authServiceURL is empty, only local validation will be used.
 func NewAuthServiceValidator(authServiceURL, secretKey string, logger *zap.Logger) *AuthServiceValidator {
 	return &AuthServiceValidator{
 		authServiceURL: authServiceURL,
@@ -36,6 +50,9 @@ func NewAuthServiceValidator(authServiceURL, secretKey string, logger *zap.Logge
 	}
 }
 
+// ValidateToken validates a JWT token by first trying the auth-service,
+// then falling back to local JWT parsing if the service is unavailable.
+// It extracts the user ID from the token claims.
 func (v *AuthServiceValidator) ValidateToken(ctx context.Context, tokenString string) (uuid.UUID, error) {
 	// Try auth service first
 	if v.authServiceURL != "" {
@@ -50,6 +67,7 @@ func (v *AuthServiceValidator) ValidateToken(ctx context.Context, tokenString st
 	return v.validateLocally(tokenString)
 }
 
+// validateWithAuthService validates token by calling auth-service's validate endpoint.
 func (v *AuthServiceValidator) validateWithAuthService(ctx context.Context, token string) (uuid.UUID, error) {
 	url := v.authServiceURL + "/api/auth/validate"
 
@@ -82,6 +100,8 @@ func (v *AuthServiceValidator) validateWithAuthService(ctx context.Context, toke
 	return uuid.Parse(result.UserID)
 }
 
+// validateLocally parses and validates the JWT token locally using the secret key.
+// It looks for user ID in 'sub', 'userId', or 'user_id' claims.
 func (v *AuthServiceValidator) validateLocally(tokenString string) (uuid.UUID, error) {
 	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
 		return []byte(v.secretKey), nil
@@ -111,25 +131,22 @@ func (v *AuthServiceValidator) validateLocally(tokenString string) (uuid.UUID, e
 	return uuid.Parse(userIDStr)
 }
 
-// AuthMiddleware validates JWT token from Authorization header
+// AuthMiddleware returns a Gin middleware that validates JWT tokens.
+// It extracts the token from the Authorization header (Bearer scheme),
+// validates it using the provided TokenValidator, and sets 'user_id'
+// and 'token' in the Gin context for downstream handlers.
 func AuthMiddleware(validator TokenValidator) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		authHeader := c.GetHeader("Authorization")
 		if authHeader == "" {
-			c.JSON(http.StatusUnauthorized, gin.H{
-				"success": false,
-				"error":   gin.H{"code": "UNAUTHORIZED", "message": "No authorization header"},
-			})
+			response.Unauthorized(c, "No authorization header")
 			c.Abort()
 			return
 		}
 
 		parts := strings.Split(authHeader, " ")
 		if len(parts) != 2 || strings.ToLower(parts[0]) != "bearer" {
-			c.JSON(http.StatusUnauthorized, gin.H{
-				"success": false,
-				"error":   gin.H{"code": "UNAUTHORIZED", "message": "Invalid authorization header format"},
-			})
+			response.Unauthorized(c, "Invalid authorization header format")
 			c.Abort()
 			return
 		}
@@ -137,10 +154,7 @@ func AuthMiddleware(validator TokenValidator) gin.HandlerFunc {
 		tokenString := parts[1]
 		userID, err := validator.ValidateToken(c.Request.Context(), tokenString)
 		if err != nil {
-			c.JSON(http.StatusUnauthorized, gin.H{
-				"success": false,
-				"error":   gin.H{"code": "UNAUTHORIZED", "message": "Invalid token"},
-			})
+			response.Unauthorized(c, "Invalid token")
 			c.Abort()
 			return
 		}

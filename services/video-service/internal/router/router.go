@@ -4,6 +4,7 @@ import (
 	"video-service/internal/client"
 	"video-service/internal/config"
 	"video-service/internal/handler"
+	"video-service/internal/metrics"
 	"video-service/internal/middleware"
 	"video-service/internal/repository"
 	"video-service/internal/service"
@@ -25,11 +26,14 @@ func Setup(cfg *config.Config, db *gorm.DB, redisClient *redis.Client, logger *z
 
 	r := gin.New()
 
+	// Initialize metrics
+	m := metrics.New()
+
 	// Middleware (using common package)
 	r.Use(commonmw.Recovery(logger))
 	r.Use(commonmw.Logger(logger))
 	r.Use(commonmw.DefaultCORS())
-	r.Use(commonmw.Metrics())
+	r.Use(metrics.HTTPMiddleware(m))
 
 	// Initialize repositories
 	roomRepo := repository.NewRoomRepository(db)

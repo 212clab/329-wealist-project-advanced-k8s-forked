@@ -1,3 +1,9 @@
+// Package service implements business logic for video-service.
+//
+// This package provides the RoomService interface and implementation
+// for managing video call rooms, participants, call history, and transcripts.
+// It integrates with LiveKit for WebRTC functionality and validates
+// workspace membership through the user-service.
 package service
 
 import (
@@ -18,34 +24,72 @@ import (
 	"go.uber.org/zap"
 )
 
+// Service-level errors for room operations.
+// These errors are used to communicate specific failure conditions
+// to handlers for appropriate HTTP response mapping.
 var (
-	ErrRoomNotFound       = errors.New("room not found")
-	ErrRoomFull           = errors.New("room is full")
-	ErrAlreadyInRoom      = errors.New("user is already in room")
-	ErrNotInRoom          = errors.New("user is not in room")
-	ErrRoomNotActive      = errors.New("room is not active")
+	// ErrRoomNotFound indicates the requested room does not exist.
+	ErrRoomNotFound = errors.New("room not found")
+	// ErrRoomFull indicates the room has reached its maximum participant capacity.
+	ErrRoomFull = errors.New("room is full")
+	// ErrAlreadyInRoom indicates the user is already a participant in the room.
+	ErrAlreadyInRoom = errors.New("user is already in room")
+	// ErrNotInRoom indicates the user is not a participant in the room.
+	ErrNotInRoom = errors.New("user is not in room")
+	// ErrRoomNotActive indicates the room has ended and is no longer accepting participants.
+	ErrRoomNotActive = errors.New("room is not active")
+	// ErrNotWorkspaceMember indicates the user is not authorized to access the workspace.
 	ErrNotWorkspaceMember = errors.New("user is not a member of this workspace")
 )
 
+// RoomService defines the interface for video room business operations.
+// It provides methods for room lifecycle management, participant tracking,
+// call history retrieval, and transcript storage.
 type RoomService interface {
+	// CreateRoom creates a new video call room in the specified workspace.
+	// It validates workspace membership and initializes a LiveKit room.
 	CreateRoom(ctx context.Context, req *domain.CreateRoomRequest, creatorID uuid.UUID, token string) (*domain.RoomResponse, error)
+
+	// GetRoom retrieves a single room by its ID.
 	GetRoom(ctx context.Context, roomID uuid.UUID) (*domain.RoomResponse, error)
+
+	// GetWorkspaceRooms retrieves all rooms for a workspace.
+	// Set activeOnly to true to filter for only active rooms.
 	GetWorkspaceRooms(ctx context.Context, workspaceID uuid.UUID, userID uuid.UUID, token string, activeOnly bool) ([]domain.RoomResponse, error)
+
+	// JoinRoom adds a user to a room and returns a LiveKit access token.
+	// Returns ErrRoomFull if the room has reached capacity.
 	JoinRoom(ctx context.Context, roomID, userID uuid.UUID, userName string, token string) (*domain.JoinRoomResponse, error)
+
+	// LeaveRoom removes a user from a room.
+	// If the creator leaves, the room is automatically ended.
 	LeaveRoom(ctx context.Context, roomID, userID uuid.UUID) error
+
+	// EndRoom closes a room and creates a call history record.
+	// Only the room creator can end the room.
 	EndRoom(ctx context.Context, roomID, userID uuid.UUID) error
+
+	// GetParticipants returns all active participants in a room.
 	GetParticipants(ctx context.Context, roomID uuid.UUID) ([]domain.ParticipantResponse, error)
 
-	// Call history methods
+	// GetWorkspaceCallHistory returns paginated call history for a workspace.
 	GetWorkspaceCallHistory(ctx context.Context, workspaceID uuid.UUID, userID uuid.UUID, token string, limit, offset int) ([]domain.CallHistoryResponse, int64, error)
+
+	// GetUserCallHistory returns paginated call history for a specific user.
 	GetUserCallHistory(ctx context.Context, userID uuid.UUID, limit, offset int) ([]domain.CallHistoryResponse, int64, error)
+
+	// GetCallHistoryByID retrieves a single call history record by ID.
 	GetCallHistoryByID(ctx context.Context, historyID uuid.UUID) (*domain.CallHistoryResponse, error)
 
-	// Transcript methods
+	// SaveTranscript stores or updates the transcript content for a room.
 	SaveTranscript(ctx context.Context, roomID uuid.UUID, content string) (*domain.TranscriptResponse, error)
+
+	// GetTranscriptByCallHistoryID retrieves the transcript for a completed call.
 	GetTranscriptByCallHistoryID(ctx context.Context, callHistoryID uuid.UUID) (*domain.TranscriptResponse, error)
 }
 
+// roomService implements RoomService interface.
+// It coordinates between repository, LiveKit, and user-service client.
 type roomService struct {
 	roomRepo    repository.RoomRepository
 	userClient  client.UserClient
@@ -55,6 +99,9 @@ type roomService struct {
 	logger      *zap.Logger
 }
 
+// NewRoomService creates a new RoomService with the given dependencies.
+// If LiveKit configuration is provided, it initializes the LiveKit client.
+// If userClient is nil, workspace validation will be skipped.
 func NewRoomService(
 	roomRepo repository.RoomRepository,
 	userClient client.UserClient,
