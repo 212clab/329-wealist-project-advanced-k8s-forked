@@ -1,3 +1,8 @@
+// Package middleware provides HTTP middleware for noti-service.
+//
+// This package includes authentication middleware that validates JWT tokens
+// either through the auth-service or locally using the configured secret key.
+// It also provides workspace extraction and internal API key validation.
 package middleware
 
 import (
@@ -5,6 +10,7 @@ import (
 	"context"
 	"encoding/json"
 	"net/http"
+	"noti-service/internal/response"
 	"strings"
 	"time"
 
@@ -14,10 +20,13 @@ import (
 	"go.uber.org/zap"
 )
 
+// TokenValidator defines the interface for JWT token validation.
 type TokenValidator interface {
 	ValidateToken(ctx context.Context, token string) (uuid.UUID, error)
 }
 
+// AuthServiceValidator implements TokenValidator using auth-service with
+// local JWT fallback.
 type AuthServiceValidator struct {
 	authServiceURL string
 	secretKey      string
@@ -25,6 +34,7 @@ type AuthServiceValidator struct {
 	logger         *zap.Logger
 }
 
+// NewAuthServiceValidator creates a new AuthServiceValidator.
 func NewAuthServiceValidator(authServiceURL, secretKey string, logger *zap.Logger) *AuthServiceValidator {
 	return &AuthServiceValidator{
 		authServiceURL: authServiceURL,
@@ -112,25 +122,20 @@ func (v *AuthServiceValidator) validateLocally(tokenString string) (uuid.UUID, e
 	return uuid.Parse(userIDStr)
 }
 
-// AuthMiddleware validates JWT token from Authorization header
+// AuthMiddleware validates JWT token from Authorization header.
+// It extracts the token from the Bearer scheme and validates it.
 func AuthMiddleware(validator TokenValidator) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		authHeader := c.GetHeader("Authorization")
 		if authHeader == "" {
-			c.JSON(http.StatusUnauthorized, gin.H{
-				"success": false,
-				"error":   gin.H{"code": "UNAUTHORIZED", "message": "No authorization header"},
-			})
+			response.Unauthorized(c, "No authorization header")
 			c.Abort()
 			return
 		}
 
 		parts := strings.Split(authHeader, " ")
 		if len(parts) != 2 || strings.ToLower(parts[0]) != "bearer" {
-			c.JSON(http.StatusUnauthorized, gin.H{
-				"success": false,
-				"error":   gin.H{"code": "UNAUTHORIZED", "message": "Invalid authorization header format"},
-			})
+			response.Unauthorized(c, "Invalid authorization header format")
 			c.Abort()
 			return
 		}
@@ -138,10 +143,7 @@ func AuthMiddleware(validator TokenValidator) gin.HandlerFunc {
 		tokenString := parts[1]
 		userID, err := validator.ValidateToken(c.Request.Context(), tokenString)
 		if err != nil {
-			c.JSON(http.StatusUnauthorized, gin.H{
-				"success": false,
-				"error":   gin.H{"code": "UNAUTHORIZED", "message": "Invalid token"},
-			})
+			response.Unauthorized(c, "Invalid token")
 			c.Abort()
 			return
 		}
@@ -151,7 +153,7 @@ func AuthMiddleware(validator TokenValidator) gin.HandlerFunc {
 	}
 }
 
-// InternalAuthMiddleware validates internal API key
+// InternalAuthMiddleware validates internal API key for service-to-service calls.
 func InternalAuthMiddleware(apiKey string) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		providedKey := c.GetHeader("x-internal-api-key")
@@ -160,10 +162,7 @@ func InternalAuthMiddleware(apiKey string) gin.HandlerFunc {
 		}
 
 		if providedKey == "" || providedKey != apiKey {
-			c.JSON(http.StatusUnauthorized, gin.H{
-				"success": false,
-				"error":   gin.H{"code": "UNAUTHORIZED", "message": "Invalid internal API key"},
-			})
+			response.Unauthorized(c, "Invalid internal API key")
 			c.Abort()
 			return
 		}
@@ -191,15 +190,12 @@ func WorkspaceMiddleware() gin.HandlerFunc {
 	}
 }
 
-// RequireWorkspace ensures workspace ID is present
+// RequireWorkspace ensures workspace ID is present in the context.
 func RequireWorkspace() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		_, exists := c.Get("workspace_id")
 		if !exists {
-			c.JSON(http.StatusBadRequest, gin.H{
-				"success": false,
-				"error":   gin.H{"code": "BAD_REQUEST", "message": "x-workspace-id header is required"},
-			})
+			response.BadRequest(c, "x-workspace-id header is required")
 			c.Abort()
 			return
 		}
@@ -207,8 +203,8 @@ func RequireWorkspace() gin.HandlerFunc {
 	}
 }
 
-// SSEAuthMiddleware validates JWT token from query parameter for SSE connections
-// EventSource API doesn't support custom headers, so token must be passed as query param
+// SSEAuthMiddleware validates JWT token from query parameter for SSE connections.
+// EventSource API doesn't support custom headers, so token must be passed as query param.
 func SSEAuthMiddleware(validator TokenValidator) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		// Try query parameter first (for SSE)
@@ -226,20 +222,14 @@ func SSEAuthMiddleware(validator TokenValidator) gin.HandlerFunc {
 		}
 
 		if tokenString == "" {
-			c.JSON(http.StatusUnauthorized, gin.H{
-				"success": false,
-				"error":   gin.H{"code": "UNAUTHORIZED", "message": "No token provided"},
-			})
+			response.Unauthorized(c, "No token provided")
 			c.Abort()
 			return
 		}
 
 		userID, err := validator.ValidateToken(c.Request.Context(), tokenString)
 		if err != nil {
-			c.JSON(http.StatusUnauthorized, gin.H{
-				"success": false,
-				"error":   gin.H{"code": "UNAUTHORIZED", "message": "Invalid token"},
-			})
+			response.Unauthorized(c, "Invalid token")
 			c.Abort()
 			return
 		}

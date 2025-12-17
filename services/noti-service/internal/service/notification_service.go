@@ -1,3 +1,7 @@
+// Package service implements business logic for noti-service.
+//
+// This package provides the NotificationService for managing notifications,
+// including creation, delivery via Redis pub/sub, and cache management.
 package service
 
 import (
@@ -14,6 +18,9 @@ import (
 	"go.uber.org/zap"
 )
 
+// NotificationService provides notification management operations.
+// It handles notification CRUD, Redis pub/sub for real-time delivery,
+// and caching for unread count optimization.
 type NotificationService struct {
 	repo   *repository.NotificationRepository
 	redis  *redis.Client
@@ -21,6 +28,7 @@ type NotificationService struct {
 	logger *zap.Logger
 }
 
+// NewNotificationService creates a new NotificationService with the given dependencies.
 func NewNotificationService(
 	repo *repository.NotificationRepository,
 	redis *redis.Client,
@@ -35,6 +43,7 @@ func NewNotificationService(
 	}
 }
 
+// CreateNotification creates a new notification from an event and publishes it via Redis.
 func (s *NotificationService) CreateNotification(ctx context.Context, event *domain.NotificationEvent) (*domain.Notification, error) {
 	notification := &domain.Notification{
 		ID:           uuid.New(),
@@ -73,6 +82,8 @@ func (s *NotificationService) CreateNotification(ctx context.Context, event *dom
 	return notification, nil
 }
 
+// CreateBulkNotifications creates multiple notifications from a list of events.
+// Errors for individual notifications are logged but don't stop the batch.
 func (s *NotificationService) CreateBulkNotifications(ctx context.Context, events []domain.NotificationEvent) ([]domain.Notification, error) {
 	notifications := make([]domain.Notification, 0, len(events))
 
@@ -88,6 +99,7 @@ func (s *NotificationService) CreateBulkNotifications(ctx context.Context, event
 	return notifications, nil
 }
 
+// GetNotifications returns paginated notifications for a user in a workspace.
 func (s *NotificationService) GetNotifications(ctx context.Context, userID, workspaceID uuid.UUID, page, limit int, unreadOnly bool) (*domain.PaginatedNotifications, error) {
 	notifications, total, err := s.repo.GetByUserAndWorkspace(userID, workspaceID, page, limit, unreadOnly)
 	if err != nil {
@@ -105,10 +117,12 @@ func (s *NotificationService) GetNotifications(ctx context.Context, userID, work
 	}, nil
 }
 
+// GetNotificationByID retrieves a single notification by ID for a specific user.
 func (s *NotificationService) GetNotificationByID(ctx context.Context, id, userID uuid.UUID) (*domain.Notification, error) {
 	return s.repo.GetByIDAndUserID(id, userID)
 }
 
+// MarkAsRead marks a single notification as read and invalidates the cache.
 func (s *NotificationService) MarkAsRead(ctx context.Context, id, userID uuid.UUID) (*domain.Notification, error) {
 	notification, err := s.repo.MarkAsRead(id, userID)
 	if err != nil {
@@ -121,6 +135,7 @@ func (s *NotificationService) MarkAsRead(ctx context.Context, id, userID uuid.UU
 	return notification, nil
 }
 
+// MarkAllAsRead marks all notifications as read for a user in a workspace.
 func (s *NotificationService) MarkAllAsRead(ctx context.Context, userID, workspaceID uuid.UUID) (int64, error) {
 	count, err := s.repo.MarkAllAsRead(userID, workspaceID)
 	if err != nil {
@@ -133,6 +148,7 @@ func (s *NotificationService) MarkAllAsRead(ctx context.Context, userID, workspa
 	return count, nil
 }
 
+// GetUnreadCount returns the unread notification count, using cache when available.
 func (s *NotificationService) GetUnreadCount(ctx context.Context, userID, workspaceID uuid.UUID) (*domain.UnreadCount, error) {
 	cacheKey := fmt.Sprintf("unread:%s:%s", userID.String(), workspaceID.String())
 
@@ -165,6 +181,7 @@ func (s *NotificationService) GetUnreadCount(ctx context.Context, userID, worksp
 	}, nil
 }
 
+// DeleteNotification deletes a notification and invalidates the cache if it was unread.
 func (s *NotificationService) DeleteNotification(ctx context.Context, id, userID uuid.UUID) (bool, error) {
 	// Get notification to find workspace ID for cache invalidation
 	notification, _ := s.repo.GetByIDAndUserID(id, userID)
@@ -182,10 +199,12 @@ func (s *NotificationService) DeleteNotification(ctx context.Context, id, userID
 	return deleted, nil
 }
 
+// CleanupOldNotifications removes read notifications older than configured days.
 func (s *NotificationService) CleanupOldNotifications(ctx context.Context) (int64, error) {
 	return s.repo.CleanupOld(s.config.App.CleanupDays)
 }
 
+// publishNotification publishes a notification to Redis for SSE delivery.
 func (s *NotificationService) publishNotification(ctx context.Context, notification *domain.Notification) {
 	if s.redis == nil {
 		return
@@ -203,6 +222,7 @@ func (s *NotificationService) publishNotification(ctx context.Context, notificat
 	}
 }
 
+// invalidateUnreadCountCache removes the cached unread count for a user/workspace.
 func (s *NotificationService) invalidateUnreadCountCache(ctx context.Context, userID, workspaceID uuid.UUID) {
 	if s.redis == nil {
 		return
