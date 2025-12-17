@@ -2,13 +2,14 @@ package middleware
 
 import (
 	"context"
-	"net/http"
 	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
+
+	"storage-service/internal/response"
 )
 
 // TokenValidator interface for auth-service token validation
@@ -21,24 +22,14 @@ func AuthWithValidator(validator TokenValidator) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		authHeader := c.GetHeader("Authorization")
 		if authHeader == "" {
-			c.JSON(http.StatusUnauthorized, gin.H{
-				"error": gin.H{
-					"code":    "UNAUTHORIZED",
-					"message": "Authorization header is required",
-				},
-			})
+			response.Unauthorized(c, "Authorization header is required")
 			c.Abort()
 			return
 		}
 
 		parts := strings.SplitN(authHeader, " ", 2)
 		if len(parts) != 2 || parts[0] != "Bearer" {
-			c.JSON(http.StatusUnauthorized, gin.H{
-				"error": gin.H{
-					"code":    "UNAUTHORIZED",
-					"message": "Invalid authorization header format",
-				},
-			})
+			response.Unauthorized(c, "Invalid authorization header format")
 			c.Abort()
 			return
 		}
@@ -50,12 +41,7 @@ func AuthWithValidator(validator TokenValidator) gin.HandlerFunc {
 
 		userID, err := validator.ValidateToken(ctx, tokenString)
 		if err != nil {
-			c.JSON(http.StatusUnauthorized, gin.H{
-				"error": gin.H{
-					"code":    "UNAUTHORIZED",
-					"message": "Invalid or expired token",
-				},
-			})
+			response.Unauthorized(c, "Invalid or expired token")
 			c.Abort()
 			return
 		}
@@ -71,24 +57,14 @@ func Auth(jwtSecret string) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		authHeader := c.GetHeader("Authorization")
 		if authHeader == "" {
-			c.JSON(http.StatusUnauthorized, gin.H{
-				"error": gin.H{
-					"code":    "UNAUTHORIZED",
-					"message": "Authorization header is required",
-				},
-			})
+			response.Unauthorized(c, "Authorization header is required")
 			c.Abort()
 			return
 		}
 
 		parts := strings.SplitN(authHeader, " ", 2)
 		if len(parts) != 2 || parts[0] != "Bearer" {
-			c.JSON(http.StatusUnauthorized, gin.H{
-				"error": gin.H{
-					"code":    "UNAUTHORIZED",
-					"message": "Invalid authorization header format",
-				},
-			})
+			response.Unauthorized(c, "Invalid authorization header format")
 			c.Abort()
 			return
 		}
@@ -103,24 +79,14 @@ func Auth(jwtSecret string) gin.HandlerFunc {
 		})
 
 		if err != nil || !token.Valid {
-			c.JSON(http.StatusUnauthorized, gin.H{
-				"error": gin.H{
-					"code":    "UNAUTHORIZED",
-					"message": "Invalid or expired token",
-				},
-			})
+			response.Unauthorized(c, "Invalid or expired token")
 			c.Abort()
 			return
 		}
 
 		claims, ok := token.Claims.(jwt.MapClaims)
 		if !ok {
-			c.JSON(http.StatusUnauthorized, gin.H{
-				"error": gin.H{
-					"code":    "UNAUTHORIZED",
-					"message": "Invalid token claims",
-				},
-			})
+			response.Unauthorized(c, "Invalid token claims")
 			c.Abort()
 			return
 		}
@@ -133,24 +99,14 @@ func Auth(jwtSecret string) gin.HandlerFunc {
 		} else if uid, ok := claims["uid"].(string); ok {
 			userIDStr = uid
 		} else {
-			c.JSON(http.StatusUnauthorized, gin.H{
-				"error": gin.H{
-					"code":    "UNAUTHORIZED",
-					"message": "User ID not found in token",
-				},
-			})
+			response.Unauthorized(c, "User ID not found in token")
 			c.Abort()
 			return
 		}
 
 		userID, err := uuid.Parse(userIDStr)
 		if err != nil {
-			c.JSON(http.StatusUnauthorized, gin.H{
-				"error": gin.H{
-					"code":    "UNAUTHORIZED",
-					"message": "Invalid user ID format",
-				},
-			})
+			response.Unauthorized(c, "Invalid user ID format")
 			c.Abort()
 			return
 		}

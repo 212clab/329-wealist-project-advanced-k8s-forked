@@ -2,6 +2,7 @@ package middleware
 
 import (
 	"bytes"
+	"chat-service/internal/response"
 	"context"
 	"encoding/json"
 	"net/http"
@@ -116,20 +117,14 @@ func AuthMiddleware(validator TokenValidator) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		authHeader := c.GetHeader("Authorization")
 		if authHeader == "" {
-			c.JSON(http.StatusUnauthorized, gin.H{
-				"success": false,
-				"error":   gin.H{"code": "UNAUTHORIZED", "message": "No authorization header"},
-			})
+			response.Unauthorized(c, "No authorization header")
 			c.Abort()
 			return
 		}
 
 		parts := strings.Split(authHeader, " ")
 		if len(parts) != 2 || strings.ToLower(parts[0]) != "bearer" {
-			c.JSON(http.StatusUnauthorized, gin.H{
-				"success": false,
-				"error":   gin.H{"code": "UNAUTHORIZED", "message": "Invalid authorization header format"},
-			})
+			response.Unauthorized(c, "Invalid authorization header format")
 			c.Abort()
 			return
 		}
@@ -137,10 +132,7 @@ func AuthMiddleware(validator TokenValidator) gin.HandlerFunc {
 		tokenString := parts[1]
 		userID, err := validator.ValidateToken(c.Request.Context(), tokenString)
 		if err != nil {
-			c.JSON(http.StatusUnauthorized, gin.H{
-				"success": false,
-				"error":   gin.H{"code": "UNAUTHORIZED", "message": "Invalid token"},
-			})
+			response.Unauthorized(c, "Invalid token")
 			c.Abort()
 			return
 		}

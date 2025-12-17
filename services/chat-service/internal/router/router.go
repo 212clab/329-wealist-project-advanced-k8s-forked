@@ -4,6 +4,7 @@ import (
 	"chat-service/internal/client"
 	"chat-service/internal/config"
 	"chat-service/internal/handler"
+	"chat-service/internal/metrics"
 	"chat-service/internal/middleware"
 	"chat-service/internal/repository"
 	"chat-service/internal/service"
@@ -28,11 +29,14 @@ func Setup(cfg *config.Config, db *gorm.DB, redisClient *redis.Client, logger *z
 
 	r := gin.New()
 
+	// Initialize metrics
+	m := metrics.New()
+
 	// Middleware (using common package)
 	r.Use(commonmw.Recovery(logger))
 	r.Use(commonmw.Logger(logger))
 	r.Use(commonmw.DefaultCORS())
-	r.Use(commonmw.Metrics())
+	r.Use(metrics.HTTPMiddleware(m))
 
 	// Initialize repositories
 	chatRepo := repository.NewChatRepository(db)

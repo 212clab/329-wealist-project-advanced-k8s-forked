@@ -10,6 +10,7 @@ import (
 	commonmw "github.com/OrangesCloud/wealist-advanced-go-pkg/middleware"
 	"storage-service/internal/client"
 	"storage-service/internal/handler"
+	"storage-service/internal/metrics"
 	"storage-service/internal/middleware"
 	"storage-service/internal/repository"
 	"storage-service/internal/service"
@@ -24,17 +25,24 @@ type Config struct {
 	S3Client   *client.S3Client
 	AuthClient *client.AuthClient
 	UserClient client.UserClient
+	Metrics    *metrics.Metrics
 }
 
 // Setup sets up the router with all routes
 func Setup(cfg Config) *gin.Engine {
 	r := gin.New()
 
+	// Initialize metrics if not provided
+	m := cfg.Metrics
+	if m == nil {
+		m = metrics.New()
+	}
+
 	// Middleware (using common package)
 	r.Use(commonmw.Recovery(cfg.Logger))
 	r.Use(commonmw.Logger(cfg.Logger))
 	r.Use(commonmw.DefaultCORS())
-	r.Use(commonmw.Metrics())
+	r.Use(metrics.HTTPMiddleware(m))
 
 	// Prometheus metrics endpoint
 	r.GET("/metrics", gin.WrapH(promhttp.Handler()))
