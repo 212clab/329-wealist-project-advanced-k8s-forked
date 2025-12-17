@@ -76,7 +76,7 @@ func (v *AuthServiceValidator) validateWithAuthService(ctx context.Context, toke
 	if err != nil {
 		return uuid.Nil, err
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
 		return uuid.Nil, jwt.ErrTokenInvalidClaims

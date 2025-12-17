@@ -322,14 +322,14 @@ func (s *roomService) LeaveRoom(ctx context.Context, roomID, userID uuid.UUID) e
 	count, _ := s.roomRepo.CountActiveParticipants(roomID)
 	if count == 0 {
 		room.IsActive = false
-		s.roomRepo.Update(room)
+		_ = s.roomRepo.Update(room)
 
 		// Create call history
 		s.createCallHistory(room)
 
 		// Delete room from LiveKit
 		if s.lkClient != nil {
-			s.lkClient.DeleteRoom(ctx, &livekit.DeleteRoomRequest{
+			_, _ = s.lkClient.DeleteRoom(ctx, &livekit.DeleteRoomRequest{
 				Room: room.ID.String(),
 			})
 		}
@@ -359,7 +359,7 @@ func (s *roomService) EndRoom(ctx context.Context, roomID, userID uuid.UUID) err
 
 	// Delete room from LiveKit
 	if s.lkClient != nil {
-		s.lkClient.DeleteRoom(ctx, &livekit.DeleteRoomRequest{
+		_, _ = s.lkClient.DeleteRoom(ctx, &livekit.DeleteRoomRequest{
 			Room: room.ID.String(),
 		})
 	}
