@@ -3,8 +3,6 @@ package router
 import (
 	"github.com/gin-gonic/gin"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
-	// swaggerFiles "github.com/swaggo/files"
-	// ginSwagger "github.com/swaggo/gin-swagger"
 	"go.uber.org/zap"
 	"gorm.io/gorm"
 
@@ -12,6 +10,7 @@ import (
 	commonmw "github.com/OrangesCloud/wealist-advanced-go-pkg/middleware"
 	"user-service/internal/client"
 	"user-service/internal/handler"
+	"user-service/internal/metrics"
 	"user-service/internal/middleware"
 	"user-service/internal/repository"
 	"user-service/internal/service"
@@ -25,17 +24,24 @@ type Config struct {
 	BasePath   string
 	S3Client   *client.S3Client
 	AuthClient *client.AuthClient
+	Metrics    *metrics.Metrics
 }
 
 // Setup sets up the router with all routes
 func Setup(cfg Config) *gin.Engine {
 	r := gin.New()
 
+	// Initialize metrics if not provided
+	m := cfg.Metrics
+	if m == nil {
+		m = metrics.New()
+	}
+
 	// Middleware (using common package)
 	r.Use(commonmw.Recovery(cfg.Logger))
 	r.Use(commonmw.Logger(cfg.Logger))
 	r.Use(commonmw.DefaultCORS())
-	r.Use(commonmw.Metrics())
+	r.Use(metrics.HTTPMiddleware(m))
 
 	// Prometheus metrics endpoint
 	r.GET("/metrics", gin.WrapH(promhttp.Handler()))
