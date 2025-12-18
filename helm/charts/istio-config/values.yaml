@@ -142,25 +142,25 @@ authorizationPolicy:
         - /health/*
 
 jwtAuth:
-  # Set to true when auth-service exposes JWKS endpoint
-  # Current: Each service validates JWT in middleware
-  enabled: false
+  # RS256 JWKS 기반 JWT 검증 활성화
+  # auth-service가 /.well-known/jwks.json 엔드포인트 노출
+  enabled: true
   issuer: wealist-auth-service
-  # JWKS endpoint from auth-service (Spring Boot)
-  # TODO: Configure auth-service to expose JWKS endpoint
-  jwksUri: "http://auth-service.wealist-kind-local.svc.cluster.local:8080/.well-known/jwks.json"
-  # Alternative: local JWKS URI if auth-service supports it
-  # jwksUri: "http://auth-service:8080/.well-known/jwks.json"
-  # Public paths that don't require JWT
+  # JWKS endpoint from auth-service (RS256 공개키)
+  jwksUri: "http://auth-service:8080/.well-known/jwks.json"
+  # Public paths that don't require JWT (인증 없이 접근 가능)
   excludePaths:
     - /health/*
     - /actuator/health/*
+    - /.well-known/*
     - /oauth2/*
     - /login/oauth2/*
     - /api/auth/login
     - /api/auth/register
     - /api/auth/refresh
     - /api/auth/oauth2/*
+    - /swagger-ui/*
+    - /v3/api-docs/*
     - /  # Frontend static files
 
 telemetry:
