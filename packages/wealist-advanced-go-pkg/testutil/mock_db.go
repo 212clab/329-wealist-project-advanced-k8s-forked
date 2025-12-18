@@ -72,10 +72,10 @@ func SetupTestDB(t *testing.T, config *DBConfig) (*gorm.DB, func()) {
 	cleanup := func() {
 		sqlDB, err := db.DB()
 		if err == nil {
-			sqlDB.Close()
+			_ = sqlDB.Close()
 		}
 		if tempFile != "" {
-			os.Remove(tempFile)
+			_ = os.Remove(tempFile)
 		}
 	}
 
@@ -86,12 +86,12 @@ func SetupTestDB(t *testing.T, config *DBConfig) (*gorm.DB, func()) {
 // before creating them. This is necessary for SQLite which doesn't support
 // gen_random_uuid() like PostgreSQL.
 func RegisterUUIDCallback(db *gorm.DB) {
-	db.Callback().Create().Before("gorm:create").Register("uuid_generate", func(tx *gorm.DB) {
+	_ = db.Callback().Create().Before("gorm:create").Register("uuid_generate", func(tx *gorm.DB) {
 		if tx.Statement.Schema != nil {
 			for _, field := range tx.Statement.Schema.Fields {
 				if field.Name == "ID" && field.FieldType.String() == "uuid.UUID" {
 					fieldValue := tx.Statement.ReflectValue
-					if fieldValue.Kind() == fieldValue.Kind() {
+					if fieldValue.IsValid() {
 						idField := fieldValue.FieldByName("ID")
 						if idField.IsValid() && idField.CanSet() {
 							// Check if ID is zero value

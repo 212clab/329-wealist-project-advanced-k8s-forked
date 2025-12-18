@@ -212,7 +212,7 @@ func MockJSONHandler(statusCode int, response interface{}) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(statusCode)
-		json.NewEncoder(w).Encode(response)
+		_ = json.NewEncoder(w).Encode(response)
 	}
 }
 
@@ -221,6 +221,6 @@ func MockErrorHandler(statusCode int, errorMessage string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(statusCode)
-		json.NewEncoder(w).Encode(map[string]string{"error": errorMessage})
+		_ = json.NewEncoder(w).Encode(map[string]string{"error": errorMessage})
 	}
 }
