@@ -68,40 +68,41 @@ func (h *MessageHandler) SendMessage(c *gin.Context) {
 		return
 	}
 
-	// Verify user is in chat
-	inChat, _ := h.chatService.IsUserInChat(c.Request.Context(), chatID, userID)
-	if !inChat {
-		response.Forbidden(c, "Not a participant")
-		return
-	}
-
 	var req domain.SendMessageRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		response.BadRequest(c, err.Error())
 		return
 	}
 
+	// Service layer validates participant and message content
 	message, err := h.chatService.SendMessage(c.Request.Context(), chatID, userID, &req)
 	if err != nil {
-		h.logger.Error("failed to send message", zap.Error(err))
-		response.InternalError(c, "Failed to send message")
+		h.logger.Error("failed to send message",
+			zap.String("chat_id", chatID.String()),
+			zap.Error(err))
+		response.HandleServiceError(c, err)
 		return
 	}
 
 	response.Created(c, message)
 }
 
-// DeleteMessage soft deletes a message
+// DeleteMessage soft deletes a message (owner only)
 func (h *MessageHandler) DeleteMessage(c *gin.Context) {
+	userID := c.MustGet("user_id").(uuid.UUID)
+
 	messageID, err := uuid.Parse(c.Param("messageId"))
 	if err != nil {
 		response.BadRequest(c, "Invalid message ID")
 		return
 	}
 
-	if err := h.chatService.DeleteMessage(c.Request.Context(), messageID); err != nil {
-		h.logger.Error("failed to delete message", zap.Error(err))
-		response.InternalError(c, "Failed to delete message")
+	// Service layer validates message ownership
+	if err := h.chatService.DeleteMessage(c.Request.Context(), messageID, userID); err != nil {
+		h.logger.Error("failed to delete message",
+			zap.String("message_id", messageID.String()),
+			zap.Error(err))
+		response.HandleServiceError(c, err)
 		return
 	}
 

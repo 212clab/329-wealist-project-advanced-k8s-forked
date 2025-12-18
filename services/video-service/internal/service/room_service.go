@@ -8,7 +8,6 @@ package service
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"time"
 	"video-service/internal/client"
@@ -16,6 +15,7 @@ import (
 	"video-service/internal/domain"
 	"video-service/internal/metrics"
 	"video-service/internal/repository"
+	"video-service/internal/response"
 
 	"github.com/google/uuid"
 	"github.com/livekit/protocol/auth"
@@ -23,23 +23,6 @@ import (
 	lksdk "github.com/livekit/server-sdk-go/v2"
 	"github.com/redis/go-redis/v9"
 	"go.uber.org/zap"
-)
-
-// 서비스 레벨 에러 정의
-// 이 에러들은 핸들러에서 적절한 HTTP 응답을 매핑하기 위해 사용됩니다.
-var (
-	// ErrRoomNotFound는 요청한 룸이 존재하지 않음을 나타냅니다.
-	ErrRoomNotFound = errors.New("room not found")
-	// ErrRoomFull은 룸이 최대 참가자 수에 도달했음을 나타냅니다.
-	ErrRoomFull = errors.New("room is full")
-	// ErrAlreadyInRoom은 사용자가 이미 룸에 참가 중임을 나타냅니다.
-	ErrAlreadyInRoom = errors.New("user is already in room")
-	// ErrNotInRoom은 사용자가 룸에 참가하지 않았음을 나타냅니다.
-	ErrNotInRoom = errors.New("user is not in room")
-	// ErrRoomNotActive는 룸이 종료되어 더 이상 참가자를 받지 않음을 나타냅니다.
-	ErrRoomNotActive = errors.New("room is not active")
-	// ErrNotWorkspaceMember는 사용자가 워크스페이스에 접근 권한이 없음을 나타냅니다.
-	ErrNotWorkspaceMember = errors.New("user is not a member of this workspace")
 )
 
 // RoomService는 비디오 룸 비즈니스 로직을 위한 인터페이스입니다.
@@ -144,7 +127,7 @@ func (s *roomService) CreateRoom(ctx context.Context, req *domain.CreateRoomRequ
 			return nil, fmt.Errorf("failed to validate workspace membership: %w", err)
 		}
 		if !isMember {
-			return nil, ErrNotWorkspaceMember
+			return nil, response.ErrNotWorkspaceMember
 		}
 	}
 
@@ -196,7 +179,7 @@ func (s *roomService) CreateRoom(ctx context.Context, req *domain.CreateRoomRequ
 func (s *roomService) GetRoom(ctx context.Context, roomID uuid.UUID) (*domain.RoomResponse, error) {
 	room, err := s.roomRepo.GetByID(roomID)
 	if err != nil {
-		return nil, ErrRoomNotFound
+		return nil, response.ErrRoomNotFound
 	}
 
 	response := room.ToResponse()
@@ -213,7 +196,7 @@ func (s *roomService) GetWorkspaceRooms(ctx context.Context, workspaceID uuid.UU
 			return nil, fmt.Errorf("failed to validate workspace membership: %w", err)
 		}
 		if !isMember {
-			return nil, ErrNotWorkspaceMember
+			return nil, response.ErrNotWorkspaceMember
 		}
 	}
 
@@ -244,12 +227,12 @@ func (s *roomService) GetWorkspaceRooms(ctx context.Context, workspaceID uuid.UU
 func (s *roomService) EndRoom(ctx context.Context, roomID, userID uuid.UUID) error {
 	room, err := s.roomRepo.GetByID(roomID)
 	if err != nil {
-		return ErrRoomNotFound
+		return response.ErrRoomNotFound
 	}
 
 	// 생성자만 룸을 종료할 수 있음
 	if room.CreatorID != userID {
-		return errors.New("only room creator can end the room")
+		return response.ErrNotRoomCreator
 	}
 
 	// 통화 시간 계산 (메트릭 기록용)
@@ -288,7 +271,7 @@ func (s *roomService) EndRoom(ctx context.Context, roomID, userID uuid.UUID) err
 // generateLiveKitToken은 LiveKit 액세스 토큰을 생성합니다.
 func (s *roomService) generateLiveKitToken(roomName, userID, userName string) (string, error) {
 	if s.lkConfig.APIKey == "" || s.lkConfig.APISecret == "" {
-		return "", errors.New("LiveKit credentials not configured")
+		return "", response.ErrLiveKitNotConfigured
 	}
 
 	at := auth.NewAccessToken(s.lkConfig.APIKey, s.lkConfig.APISecret)

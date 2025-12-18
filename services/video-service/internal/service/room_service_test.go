@@ -7,6 +7,7 @@ import (
 	"testing"
 	"time"
 	"video-service/internal/domain"
+	"video-service/internal/response"
 
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
@@ -17,21 +18,21 @@ import (
 // ============================================================
 
 func TestRoomService_ErrorDefinitions(t *testing.T) {
-	// Given/When/Then: 에러 상수 정의 확인
-	assert.NotNil(t, ErrRoomNotFound)
-	assert.NotNil(t, ErrRoomFull)
-	assert.NotNil(t, ErrAlreadyInRoom)
-	assert.NotNil(t, ErrNotInRoom)
-	assert.NotNil(t, ErrRoomNotActive)
-	assert.NotNil(t, ErrNotWorkspaceMember)
+	// Given/When/Then: 에러 상수 정의 확인 (response 패키지에서 관리)
+	assert.NotNil(t, response.ErrRoomNotFound)
+	assert.NotNil(t, response.ErrRoomFull)
+	assert.NotNil(t, response.ErrAlreadyInRoom)
+	assert.NotNil(t, response.ErrNotInRoom)
+	assert.NotNil(t, response.ErrRoomNotActive)
+	assert.NotNil(t, response.ErrNotWorkspaceMember)
 
 	// 에러 메시지 확인
-	assert.Equal(t, "room not found", ErrRoomNotFound.Error())
-	assert.Equal(t, "room is full", ErrRoomFull.Error())
-	assert.Equal(t, "user is already in room", ErrAlreadyInRoom.Error())
-	assert.Equal(t, "user is not in room", ErrNotInRoom.Error())
-	assert.Equal(t, "room is not active", ErrRoomNotActive.Error())
-	assert.Equal(t, "user is not a member of this workspace", ErrNotWorkspaceMember.Error())
+	assert.Equal(t, "room not found", response.ErrRoomNotFound.Error())
+	assert.Equal(t, "room is full", response.ErrRoomFull.Error())
+	assert.Equal(t, "user is already in room", response.ErrAlreadyInRoom.Error())
+	assert.Equal(t, "user is not in room", response.ErrNotInRoom.Error())
+	assert.Equal(t, "room is not active", response.ErrRoomNotActive.Error())
+	assert.Equal(t, "user is not a member of this workspace", response.ErrNotWorkspaceMember.Error())
 }
 
 // ============================================================

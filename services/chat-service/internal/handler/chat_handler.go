@@ -106,7 +106,7 @@ func (h *ChatHandler) GetChat(c *gin.Context) {
 	response.Success(c, chat)
 }
 
-// DeleteChat soft deletes a chat
+// DeleteChat soft deletes a chat (creator only)
 func (h *ChatHandler) DeleteChat(c *gin.Context) {
 	userID := c.MustGet("user_id").(uuid.UUID)
 
@@ -116,16 +116,12 @@ func (h *ChatHandler) DeleteChat(c *gin.Context) {
 		return
 	}
 
-	// Verify user is in chat
-	inChat, _ := h.chatService.IsUserInChat(c.Request.Context(), chatID, userID)
-	if !inChat {
-		response.Forbidden(c, "Not a participant")
-		return
-	}
-
-	if err := h.chatService.DeleteChat(c.Request.Context(), chatID); err != nil {
-		h.logger.Error("failed to delete chat", zap.Error(err))
-		response.InternalError(c, "Failed to delete chat")
+	// Service layer validates creator permission
+	if err := h.chatService.DeleteChat(c.Request.Context(), chatID, userID); err != nil {
+		h.logger.Error("failed to delete chat",
+			zap.String("chat_id", chatID.String()),
+			zap.Error(err))
+		response.HandleServiceError(c, err)
 		return
 	}
 
@@ -168,8 +164,9 @@ func (h *ChatHandler) AddParticipants(c *gin.Context) {
 }
 
 // RemoveParticipant removes a participant from a chat
+// Users can remove themselves, or creators can remove other participants
 func (h *ChatHandler) RemoveParticipant(c *gin.Context) {
-	currentUserID := c.MustGet("user_id").(uuid.UUID)
+	requesterID := c.MustGet("user_id").(uuid.UUID)
 
 	chatID, err := uuid.Parse(c.Param("chatId"))
 	if err != nil {
@@ -177,22 +174,19 @@ func (h *ChatHandler) RemoveParticipant(c *gin.Context) {
 		return
 	}
 
-	userID, err := uuid.Parse(c.Param("userId"))
+	targetUserID, err := uuid.Parse(c.Param("userId"))
 	if err != nil {
 		response.BadRequest(c, "Invalid user ID")
 		return
 	}
 
-	// Verify current user is in chat
-	inChat, _ := h.chatService.IsUserInChat(c.Request.Context(), chatID, currentUserID)
-	if !inChat {
-		response.Forbidden(c, "Not a participant")
-		return
-	}
-
-	if err := h.chatService.RemoveParticipant(c.Request.Context(), chatID, userID); err != nil {
-		h.logger.Error("failed to remove participant", zap.Error(err))
-		response.InternalError(c, "Failed to remove participant")
+	// Service layer validates permission (self-removal or creator)
+	if err := h.chatService.RemoveParticipant(c.Request.Context(), chatID, targetUserID, requesterID); err != nil {
+		h.logger.Error("failed to remove participant",
+			zap.String("chat_id", chatID.String()),
+			zap.String("target_user_id", targetUserID.String()),
+			zap.Error(err))
+		response.HandleServiceError(c, err)
 		return
 	}
 

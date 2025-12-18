@@ -57,7 +57,7 @@ func (h *RoomHandler) CreateRoom(c *gin.Context) {
 
 	room, err := h.roomService.CreateRoom(c.Request.Context(), &req, userID, token)
 	if err != nil {
-		if errors.Is(err, service.ErrNotWorkspaceMember) {
+		if errors.Is(err, response.ErrNotWorkspaceMember) {
 			response.Forbidden(c, "You are not a member of this workspace")
 			return
 		}
@@ -88,7 +88,7 @@ func (h *RoomHandler) GetRoom(c *gin.Context) {
 
 	room, err := h.roomService.GetRoom(c.Request.Context(), roomID)
 	if err != nil {
-		if errors.Is(err, service.ErrRoomNotFound) {
+		if errors.Is(err, response.ErrRoomNotFound) {
 			response.NotFound(c, "Room not found")
 			return
 		}
@@ -123,7 +123,7 @@ func (h *RoomHandler) GetWorkspaceRooms(c *gin.Context) {
 
 	rooms, err := h.roomService.GetWorkspaceRooms(c.Request.Context(), workspaceID, userID, token, activeOnly)
 	if err != nil {
-		if errors.Is(err, service.ErrNotWorkspaceMember) {
+		if errors.Is(err, response.ErrNotWorkspaceMember) {
 			response.Forbidden(c, "You are not a member of this workspace")
 			return
 		}
@@ -166,15 +166,15 @@ func (h *RoomHandler) JoinRoom(c *gin.Context) {
 	resp, err := h.roomService.JoinRoom(c.Request.Context(), roomID, userID, userName, token)
 	if err != nil {
 		switch {
-		case errors.Is(err, service.ErrRoomNotFound):
+		case errors.Is(err, response.ErrRoomNotFound):
 			response.NotFound(c, "Room not found")
-		case errors.Is(err, service.ErrRoomFull):
+		case errors.Is(err, response.ErrRoomFull):
 			response.CustomError(c, http.StatusConflict, "ROOM_FULL", "Room is full")
-		case errors.Is(err, service.ErrAlreadyInRoom):
+		case errors.Is(err, response.ErrAlreadyInRoom):
 			response.CustomError(c, http.StatusConflict, "ALREADY_IN_ROOM", "User is already in room")
-		case errors.Is(err, service.ErrRoomNotActive):
+		case errors.Is(err, response.ErrRoomNotActive):
 			response.CustomError(c, http.StatusGone, "ROOM_ENDED", "Room has ended")
-		case errors.Is(err, service.ErrNotWorkspaceMember):
+		case errors.Is(err, response.ErrNotWorkspaceMember):
 			response.Forbidden(c, "You are not a member of this workspace")
 		default:
 			h.logger.Error("Failed to join room", zap.Error(err))
@@ -204,7 +204,7 @@ func (h *RoomHandler) LeaveRoom(c *gin.Context) {
 	}
 
 	if err := h.roomService.LeaveRoom(c.Request.Context(), roomID, userID); err != nil {
-		if errors.Is(err, service.ErrNotInRoom) {
+		if errors.Is(err, response.ErrNotInRoom) {
 			response.CustomError(c, http.StatusBadRequest, "NOT_IN_ROOM", "User is not in room")
 			return
 		}
@@ -234,7 +234,7 @@ func (h *RoomHandler) EndRoom(c *gin.Context) {
 	}
 
 	if err := h.roomService.EndRoom(c.Request.Context(), roomID, userID); err != nil {
-		if errors.Is(err, service.ErrRoomNotFound) {
+		if errors.Is(err, response.ErrRoomNotFound) {
 			response.NotFound(c, "Room not found")
 			return
 		}
@@ -308,7 +308,7 @@ func (h *RoomHandler) GetWorkspaceCallHistory(c *gin.Context) {
 
 	histories, total, err := h.roomService.GetWorkspaceCallHistory(c.Request.Context(), workspaceID, userID, token, limit, offset)
 	if err != nil {
-		if errors.Is(err, service.ErrNotWorkspaceMember) {
+		if errors.Is(err, response.ErrNotWorkspaceMember) {
 			response.Forbidden(c, "You are not a member of this workspace")
 			return
 		}

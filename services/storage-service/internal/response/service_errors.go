@@ -8,7 +8,11 @@ import (
 	apperrors "github.com/OrangesCloud/wealist-advanced-go-pkg/errors"
 )
 
+// AppError는 공통 에러 패키지의 타입 alias입니다.
+type AppError = apperrors.AppError
+
 // Service-level sentinel errors for storage-service
+// 기존 sentinel 에러들 (하위 호환성 유지)
 var (
 	ErrAccessDenied           = errors.New("access denied")
 	ErrNotWorkspaceMember     = errors.New("user is not a workspace member")
@@ -23,6 +27,59 @@ var (
 	ErrMemberAlreadyExists    = errors.New("member already exists")
 	ErrShareNotFound          = errors.New("share not found")
 )
+
+// ============================================================
+// 타입화된 에러 생성 함수들 (Service Layer용)
+// Handler에서 HandleError()로 자동 HTTP 상태 매핑
+// ============================================================
+
+// NewNotFoundError는 404 NOT_FOUND 에러를 생성합니다.
+// 리소스를 찾을 수 없을 때 사용합니다.
+func NewNotFoundError(message, details string) *AppError {
+	return apperrors.NotFound(message, details)
+}
+
+// NewForbiddenError는 403 FORBIDDEN 에러를 생성합니다.
+// 권한이 없을 때 사용합니다.
+func NewForbiddenError(message, details string) *AppError {
+	return apperrors.Forbidden(message, details)
+}
+
+// NewValidationError는 400 VALIDATION 에러를 생성합니다.
+// 입력값 검증 실패 시 사용합니다.
+func NewValidationError(message, details string) *AppError {
+	return apperrors.Validation(message, details)
+}
+
+// NewConflictError는 409 CONFLICT 에러를 생성합니다.
+// 리소스 충돌(중복) 시 사용합니다.
+func NewConflictError(message, details string) *AppError {
+	return apperrors.Conflict(message, details)
+}
+
+// NewAlreadyExistsError는 409 ALREADY_EXISTS 에러를 생성합니다.
+// 리소스가 이미 존재할 때 사용합니다.
+func NewAlreadyExistsError(message, details string) *AppError {
+	return apperrors.AlreadyExists(message, details)
+}
+
+// NewBadRequestError는 400 BAD_REQUEST 에러를 생성합니다.
+// 잘못된 요청일 때 사용합니다.
+func NewBadRequestError(message, details string) *AppError {
+	return apperrors.BadRequest(message, details)
+}
+
+// NewUnauthorizedError는 401 UNAUTHORIZED 에러를 생성합니다.
+// 인증이 필요할 때 사용합니다.
+func NewUnauthorizedError(message, details string) *AppError {
+	return apperrors.Unauthorized(message, details)
+}
+
+// NewInternalError는 500 INTERNAL 에러를 생성합니다.
+// 서버 내부 오류 시 사용합니다.
+func NewInternalError(message, details string) *AppError {
+	return apperrors.Internal(message, details)
+}
 
 // HandleServiceError maps service errors to HTTP responses.
 // This replaces string-matching error handling with proper error comparison.
