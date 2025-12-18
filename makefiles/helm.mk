@@ -139,6 +139,8 @@ helm-install-all: helm-deps-build helm-install-cert-manager helm-install-infra #
 	@$(MAKE) helm-install-services ENV=$(ENV)
 	@sleep 3
 	@$(MAKE) helm-install-monitoring ENV=$(ENV)
+	@sleep 2
+	@$(MAKE) port-forward-monitoring ENV=$(ENV)
 
 helm-install-all-init: helm-deps-build helm-install-cert-manager helm-install-infra ## Install all with DB migration (first time)
 	@sleep 5

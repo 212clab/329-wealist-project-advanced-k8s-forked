@@ -181,3 +181,66 @@ grafana:
 
   config:
     allowSignUp: false
+
+# =============================================================================
+# PostgreSQL Exporter - External PostgreSQL Metrics
+# =============================================================================
+postgresExporter:
+  enabled: false  # Enable in environments with external PostgreSQL
+
+  image:
+    repository: prometheuscommunity/postgres-exporter
+    tag: v0.15.0
+
+  service:
+    port: 9187
+
+  resources:
+    requests:
+      memory: "64Mi"
+      cpu: "50m"
+    limits:
+      memory: "128Mi"
+      cpu: "100m"
+
+  # Connection to external PostgreSQL
+  config:
+    host: "172.18.0.1"
+    port: 5432
+    user: "postgres"
+    database: "postgres"
+    sslmode: "disable"
+
+# =============================================================================
+# Redis Exporter - External Redis Metrics
+# =============================================================================
+redisExporter:
+  enabled: false  # Enable in environments with external Redis
+
+  image:
+    repository: oliver006/redis_exporter
+    tag: v1.55.0
+
+  service:
+    port: 9121
+
+  resources:
+    requests:
+      memory: "32Mi"
+      cpu: "25m"
+    limits:
+      memory: "64Mi"
+      cpu: "50m"
+
+  # Connection to external Redis
+  config:
+    host: "172.18.0.1"
+    port: 6379
+
+# =============================================================================
+# Shared Secrets (for exporters)
+# =============================================================================
+shared:
+  secrets:
+    DB_PASSWORD: ""
+    REDIS_PASSWORD: ""

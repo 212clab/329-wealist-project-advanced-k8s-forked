@@ -78,13 +78,45 @@ podDisruptionBudget:
   enabled: false
 
 # -----------------------------------------------------------------------------
+# Database Configuration (dev server specific)
+# -----------------------------------------------------------------------------
+# Use HOST PC's PostgreSQL and Redis instead of cluster's internal DB
+# This ensures data persistence across cluster resets
+#
+# Prerequisites:
+#   1. PostgreSQL installed on host: sudo apt install postgresql
+#   2. Redis installed on host: sudo apt install redis-server
+#   3. PostgreSQL pg_hba.conf allows connections from Docker network:
+#      host    all    all    172.17.0.0/16    md5
+#      host    all    all    172.18.0.0/16    md5
+#   4. PostgreSQL postgresql.conf: listen_addresses = '*'
+#   5. Redis redis.conf: bind 0.0.0.0, protected-mode no
+#
+# Note: Kind uses its own bridge network (172.18.0.0/16)
+#       172.18.0.1 is the gateway IP that Kind pods use to reach the host
+
+postgres:
+  enabled: false  # Disable internal PostgreSQL StatefulSet
+  external:
+    enabled: true
+    host: "172.18.0.1"  # Kind bridge gateway (host machine)
+    port: 5432
+
+redis:
+  enabled: false  # Disable internal Redis StatefulSet
+  external:
+    enabled: true
+    host: "172.18.0.1"  # Kind bridge gateway (host machine)
+    port: 6379
+
+# -----------------------------------------------------------------------------
 # Shared Configuration
 # -----------------------------------------------------------------------------
 shared:
   config:
     ENV: "development"
     LOG_LEVEL: "debug"
-    DB_AUTO_MIGRATE: "true" # Create tables on startup
+    DB_AUTO_MIGRATE: "false"  # Disabled - external DB has existing data
     CORS_ORIGINS: "https://dev.wealist.co.kr,https://api.dev.wealist.co.kr"
     S3_PUBLIC_ENDPOINT: "https://dev.wealist.co.kr/minio"
     LIVEKIT_WS_URL: "wss://dev.wealist.co.kr/svc/livekit"
@@ -93,6 +125,19 @@ shared:
     OAUTH2_CLIENT_REDIRECT_URI: "https://api.dev.wealist.co.kr/oauth2/callback/google"
     # auth-service redirects here (frontend) after processing OAuth
     OAUTH2_REDIRECT_URL_ENV: "https://dev.wealist.co.kr/oauth/callback"
+
+    # External Database Configuration (Host PC's PostgreSQL/Redis)
+    DB_HOST: "postgres"       # K8s Service name (routes to 172.18.0.1)
+    DB_PORT: "5432"
+    DB_USER: "postgres"       # Host PC PostgreSQL superuser
+    DB_SSLMODE: "disable"
+    REDIS_HOST: "redis"       # K8s Service name (routes to 172.18.0.1)
+    REDIS_PORT: "6379"
+
+  # Secrets for dev environment (stored in K8s Secret)
+  secrets:
+    DB_PASSWORD: "postgres"   # Host PC PostgreSQL password
+    REDIS_PASSWORD: ""        # No password for local Redis
 
 # -----------------------------------------------------------------------------
 # Ingress (HTTP only - CloudFront handles SSL termination)
@@ -166,3 +211,49 @@ monitoring:
     admin:
       user: admin
       password: admin # TODO: 프로덕션에서는 시크릿으로 관리
+
+  # -----------------------------------------------------------------------------
+  # Database Exporters (for external DB monitoring)
+  # -----------------------------------------------------------------------------
+  postgresExporter:
+    enabled: true
+    image:
+      repository: prometheuscommunity/postgres-exporter
+      tag: v0.15.0
+    service:
+      port: 9187
+    resources:
+      requests:
+        memory: "64Mi"
+        cpu: "50m"
+      limits:
+        memory: "128Mi"
+        cpu: "100m"
+    # Connection to external PostgreSQL (host machine)
+    config:
+      host: "172.18.0.1"
+      port: 5432
+      user: "postgres"
+      database: "postgres"
+      sslmode: "disable"
+    # DATA_SOURCE_NAME will be constructed from secrets
+
+  redisExporter:
+    enabled: true
+    image:
+      repository: oliver006/redis_exporter
+      tag: v1.55.0
+    service:
+      port: 9121
+    resources:
+      requests:
+        memory: "32Mi"
+        cpu: "25m"
+      limits:
+        memory: "64Mi"
+        cpu: "50m"
+    # Connection to external Redis (host machine)
+    config:
+      host: "172.18.0.1"
+      port: 6379
+      # REDIS_ADDR will be set automatically

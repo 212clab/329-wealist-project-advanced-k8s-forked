@@ -82,6 +82,23 @@ data:
       {{- end }}
 
       # ==========================================================================
+      # Database Exporters
+      # ==========================================================================
+      {{- if .Values.postgresExporter.enabled }}
+      - job_name: 'postgres-exporter'
+        static_configs:
+          - targets: ['postgres-exporter:{{ .Values.postgresExporter.service.port }}']
+        metrics_path: '/metrics'
+      {{- end }}
+
+      {{- if .Values.redisExporter.enabled }}
+      - job_name: 'redis-exporter'
+        static_configs:
+          - targets: ['redis-exporter:{{ .Values.redisExporter.service.port }}']
+        metrics_path: '/metrics'
+      {{- end }}
+
+      # ==========================================================================
       # Kubernetes Service Discovery (Pod Annotations)
       # ==========================================================================
       - job_name: 'kubernetes-pods'
