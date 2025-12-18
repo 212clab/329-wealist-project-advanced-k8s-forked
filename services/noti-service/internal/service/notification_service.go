@@ -12,6 +12,7 @@ import (
 	"noti-service/internal/domain"
 	"noti-service/internal/metrics"
 	"noti-service/internal/repository"
+	"noti-service/internal/response"
 	"time"
 
 	"github.com/google/uuid"
@@ -129,21 +130,31 @@ func (s *NotificationService) GetNotifications(ctx context.Context, userID, work
 }
 
 // GetNotificationByID retrieves a single notification by ID for a specific user.
+// userID를 함께 조회하여 소유권을 검증합니다.
 func (s *NotificationService) GetNotificationByID(ctx context.Context, id, userID uuid.UUID) (*domain.Notification, error) {
-	return s.repo.GetByIDAndUserID(id, userID)
+	notification, err := s.repo.GetByIDAndUserID(id, userID)
+	if err != nil {
+		s.logger.Warn("notification not found",
+			zap.String("notificationId", id.String()),
+			zap.String("userId", userID.String()),
+			zap.Error(err))
+		return nil, response.ErrNotificationNotFound
+	}
+	return notification, nil
 }
 
 // MarkAsRead marks a single notification as read and invalidates the cache.
 // 읽음 처리 성공 시 메트릭을 기록합니다.
+// userID로 소유권을 검증합니다.
 func (s *NotificationService) MarkAsRead(ctx context.Context, id, userID uuid.UUID) (*domain.Notification, error) {
 	notification, err := s.repo.MarkAsRead(id, userID)
 	if err != nil {
-		s.logger.Error("failed to mark notification as read",
+		s.logger.Warn("failed to mark notification as read",
 			zap.String("notificationId", id.String()),
 			zap.String("userId", userID.String()),
 			zap.Error(err),
 		)
-		return nil, err
+		return nil, response.ErrNotificationNotFound
 	}
 
 	// Invalidate cache

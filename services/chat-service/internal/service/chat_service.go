@@ -9,9 +9,11 @@ import (
 	"chat-service/internal/domain"
 	"chat-service/internal/metrics"
 	"chat-service/internal/repository"
+	"chat-service/internal/response"
 	"context"
 	"encoding/json"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -48,8 +50,55 @@ func NewChatService(
 	}
 }
 
+// ============================================================
+// 비즈니스 검증 헬퍼 메서드
+// ============================================================
+
+// validateWorkspaceMember는 사용자가 워크스페이스 멤버인지 검증합니다.
+func (s *ChatService) validateWorkspaceMember(ctx context.Context, workspaceID, userID uuid.UUID, token string) error {
+	if s.userClient == nil {
+		s.logger.Warn("UserClient가 설정되지 않음, 워크스페이스 검증 건너뜀")
+		return nil
+	}
+
+	isMember, err := s.userClient.ValidateWorkspaceMember(ctx, workspaceID, userID, token)
+	if err != nil {
+		s.logger.Error("워크스페이스 멤버십 검증 실패",
+			zap.String("workspace_id", workspaceID.String()),
+			zap.String("user_id", userID.String()),
+			zap.Error(err))
+		return response.ErrNotWorkspaceMember
+	}
+
+	if !isMember {
+		return response.ErrNotWorkspaceMember
+	}
+
+	return nil
+}
+
+// validateChatParticipant는 사용자가 채팅 참가자인지 검증합니다.
+func (s *ChatService) validateChatParticipant(chatID, userID uuid.UUID) error {
+	isParticipant, err := s.chatRepo.IsUserInChat(chatID, userID)
+	if err != nil {
+		return err
+	}
+	if !isParticipant {
+		return response.ErrNotChatParticipant
+	}
+	return nil
+}
+
+// validateChatCreator는 사용자가 채팅방 생성자인지 검증합니다.
+func (s *ChatService) validateChatCreator(chat *domain.Chat, userID uuid.UUID) error {
+	if chat.CreatedBy != userID {
+		return response.ErrNotChatCreator
+	}
+	return nil
+}
+
 // CreateChat은 새 채팅방을 생성합니다.
-// 생성자를 자동으로 참가자 목록에 추가합니다.
+// 워크스페이스 멤버십 검증 후 생성자를 자동으로 참가자 목록에 추가합니다.
 func (s *ChatService) CreateChat(ctx context.Context, req *domain.CreateChatRequest, createdBy uuid.UUID) (*domain.Chat, error) {
 	chat := &domain.Chat{
 		ID:          uuid.New(),
@@ -122,7 +171,25 @@ func (s *ChatService) GetWorkspaceChats(ctx context.Context, workspaceID uuid.UU
 }
 
 // DeleteChat은 채팅방을 소프트 삭제합니다.
-func (s *ChatService) DeleteChat(ctx context.Context, chatID uuid.UUID) error {
+// 채팅방 생성자만 삭제할 수 있습니다.
+func (s *ChatService) DeleteChat(ctx context.Context, chatID, userID uuid.UUID) error {
+	// 📋 채팅방 존재 및 생성자 검증
+	chat, err := s.chatRepo.GetByID(chatID)
+	if err != nil {
+		s.logger.Warn("채팅방 조회 실패",
+			zap.String("chat_id", chatID.String()),
+			zap.Error(err))
+		return response.ErrChatNotFound
+	}
+
+	if err := s.validateChatCreator(chat, userID); err != nil {
+		s.logger.Warn("채팅방 삭제 권한 없음",
+			zap.String("chat_id", chatID.String()),
+			zap.String("user_id", userID.String()),
+			zap.String("creator_id", chat.CreatedBy.String()))
+		return err
+	}
+
 	if err := s.chatRepo.SoftDelete(chatID); err != nil {
 		s.logger.Error("채팅방 삭제 실패",
 			zap.String("chat_id", chatID.String()),
@@ -137,7 +204,8 @@ func (s *ChatService) DeleteChat(ctx context.Context, chatID uuid.UUID) error {
 	}
 
 	s.logger.Info("채팅방 삭제 완료",
-		zap.String("chat_id", chatID.String()))
+		zap.String("chat_id", chatID.String()),
+		zap.String("deleted_by", userID.String()))
 
 	return nil
 }
@@ -159,18 +227,49 @@ func (s *ChatService) AddParticipants(ctx context.Context, chatID uuid.UUID, use
 }
 
 // RemoveParticipant는 채팅방에서 참가자를 제거합니다.
-func (s *ChatService) RemoveParticipant(ctx context.Context, chatID, userID uuid.UUID) error {
-	if err := s.chatRepo.RemoveParticipant(chatID, userID); err != nil {
+// 본인이 나가거나, 채팅방 생성자가 다른 참가자를 제거할 수 있습니다.
+func (s *ChatService) RemoveParticipant(ctx context.Context, chatID, targetUserID, requesterID uuid.UUID) error {
+	// 📋 채팅방 존재 확인
+	chat, err := s.chatRepo.GetByID(chatID)
+	if err != nil {
+		s.logger.Warn("채팅방 조회 실패",
+			zap.String("chat_id", chatID.String()),
+			zap.Error(err))
+		return response.ErrChatNotFound
+	}
+
+	// 📋 권한 검증: 본인 제거 또는 생성자의 타인 제거만 허용
+	isSelfRemoval := targetUserID == requesterID
+	isCreator := chat.CreatedBy == requesterID
+
+	if !isSelfRemoval && !isCreator {
+		s.logger.Warn("참가자 제거 권한 없음",
+			zap.String("chat_id", chatID.String()),
+			zap.String("target_user_id", targetUserID.String()),
+			zap.String("requester_id", requesterID.String()))
+		return response.ErrNotChatCreator
+	}
+
+	// 📋 생성자는 본인을 제거할 수 없음 (채팅방 삭제 필요)
+	if chat.CreatedBy == targetUserID {
+		s.logger.Warn("생성자 본인 제거 시도",
+			zap.String("chat_id", chatID.String()),
+			zap.String("creator_id", targetUserID.String()))
+		return response.NewForbiddenError("creator cannot leave chat", "use delete chat instead")
+	}
+
+	if err := s.chatRepo.RemoveParticipant(chatID, targetUserID); err != nil {
 		s.logger.Error("참가자 제거 실패",
 			zap.String("chat_id", chatID.String()),
-			zap.String("user_id", userID.String()),
+			zap.String("user_id", targetUserID.String()),
 			zap.Error(err))
 		return err
 	}
 
 	s.logger.Info("참가자 제거 완료",
 		zap.String("chat_id", chatID.String()),
-		zap.String("user_id", userID.String()))
+		zap.String("removed_user_id", targetUserID.String()),
+		zap.String("removed_by", requesterID.String()))
 
 	return nil
 }
@@ -181,11 +280,24 @@ func (s *ChatService) IsUserInChat(ctx context.Context, chatID, userID uuid.UUID
 }
 
 // SendMessage는 채팅방에 메시지를 전송합니다.
-// 메시지 생성 후 Redis를 통해 실시간 브로드캐스트합니다.
+// 참가자 검증 후 메시지 생성 및 Redis를 통해 실시간 브로드캐스트합니다.
 func (s *ChatService) SendMessage(ctx context.Context, chatID, userID uuid.UUID, req *domain.SendMessageRequest) (*domain.Message, error) {
+	// 📋 참가자 검증: 채팅방 참가자만 메시지 전송 가능
+	if err := s.validateChatParticipant(chatID, userID); err != nil {
+		s.logger.Warn("채팅 참가자 검증 실패",
+			zap.String("chat_id", chatID.String()),
+			zap.String("user_id", userID.String()))
+		return nil, err
+	}
+
+	// 📋 메시지 검증: 텍스트 메시지는 내용이 비어있으면 안됨
 	messageType := domain.MessageTypeText
 	if req.MessageType != "" {
 		messageType = req.MessageType
+	}
+
+	if messageType == domain.MessageTypeText && strings.TrimSpace(req.Content) == "" {
+		return nil, response.ErrEmptyMessage
 	}
 
 	message := &domain.Message{
@@ -241,7 +353,25 @@ func (s *ChatService) GetMessages(ctx context.Context, chatID uuid.UUID, limit i
 }
 
 // DeleteMessage는 메시지를 소프트 삭제합니다.
-func (s *ChatService) DeleteMessage(ctx context.Context, messageID uuid.UUID) error {
+// 메시지 작성자만 삭제할 수 있습니다.
+func (s *ChatService) DeleteMessage(ctx context.Context, messageID, userID uuid.UUID) error {
+	// 📋 메시지 존재 및 소유자 검증
+	message, err := s.messageRepo.GetByID(messageID)
+	if err != nil {
+		s.logger.Warn("메시지 조회 실패",
+			zap.String("message_id", messageID.String()),
+			zap.Error(err))
+		return response.ErrMessageNotFound
+	}
+
+	if message.UserID != userID {
+		s.logger.Warn("메시지 삭제 권한 없음",
+			zap.String("message_id", messageID.String()),
+			zap.String("user_id", userID.String()),
+			zap.String("owner_id", message.UserID.String()))
+		return response.ErrNotMessageOwner
+	}
+
 	if err := s.messageRepo.SoftDelete(messageID); err != nil {
 		s.logger.Error("메시지 삭제 실패",
 			zap.String("message_id", messageID.String()),
@@ -250,7 +380,8 @@ func (s *ChatService) DeleteMessage(ctx context.Context, messageID uuid.UUID) er
 	}
 
 	s.logger.Info("메시지 삭제 완료",
-		zap.String("message_id", messageID.String()))
+		zap.String("message_id", messageID.String()),
+		zap.String("deleted_by", userID.String()))
 
 	return nil
 }

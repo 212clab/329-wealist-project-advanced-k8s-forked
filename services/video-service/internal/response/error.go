@@ -2,12 +2,108 @@
 package response
 
 import (
+	"errors"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
 
 	apperrors "github.com/OrangesCloud/wealist-advanced-go-pkg/errors"
 )
+
+// AppError는 공통 에러 패키지의 타입 alias입니다.
+type AppError = apperrors.AppError
+
+// Service-level sentinel errors for video-service
+// 비디오 서비스 비즈니스 로직에서 발생하는 에러들
+var (
+	// 룸 관련 에러
+	ErrRoomNotFound      = errors.New("room not found")
+	ErrRoomFull          = errors.New("room is full")
+	ErrRoomNotActive     = errors.New("room is not active")
+	ErrNotRoomCreator    = errors.New("only room creator can end the room")
+	ErrLiveKitNotConfigured = errors.New("LiveKit credentials not configured")
+
+	// 참가자 관련 에러
+	ErrAlreadyInRoom = errors.New("user is already in room")
+	ErrNotInRoom     = errors.New("user is not in room")
+
+	// 워크스페이스 에러
+	ErrNotWorkspaceMember = errors.New("user is not a member of this workspace")
+)
+
+// ============================================================
+// 타입화된 에러 생성 함수들 (Service Layer용)
+// Handler에서 HandleServiceError()로 자동 HTTP 상태 매핑
+// ============================================================
+
+// NewNotFoundError는 404 NOT_FOUND 에러를 생성합니다.
+func NewNotFoundError(message, details string) *AppError {
+	return apperrors.NotFound(message, details)
+}
+
+// NewForbiddenError는 403 FORBIDDEN 에러를 생성합니다.
+func NewForbiddenError(message, details string) *AppError {
+	return apperrors.Forbidden(message, details)
+}
+
+// NewValidationError는 400 VALIDATION 에러를 생성합니다.
+func NewValidationError(message, details string) *AppError {
+	return apperrors.Validation(message, details)
+}
+
+// NewConflictError는 409 CONFLICT 에러를 생성합니다.
+func NewConflictError(message, details string) *AppError {
+	return apperrors.Conflict(message, details)
+}
+
+// NewBadRequestError는 400 BAD_REQUEST 에러를 생성합니다.
+func NewBadRequestError(message, details string) *AppError {
+	return apperrors.BadRequest(message, details)
+}
+
+// NewInternalError는 500 INTERNAL 에러를 생성합니다.
+func NewInternalError(message, details string) *AppError {
+	return apperrors.Internal(message, details)
+}
+
+// HandleServiceError maps service errors to HTTP responses.
+// sentinel error와 타입화된 AppError 모두 처리합니다.
+func HandleServiceError(c *gin.Context, err error) {
+	switch {
+	case errors.Is(err, ErrRoomNotFound):
+		NotFound(c, "Room not found")
+
+	case errors.Is(err, ErrRoomFull):
+		Conflict(c, "Room is full")
+
+	case errors.Is(err, ErrRoomNotActive):
+		Gone(c, "Room is no longer active")
+
+	case errors.Is(err, ErrNotRoomCreator):
+		Forbidden(c, "Only the room creator can end the room")
+
+	case errors.Is(err, ErrLiveKitNotConfigured):
+		InternalError(c, "Video service is not properly configured")
+
+	case errors.Is(err, ErrAlreadyInRoom):
+		Conflict(c, "User is already in this room")
+
+	case errors.Is(err, ErrNotInRoom):
+		NotFound(c, "User is not in this room")
+
+	case errors.Is(err, ErrNotWorkspaceMember):
+		Forbidden(c, "User is not a member of this workspace")
+
+	default:
+		// 타입화된 AppError 처리
+		if appErr := apperrors.AsAppError(err); appErr != nil {
+			Error(c, appErr)
+			return
+		}
+		// 기본 내부 에러
+		InternalError(c, "An internal error occurred")
+	}
+}
 
 // Error sends an error response using the common AppError type.
 func Error(c *gin.Context, err *apperrors.AppError) {

@@ -8,7 +8,6 @@ import (
 	"github.com/google/uuid"
 
 	"storage-service/internal/response"
-	"storage-service/internal/service"
 )
 
 // ErrorResponse represents an error response (kept for backward compatibility)
@@ -131,37 +130,47 @@ func handleInternalError(c *gin.Context, message string) {
 
 // handleServiceError maps service errors to HTTP responses using errors.Is()
 // for proper error comparison instead of string matching.
+// sentinel error는 response 패키지에서 관리합니다.
 func handleServiceError(c *gin.Context, err error) {
 	switch {
-	case errors.Is(err, service.ErrAccessDenied):
+	case errors.Is(err, response.ErrAccessDenied):
 		response.Forbidden(c, "Access denied")
 
-	case errors.Is(err, service.ErrNotWorkspaceMember):
+	case errors.Is(err, response.ErrNotWorkspaceMember):
 		response.Forbidden(c, "User is not a member of this workspace")
 
-	case errors.Is(err, service.ErrInsufficientPermission):
+	case errors.Is(err, response.ErrInsufficientPermission):
 		response.Forbidden(c, "Insufficient permission to perform this action")
 
-	case errors.Is(err, service.ErrCannotRemoveOwner):
+	case errors.Is(err, response.ErrCannotRemoveOwner):
 		response.BadRequest(c, "Cannot remove the only owner of the project")
 
-	case errors.Is(err, service.ErrCannotChangeOwnRole):
+	case errors.Is(err, response.ErrCannotChangeOwnRole):
 		response.BadRequest(c, "Cannot change your own role")
 
-	case errors.Is(err, service.ErrInvalidPermission):
+	case errors.Is(err, response.ErrInvalidPermission):
 		response.BadRequest(c, "Invalid permission value")
 
+	case errors.Is(err, response.ErrProjectNotFound):
+		response.NotFound(c, "Project not found")
+
+	case errors.Is(err, response.ErrProjectMemberNotFound):
+		response.NotFound(c, "Project member not found")
+
+	case errors.Is(err, response.ErrFileNotFound):
+		response.NotFound(c, "File not found")
+
+	case errors.Is(err, response.ErrFolderNotFound):
+		response.NotFound(c, "Folder not found")
+
+	case errors.Is(err, response.ErrShareNotFound):
+		response.NotFound(c, "Share not found")
+
+	case errors.Is(err, response.ErrMemberAlreadyExists):
+		response.Conflict(c, "User is already a member of this project")
+
 	default:
-		// Check error message for repository errors
-		// TODO: Replace with proper error types in repository layer
-		errStr := err.Error()
-		switch errStr {
-		case "project not found", "project member not found", "file not found", "folder not found", "share not found":
-			response.NotFound(c, errStr)
-		case "project member already exists":
-			response.Conflict(c, "User is already a member of this project")
-		default:
-			response.InternalError(c, "An internal error occurred")
-		}
+		// 타입화된 AppError 처리 - 자동 HTTP 상태 매핑
+		response.HandleServiceError(c, err)
 	}
 }

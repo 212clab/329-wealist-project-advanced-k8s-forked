@@ -97,7 +97,10 @@ func (h *NotificationHandler) MarkAsRead(c *gin.Context) {
 
 	notification, err := h.service.MarkAsRead(c.Request.Context(), notificationID, userID)
 	if err != nil {
-		response.NotFound(c, "Notification not found")
+		h.logger.Error("failed to mark as read",
+			zap.String("notification_id", notificationID.String()),
+			zap.Error(err))
+		response.HandleServiceError(c, err)
 		return
 	}
 
@@ -131,8 +134,10 @@ func (h *NotificationHandler) DeleteNotification(c *gin.Context) {
 
 	deleted, err := h.service.DeleteNotification(c.Request.Context(), notificationID, userID)
 	if err != nil {
-		h.logger.Error("failed to delete notification", zap.Error(err))
-		response.InternalError(c, "Failed to delete notification")
+		h.logger.Error("failed to delete notification",
+			zap.String("notification_id", notificationID.String()),
+			zap.Error(err))
+		response.HandleServiceError(c, err)
 		return
 	}
 
@@ -154,8 +159,10 @@ func (h *NotificationHandler) CreateNotification(c *gin.Context) {
 
 	notification, err := h.service.CreateNotification(c.Request.Context(), &event)
 	if err != nil {
-		h.logger.Error("failed to create notification", zap.Error(err))
-		response.InternalError(c, "Failed to create notification")
+		h.logger.Error("failed to create notification",
+			zap.String("type", string(event.Type)),
+			zap.Error(err))
+		response.HandleServiceError(c, err)
 		return
 	}
 

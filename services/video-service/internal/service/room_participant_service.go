@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"time"
 	"video-service/internal/domain"
+	"video-service/internal/response"
 
 	"github.com/google/uuid"
 	"github.com/livekit/protocol/livekit"
@@ -19,11 +20,11 @@ import (
 func (s *roomService) JoinRoom(ctx context.Context, roomID, userID uuid.UUID, userName string, token string) (*domain.JoinRoomResponse, error) {
 	room, err := s.roomRepo.GetByID(roomID)
 	if err != nil {
-		return nil, ErrRoomNotFound
+		return nil, response.ErrRoomNotFound
 	}
 
 	if !room.IsActive {
-		return nil, ErrRoomNotActive
+		return nil, response.ErrRoomNotActive
 	}
 
 	// 워크스페이스 멤버십 검증
@@ -34,7 +35,7 @@ func (s *roomService) JoinRoom(ctx context.Context, roomID, userID uuid.UUID, us
 			return nil, fmt.Errorf("failed to validate workspace membership: %w", err)
 		}
 		if !isMember {
-			return nil, ErrNotWorkspaceMember
+			return nil, response.ErrNotWorkspaceMember
 		}
 	}
 
@@ -60,7 +61,7 @@ func (s *roomService) JoinRoom(ctx context.Context, roomID, userID uuid.UUID, us
 			return nil, fmt.Errorf("failed to count participants: %w", err)
 		}
 		if count >= int64(room.MaxParticipants) {
-			return nil, ErrRoomFull
+			return nil, response.ErrRoomFull
 		}
 
 		// 참가자 추가
@@ -108,7 +109,7 @@ func (s *roomService) LeaveRoom(ctx context.Context, roomID, userID uuid.UUID) e
 	// 룸 존재 여부 확인 및 생성자 확인
 	room, err := s.roomRepo.GetByID(roomID)
 	if err != nil {
-		return ErrRoomNotFound
+		return response.ErrRoomNotFound
 	}
 
 	// 생성자가 나가면 룸 종료
@@ -122,7 +123,7 @@ func (s *roomService) LeaveRoom(ctx context.Context, roomID, userID uuid.UUID) e
 	// 일반 참가자 확인
 	_, err = s.roomRepo.GetParticipant(roomID, userID)
 	if err != nil {
-		return ErrNotInRoom
+		return response.ErrNotInRoom
 	}
 
 	if err := s.roomRepo.RemoveParticipant(roomID, userID); err != nil {
@@ -286,7 +287,7 @@ func (s *roomService) GetWorkspaceCallHistory(ctx context.Context, workspaceID u
 			return nil, 0, fmt.Errorf("failed to validate workspace membership: %w", err)
 		}
 		if !isMember {
-			return nil, 0, ErrNotWorkspaceMember
+			return nil, 0, response.ErrNotWorkspaceMember
 		}
 	}
 
