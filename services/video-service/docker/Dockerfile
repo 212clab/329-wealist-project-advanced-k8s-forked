@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1.4
 # Builder stage
-FROM golang:1.24-bookworm AS builder
+FROM golang:1.23-bookworm AS builder
 
 # Install build dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends git ca-certificates tzdata && rm -rf /var/lib/apt/lists/*
@@ -22,13 +22,13 @@ RUN echo 'replace github.com/OrangesCloud/wealist-advanced-go-pkg => ../../packa
 
 # Tidy and download dependencies with cache mount (use GOWORK=off to ignore go.work)
 RUN --mount=type=cache,target=/go/pkg/mod \
-    GOWORK=off go mod tidy && \
-    GOWORK=off go mod download
+    GOTOOLCHAIN=auto GOWORK=off go mod tidy && \
+    GOTOOLCHAIN=auto GOWORK=off go mod download
 
 # Build with cache mount (use GOWORK=off)
 RUN --mount=type=cache,target=/go/pkg/mod \
     --mount=type=cache,target=/root/.cache/go-build \
-    CGO_ENABLED=0 GOOS=linux GOARCH=amd64 GOWORK=off go build -ldflags="-w -s" -o video-api ./cmd/api
+    GOTOOLCHAIN=auto CGO_ENABLED=0 GOOS=linux GOARCH=amd64 GOWORK=off go build -ldflags="-w -s" -o video-api ./cmd/api
 
 # Runtime stage
 FROM alpine:latest
