@@ -85,37 +85,22 @@ curl -s 'http://localhost:3100/ready'
 
 ```
 
-# helm(kind) 테스트
+# helm(kind) 테스트 - DB 포드 포함
 
 ```
-# 1) Kind 클러스터 생성 (이미 있으면 스킵)
+make kind-setup                      # 클러스터 생성
+make kind-load-images-mono           # 이미지 빌드/로드 (프론트 포함)
+make helm-install-all ENV=local-kind # 배포 (DB/Redis Pod + 서비스 + 모니터링)
+```
+
+# helm(kind) 테스트 - DB 포드 비포함
+
+```
+make kind-local-all EXTERNAL_DB=true
+또는
 make kind-setup
-
-# 2) 이미지 빌드 및 로드
-make kind-load-images-mono
-
-# 3) dev.yaml 생성
-cp helm/environments/local-kind.yaml helm/environments/dev.yaml
-
-# 4) 서비스 설치
-make helm-install-all ENV=dev
-
-# 5) 모니터링 스택 별도 설치 (wealist-monitoring 차트)
-kubectl create namespace wealist-monitoring 2>/dev/null || true
-helm install wealist-monitoring helm/charts/wealist-monitoring \
-  -n wealist-monitoring \
-  -f helm/charts/wealist-monitoring/values.yaml
-
-# 6) Grafana 포트포워딩
-kubectl port-forward svc/grafana -n wealist-monitoring 3001:3000
-
-# 7) 접속
-# Grafana: http://localhost:3001 (admin/admin)
-
-# 8) 정리
-helm uninstall wealist-monitoring -n wealist-monitoring
-make helm-uninstall-all ENV=dev
-
+make kind-load-images-mono # 빠르게
+make helm-install-all ENV=local-kind EXTERNAL_DB=true
 ```
 
 ```

@@ -85,17 +85,38 @@ helm-install-cert-manager: ## Install cert-manager (if enabled in env)
 		echo "Skipping cert-manager (disabled for $(ENV))"; \
 	fi
 
-helm-install-infra: ## Install infrastructure chart
-	@echo "Installing infrastructure (ENV=$(ENV), NS=$(K8S_NAMESPACE))..."
+helm-install-infra: ## Install infrastructure chart (EXTERNAL_DB controls DB deployment)
+	@echo "Installing infrastructure (ENV=$(ENV), NS=$(K8S_NAMESPACE), EXTERNAL_DB=$(EXTERNAL_DB))..."
+ifeq ($(EXTERNAL_DB),true)
+	@echo "Using EXTERNAL database (host machine's PostgreSQL/Redis)"
 	helm install wealist-infrastructure ./k8s/helm/charts/wealist-infrastructure \
 		-f $(HELM_BASE_VALUES) \
 		-f $(HELM_ENV_VALUES) $(HELM_SECRETS_FLAG) \
+		--set postgres.enabled=false \
+		--set postgres.external.enabled=true \
+		--set postgres.external.host=172.18.0.1 \
+		--set redis.enabled=false \
+		--set redis.external.enabled=true \
+		--set redis.external.host=172.18.0.1 \
 		-n $(K8S_NAMESPACE) --create-namespace
+else
+	@echo "Using INTERNAL database (PostgreSQL/Redis pods in cluster)"
+	helm install wealist-infrastructure ./k8s/helm/charts/wealist-infrastructure \
+		-f $(HELM_BASE_VALUES) \
+		-f $(HELM_ENV_VALUES) $(HELM_SECRETS_FLAG) \
+		--set postgres.enabled=true \
+		--set postgres.external.enabled=false \
+		--set redis.enabled=true \
+		--set redis.external.enabled=false \
+		-n $(K8S_NAMESPACE) --create-namespace
+endif
 	@echo "Infrastructure installed!"
 
 helm-install-services: ## Install all service charts
-	@echo "Installing services (ENV=$(ENV), NS=$(K8S_NAMESPACE))..."
+	@echo "Installing services (ENV=$(ENV), NS=$(K8S_NAMESPACE), EXTERNAL_DB=$(EXTERNAL_DB))..."
 	@echo "Services to install: $(HELM_SERVICES)"
+ifeq ($(EXTERNAL_DB),true)
+	@echo "EXTERNAL_DB=true: Using existing external DB, skipping auto-migrate"
 	@for service in $(HELM_SERVICES); do \
 		echo "Installing $$service..."; \
 		helm install $$service ./k8s/helm/charts/$$service \
@@ -103,17 +124,40 @@ helm-install-services: ## Install all service charts
 			-f $(HELM_ENV_VALUES) $(HELM_SECRETS_FLAG) \
 			-n $(K8S_NAMESPACE); \
 	done
+else
+	@echo "EXTERNAL_DB=false: Using internal DB pods, enabling auto-migrate"
+	@for service in $(HELM_SERVICES); do \
+		echo "Installing $$service with DB auto-migrate..."; \
+		helm install $$service ./k8s/helm/charts/$$service \
+			-f $(HELM_BASE_VALUES) \
+			-f $(HELM_ENV_VALUES) $(HELM_SECRETS_FLAG) \
+			--set shared.config.DB_AUTO_MIGRATE=true \
+			-n $(K8S_NAMESPACE); \
+	done
+endif
 	@echo "All services installed!"
 	@echo ""
 	@echo "Next: make status"
 
 helm-install-monitoring: ## Install monitoring stack (Prometheus, Loki, Grafana)
-	@echo "Installing monitoring stack (ENV=$(ENV), NS=$(K8S_NAMESPACE))..."
+	@echo "Installing monitoring stack (ENV=$(ENV), NS=$(K8S_NAMESPACE), EXTERNAL_DB=$(EXTERNAL_DB))..."
+ifeq ($(EXTERNAL_DB),true)
+	@echo "Using EXTERNAL database exporters (host: 172.18.0.1)"
 	helm install wealist-monitoring ./k8s/helm/charts/wealist-monitoring \
 		-f $(HELM_BASE_VALUES) \
 		-f $(HELM_ENV_VALUES) $(HELM_SECRETS_FLAG) \
 		--set global.namespace=$(K8S_NAMESPACE) \
 		-n $(K8S_NAMESPACE)
+else
+	@echo "Using INTERNAL database exporters (host: postgres/redis service)"
+	helm install wealist-monitoring ./k8s/helm/charts/wealist-monitoring \
+		-f $(HELM_BASE_VALUES) \
+		-f $(HELM_ENV_VALUES) $(HELM_SECRETS_FLAG) \
+		--set global.namespace=$(K8S_NAMESPACE) \
+		--set postgresExporter.config.host=postgres \
+		--set redisExporter.config.host=redis \
+		-n $(K8S_NAMESPACE)
+endif
 	@echo ""
 	@echo "=============================================="
 	@echo "  Monitoring Stack Installed Successfully!"
@@ -150,12 +194,30 @@ helm-install-all-init: helm-deps-build helm-install-cert-manager helm-install-in
 ##@ Helm Upgrade/Uninstall
 
 helm-upgrade-all: helm-deps-build ## Upgrade all charts
-	@echo "Upgrading all charts (ENV=$(ENV), NS=$(K8S_NAMESPACE))..."
+	@echo "Upgrading all charts (ENV=$(ENV), NS=$(K8S_NAMESPACE), EXTERNAL_DB=$(EXTERNAL_DB))..."
 	@echo "Services to upgrade: $(HELM_SERVICES)"
+ifeq ($(EXTERNAL_DB),true)
 	@helm upgrade wealist-infrastructure ./k8s/helm/charts/wealist-infrastructure \
 		-f $(HELM_BASE_VALUES) \
 		-f $(HELM_ENV_VALUES) $(HELM_SECRETS_FLAG) \
+		--set postgres.enabled=false \
+		--set postgres.external.enabled=true \
+		--set postgres.external.host=172.18.0.1 \
+		--set redis.enabled=false \
+		--set redis.external.enabled=true \
+		--set redis.external.host=172.18.0.1 \
 		-n $(K8S_NAMESPACE)
+else
+	@helm upgrade wealist-infrastructure ./k8s/helm/charts/wealist-infrastructure \
+		-f $(HELM_BASE_VALUES) \
+		-f $(HELM_ENV_VALUES) $(HELM_SECRETS_FLAG) \
+		--set postgres.enabled=true \
+		--set postgres.external.enabled=false \
+		--set redis.enabled=true \
+		--set redis.external.enabled=false \
+		-n $(K8S_NAMESPACE)
+endif
+ifeq ($(EXTERNAL_DB),true)
 	@for service in $(HELM_SERVICES); do \
 		echo "Upgrading $$service..."; \
 		helm upgrade $$service ./k8s/helm/charts/$$service \
@@ -163,11 +225,31 @@ helm-upgrade-all: helm-deps-build ## Upgrade all charts
 			-f $(HELM_ENV_VALUES) $(HELM_SECRETS_FLAG) \
 			-n $(K8S_NAMESPACE); \
 	done
+else
+	@for service in $(HELM_SERVICES); do \
+		echo "Upgrading $$service with DB auto-migrate..."; \
+		helm upgrade $$service ./k8s/helm/charts/$$service \
+			-f $(HELM_BASE_VALUES) \
+			-f $(HELM_ENV_VALUES) $(HELM_SECRETS_FLAG) \
+			--set shared.config.DB_AUTO_MIGRATE=true \
+			-n $(K8S_NAMESPACE); \
+	done
+endif
+ifeq ($(EXTERNAL_DB),true)
 	@helm upgrade wealist-monitoring ./k8s/helm/charts/wealist-monitoring \
 		-f $(HELM_BASE_VALUES) \
 		-f $(HELM_ENV_VALUES) $(HELM_SECRETS_FLAG) \
 		--set global.namespace=$(K8S_NAMESPACE) \
 		-n $(K8S_NAMESPACE) 2>/dev/null || echo "Monitoring not installed, skipping upgrade"
+else
+	@helm upgrade wealist-monitoring ./k8s/helm/charts/wealist-monitoring \
+		-f $(HELM_BASE_VALUES) \
+		-f $(HELM_ENV_VALUES) $(HELM_SECRETS_FLAG) \
+		--set global.namespace=$(K8S_NAMESPACE) \
+		--set postgresExporter.config.host=postgres \
+		--set redisExporter.config.host=redis \
+		-n $(K8S_NAMESPACE) 2>/dev/null || echo "Monitoring not installed, skipping upgrade"
+endif
 	@echo "All charts upgraded!"
 
 helm-uninstall-all: ## Uninstall all charts

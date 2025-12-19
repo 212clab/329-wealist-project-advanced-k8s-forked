@@ -201,6 +201,13 @@ istio:
 # Monitoring Stack (wealist-monitoring chart values)
 # =============================================================================
 
+# Prometheus - Metrics Collection
+prometheus:
+  enabled: true
+  config:
+    # Sub-path configuration for Ingress access
+    externalUrl: "http://localhost/monitoring/prometheus"
+
 # Grafana - Visualization Dashboard
 grafana:
   enabled: true
@@ -222,3 +229,22 @@ monitoringIngress:
   hosts:
     - host: localhost
   tls: []
+
+# -----------------------------------------------------------------------------
+# Database Exporters (PostgreSQL/Redis metrics for Grafana)
+# -----------------------------------------------------------------------------
+# Note: When EXTERNAL_DB=false, helm overrides host to internal service names
+postgresExporter:
+  enabled: true
+  config:
+    host: "172.18.0.1"  # External DB (host machine) - overridden when EXTERNAL_DB=false
+    port: 5432
+    user: "postgres"
+    database: "postgres"
+    sslmode: "disable"
+
+redisExporter:
+  enabled: true
+  config:
+    host: "172.18.0.1"  # External DB (host machine) - overridden when EXTERNAL_DB=false
+    port: 6379

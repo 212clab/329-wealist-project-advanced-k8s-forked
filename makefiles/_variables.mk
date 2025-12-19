@@ -7,6 +7,11 @@ KIND_CLUSTER ?= wealist
 LOCAL_REGISTRY ?= localhost:5001
 IMAGE_TAG ?= latest
 
+# External Database Configuration
+# false (default): Deploy PostgreSQL/Redis as pods inside cluster
+# true: Use host machine's PostgreSQL/Redis (requires local installation)
+EXTERNAL_DB ?= false
+
 # Environment configuration (used across all commands)
 # Options: local-kind, dev, staging, prod
 # DEPRECATED-SOON: local-ubuntu (will be replaced by staging)
