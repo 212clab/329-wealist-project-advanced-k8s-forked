@@ -62,37 +62,22 @@ data:
             replacement: /var/log/pods/*$1/$2/*.log
 
         pipeline_stages:
-          # JSON 로그 파싱 (Go 서비스들은 zap JSON 로그 출력)
-          # zap 로거 필드: timestamp, level, message, caller, stacktrace, request_id 등
-          - json:
-              expressions:
-                level: level
-                message: message
-                timestamp: timestamp
-                error: error
-                caller: caller
-                request_id: request_id
-                service: service
-                method: method
-                path: path
-                status: status
-                duration: duration
+          # CRI 컨테이너 런타임 로그 포맷 파싱 (Kind uses containerd)
+          # Format: 2024-01-01T00:00:00.000000000Z stdout F <actual log>
+          - cri: {}
 
-          # 로그 레벨 라벨 추가
-          - labels:
-              level:
-
-          # 타임스탬프 파싱 (zap ISO8601 형식)
-          - timestamp:
-              source: timestamp
-              format: "2006-01-02T15:04:05.000Z0700"
-              fallback_formats:
-                - RFC3339Nano
-                - RFC3339
-                - "2006-01-02T15:04:05.999999999Z07:00"
-                - "2006-01-02T15:04:05Z07:00"
-
-          # 출력 포맷 설정
-          - output:
-              source: message
+          # JSON 로그 파싱 시도 (Go 서비스들은 zap JSON 로그 출력)
+          # JSON이 아닌 로그는 그대로 유지됨
+          - match:
+              selector: '{app=~".+"}'
+              stages:
+                - json:
+                    expressions:
+                      level: level
+                      message: msg
+                      timestamp: ts
+                      error: error
+                      caller: caller
+                - labels:
+                    level:
 {{- end }}

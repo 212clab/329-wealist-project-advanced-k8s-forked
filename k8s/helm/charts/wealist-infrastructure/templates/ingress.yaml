@@ -106,7 +106,7 @@ spec:
             pathType: ImplementationSpecific
             backend:
               service:
-                name: livekit
+                name: livekit-svc
                 port:
                   number: 7880
 
@@ -126,6 +126,6 @@ spec:
               service:
                 name: frontend
                 port:
-                  number: 3000
+                  number: 80
     {{- end }}
 {{- end }}

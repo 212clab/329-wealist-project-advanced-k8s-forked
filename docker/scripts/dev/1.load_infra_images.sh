@@ -1,6 +1,9 @@
 #!/bin/bash
 # 인프라 이미지를 로컬 레지스트리에 푸시
 # 이미 로컬 레지스트리에 있으면 스킵
+#
+# 환경변수:
+#   EXTERNAL_DB=true  → postgres, redis 이미지 스킵
 
 set -e
 
@@ -34,12 +37,19 @@ load() {
     docker push "${LOCAL_REG}/${name}:${tag}"
 }
 
-# AWS ECR Public (무료)
-load "public.ecr.aws/docker/library/postgres:15-alpine" "postgres" "15-alpine"
-load "public.ecr.aws/docker/library/redis:7-alpine" "redis" "7-alpine"
+# EXTERNAL_DB=true면 postgres/redis 스킵
+if [ "${EXTERNAL_DB}" = "true" ]; then
+    echo "ℹ️  EXTERNAL_DB=true → postgres, redis 이미지 스킵"
+else
+    # AWS ECR Public (무료)
+    load "public.ecr.aws/docker/library/postgres:15-alpine" "postgres" "15-alpine"
+    load "public.ecr.aws/docker/library/redis:7-alpine" "redis" "7-alpine"
+fi
 
-# Docker Hub
-load "coturn/coturn:4.6" "coturn" "4.6"
+# LiveKit (WebRTC)
 load "livekit/livekit-server:v1.5" "livekit" "v1.5"
+
+# MinIO (S3-compatible storage)
+load "minio/minio:RELEASE.2024-01-01T16-36-33Z" "minio" "RELEASE.2024-01-01T16-36-33Z"
 
 echo "완료!"

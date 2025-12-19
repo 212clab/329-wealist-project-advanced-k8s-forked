@@ -99,6 +99,51 @@ redis:
       memory: "256Mi"
       cpu: "200m"
 
+# LiveKit configuration (WebRTC)
+livekit:
+  enabled: true
+
+  image:
+    tag: "v1.5"
+    pullPolicy: IfNotPresent
+
+  config:
+    apiKey: "devkey"
+    apiSecret: "devsecret"
+
+  resources:
+    requests:
+      memory: "128Mi"
+      cpu: "100m"
+    limits:
+      memory: "512Mi"
+      cpu: "500m"
+
+# MinIO configuration (S3-compatible storage)
+minio:
+  enabled: true
+
+  image:
+    tag: "RELEASE.2024-01-01T16-36-33Z"
+    pullPolicy: IfNotPresent
+
+  config:
+    rootUser: "minioadmin"
+    rootPassword: "minioadmin"
+
+  persistence:
+    enabled: true
+    storageClass: ""
+    size: 10Gi
+
+  resources:
+    requests:
+      memory: "256Mi"
+      cpu: "100m"
+    limits:
+      memory: "512Mi"
+      cpu: "500m"
+
 # Ingress configuration
 # Note: These are LOCAL/DEV defaults. Production settings should be in
 # helm/environments/prod.yaml or staging.yaml.
@@ -114,7 +159,7 @@ ingress:
     nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"
     nginx.ingress.kubernetes.io/proxy-send-timeout: "3600"
     nginx.ingress.kubernetes.io/proxy-http-version: "1.1"
-    nginx.ingress.kubernetes.io/websocket-services: "livekit"
+    nginx.ingress.kubernetes.io/websocket-services: "livekit-svc"
     nginx.ingress.kubernetes.io/upstream-hash-by: "$request_uri"
     nginx.ingress.kubernetes.io/proxy-buffering: "off"
     # SSL/TLS - default off for local (override in prod/staging)

@@ -1,0 +1,20 @@
+{{- if .Values.livekit.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: livekit-config
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    app: livekit
+data:
+  config.yaml: |
+    port: 7880
+    rtc:
+      port_range_start: 50000
+      port_range_end: 60000
+      tcp_port: 7881
+    keys:
+      {{ .Values.livekit.config.apiKey }}: {{ .Values.livekit.config.apiSecret }}
+    logging:
+      level: info
+{{- end }}

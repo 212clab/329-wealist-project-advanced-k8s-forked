@@ -1,0 +1,22 @@
+{{- if .Values.livekit.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: livekit-svc
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    app: livekit
+spec:
+  type: ClusterIP
+  ports:
+    - port: 7880
+      targetPort: 7880
+      protocol: TCP
+      name: http
+    - port: 7881
+      targetPort: 7881
+      protocol: TCP
+      name: rtc-tcp
+  selector:
+    app: livekit
+{{- end }}

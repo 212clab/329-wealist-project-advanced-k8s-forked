@@ -3,6 +3,8 @@
 -- =============================================================================
 -- Run as postgres superuser:
 --   sudo -u postgres psql -f 01-create-databases.sql
+-- Or on macOS:
+--   psql -U postgres -f 01-create-databases.sql
 -- =============================================================================
 
 -- -----------------------------------------------------------------------------
@@ -43,62 +45,62 @@ END
 $$;
 
 -- -----------------------------------------------------------------------------
--- Create Databases
+-- Create Databases (matching Helm values DB_NAME)
 -- -----------------------------------------------------------------------------
 -- Note: CREATE DATABASE cannot be inside a transaction block, so we use \gexec
 
-SELECT 'CREATE DATABASE user_db OWNER user_service'
-WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'user_db')\gexec
+SELECT 'CREATE DATABASE wealist_user_service_db OWNER user_service'
+WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'wealist_user_service_db')\gexec
 
-SELECT 'CREATE DATABASE board_db OWNER board_service'
-WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'board_db')\gexec
+SELECT 'CREATE DATABASE wealist_board_service_db OWNER board_service'
+WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'wealist_board_service_db')\gexec
 
-SELECT 'CREATE DATABASE chat_db OWNER chat_service'
-WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'chat_db')\gexec
+SELECT 'CREATE DATABASE wealist_chat_service_db OWNER chat_service'
+WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'wealist_chat_service_db')\gexec
 
-SELECT 'CREATE DATABASE noti_db OWNER noti_service'
-WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'noti_db')\gexec
+SELECT 'CREATE DATABASE wealist_noti_service_db OWNER noti_service'
+WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'wealist_noti_service_db')\gexec
 
-SELECT 'CREATE DATABASE storage_db OWNER storage_service'
-WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'storage_db')\gexec
+SELECT 'CREATE DATABASE wealist_storage_service_db OWNER storage_service'
+WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'wealist_storage_service_db')\gexec
 
-SELECT 'CREATE DATABASE video_db OWNER video_service'
-WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'video_db')\gexec
+SELECT 'CREATE DATABASE wealist_video_service_db OWNER video_service'
+WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'wealist_video_service_db')\gexec
 
 -- -----------------------------------------------------------------------------
 -- Grant Privileges
 -- -----------------------------------------------------------------------------
-GRANT ALL PRIVILEGES ON DATABASE user_db TO user_service;
-GRANT ALL PRIVILEGES ON DATABASE board_db TO board_service;
-GRANT ALL PRIVILEGES ON DATABASE chat_db TO chat_service;
-GRANT ALL PRIVILEGES ON DATABASE noti_db TO noti_service;
-GRANT ALL PRIVILEGES ON DATABASE storage_db TO storage_service;
-GRANT ALL PRIVILEGES ON DATABASE video_db TO video_service;
+GRANT ALL PRIVILEGES ON DATABASE wealist_user_service_db TO user_service;
+GRANT ALL PRIVILEGES ON DATABASE wealist_board_service_db TO board_service;
+GRANT ALL PRIVILEGES ON DATABASE wealist_chat_service_db TO chat_service;
+GRANT ALL PRIVILEGES ON DATABASE wealist_noti_service_db TO noti_service;
+GRANT ALL PRIVILEGES ON DATABASE wealist_storage_service_db TO storage_service;
+GRANT ALL PRIVILEGES ON DATABASE wealist_video_service_db TO video_service;
 
 -- -----------------------------------------------------------------------------
 -- Enable UUID Extension (required for all databases)
 -- -----------------------------------------------------------------------------
-\c user_db
+\c wealist_user_service_db
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 GRANT ALL ON SCHEMA public TO user_service;
 
-\c board_db
+\c wealist_board_service_db
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 GRANT ALL ON SCHEMA public TO board_service;
 
-\c chat_db
+\c wealist_chat_service_db
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 GRANT ALL ON SCHEMA public TO chat_service;
 
-\c noti_db
+\c wealist_noti_service_db
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 GRANT ALL ON SCHEMA public TO noti_service;
 
-\c storage_db
+\c wealist_storage_service_db
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 GRANT ALL ON SCHEMA public TO storage_service;
 
-\c video_db
+\c wealist_video_service_db
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 GRANT ALL ON SCHEMA public TO video_service;
 
