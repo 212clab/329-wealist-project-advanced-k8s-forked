@@ -488,9 +488,10 @@ export const getOAuthBaseUrl = (): string => {
     return '';
   }
 
-  // Docker-compose (로컬 개발): auth-service 8080 포트!
+  // Docker-compose (로컬 개발): nginx 게이트웨이 사용 (포트 80)
+  // nginx가 /oauth2/* 경로를 auth-service:8080으로 프록시함
   if (INJECTED_API_BASE_URL?.includes('localhost')) {
-    return `${INJECTED_API_BASE_URL}:8080`;
+    return INJECTED_API_BASE_URL;  // http://localhost (nginx gateway)
   }
 
   // 운영 환경
