@@ -223,8 +223,8 @@ grafana:
     rootUrl: "https://dev.wealist.co.kr/monitoring/grafana"
     serveFromSubPath: "true"
 
-# Ingress - External Access via https://dev.wealist.co.kr/monitoring/*
-ingress:
+# Monitoring Ingress - External Access via https://dev.wealist.co.kr/monitoring/*
+monitoringIngress:
   enabled: true
   className: nginx
   annotations:
