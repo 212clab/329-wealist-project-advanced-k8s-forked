@@ -161,6 +161,55 @@ aws s3 sync s3://${BUCKET}/stable/ s3://${BUCKET}/ --delete
 
 ---
 
+## 자동 버전업 (Semantic Release)
+
+커밋 메시지 기반으로 **자동으로 버전이 올라갑니다!**
+
+### 커밋 메시지 형식
+
+```bash
+# 패치 버전 (1.0.0 → 1.0.1)
+front-fix: 로그인 버튼 클릭 안되는 문제 수정
+front-perf: 이미지 로딩 성능 개선
+
+# 마이너 버전 (1.0.0 → 1.1.0)
+front-feat: 다크모드 기능 추가
+front-feat(auth): 소셜 로그인 추가
+
+# 메이저 버전 (1.0.0 → 2.0.0) - Breaking Change
+front-feat!: API 응답 구조 변경
+front-fix!: 인증 토큰 형식 변경
+
+# 버전업 없음 (문서, 스타일, 테스트 등)
+front-docs: README 업데이트
+front-style: 코드 포맷팅
+front-refactor: 컴포넌트 구조 개선
+front-test: 단위 테스트 추가
+front-chore: 의존성 업데이트
+```
+
+### 자동화 흐름
+
+```
+1. front-feat: 새 기능 추가 (커밋)
+2. dev 브랜치 push
+3. semantic-release 분석
+   └→ "front-feat 발견! minor 버전업 필요"
+4. 빌드 & 배포 성공 후
+   └→ package.json 수정 (0.1.0 → 0.2.0)
+   └→ CHANGELOG.md 생성
+   └→ Git 태그: frontend-v0.2.0
+   └→ GitHub Release 생성
+```
+
+### 주의사항
+
+- 프론트엔드 관련 커밋만 `front-` prefix 사용
+- 다른 서비스 커밋은 기존대로 (`fix:`, `feat:` 등)
+- Breaking Change는 `!` 추가 (예: `front-feat!:`)
+
+---
+
 ## 워크플로우 상세
 
 ### frontend-dev.yaml

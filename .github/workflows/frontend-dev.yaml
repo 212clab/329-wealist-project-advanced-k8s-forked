@@ -44,17 +44,88 @@ env:
   IMAGE_NAME: ${{ github.repository }}/frontend
 
 permissions:
-  contents: read
+  contents: write  # semantic-release가 package.json, CHANGELOG 수정
   packages: write
   id-token: write
 
 jobs:
   # ===========================================================================
-  # Job 1: Build & Test
+  # Job 1: Semantic Release (자동 버전업)
+  # ===========================================================================
+  semantic-release:
+    name: Semantic Release
+    runs-on: ubuntu-latest
+    outputs:
+      new_version: ${{ steps.release.outputs.new_version }}
+      released: ${{ steps.release.outputs.released }}
+
+    defaults:
+      run:
+        working-directory: services/frontend
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # 전체 히스토리 필요 (커밋 분석용)
+          persist-credentials: false
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: "pnpm"
+          cache-dependency-path: services/frontend/pnpm-lock.yaml
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Run Semantic Release
+        id: release
+        run: |
+          # semantic-release 실행
+          npx semantic-release --dry-run 2>&1 | tee release-output.txt || true
+
+          # 다음 버전 추출
+          NEXT_VERSION=$(grep -oP "The next release version is \K[0-9]+\.[0-9]+\.[0-9]+" release-output.txt || echo "")
+
+          if [ -n "$NEXT_VERSION" ]; then
+            echo "🚀 New version will be: ${NEXT_VERSION}"
+            echo "new_version=${NEXT_VERSION}" >> $GITHUB_OUTPUT
+            echo "released=true" >> $GITHUB_OUTPUT
+          else
+            echo "📦 No new release needed"
+            CURRENT_VERSION=$(node -p "require('./package.json').version")
+            echo "new_version=${CURRENT_VERSION}" >> $GITHUB_OUTPUT
+            echo "released=false" >> $GITHUB_OUTPUT
+          fi
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Release Summary
+        run: |
+          echo "## 📦 Semantic Release" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          if [ "${{ steps.release.outputs.released }}" == "true" ]; then
+            echo "🚀 **New version detected:** \`v${{ steps.release.outputs.new_version }}\`" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "📦 **Current version:** \`v${{ steps.release.outputs.new_version }}\`" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "No front-fix/front-feat commits found since last release." >> $GITHUB_STEP_SUMMARY
+          fi
+
+  # ===========================================================================
+  # Job 2: Build & Test
   # ===========================================================================
   build-and-test:
     name: Build & Type Check
     runs-on: ubuntu-latest
+    needs: semantic-release
     outputs:
       version: ${{ steps.version.outputs.version }}
       short_sha: ${{ steps.version.outputs.short_sha }}
@@ -93,20 +164,24 @@ jobs:
       - name: Extract version info
         id: version
         run: |
-          VERSION=$(node -p "require('./package.json').version")
+          # semantic-release에서 결정된 버전 사용 (또는 현재 버전)
+          VERSION="${{ needs.semantic-release.outputs.new_version }}"
           SHORT_SHA=$(echo "${{ github.sha }}" | cut -c1-7)
           echo "version=${VERSION}" >> $GITHUB_OUTPUT
           echo "short_sha=${SHORT_SHA}" >> $GITHUB_OUTPUT
           echo "📦 Version: ${VERSION}"
           echo "🔖 Short SHA: ${SHORT_SHA}"
+          if [ "${{ needs.semantic-release.outputs.released }}" == "true" ]; then
+            echo "🚀 New release detected!"
+          fi
 
   # ===========================================================================
-  # Job 2: Docker Build & Push to GHCR
+  # Job 3: Docker Build & Push to GHCR
   # ===========================================================================
   docker-build-push:
     name: Docker Build & Push
     runs-on: ubuntu-latest
-    needs: build-and-test
+    needs: [semantic-release, build-and-test]
     outputs:
       image_tag: ${{ steps.meta.outputs.version }}
       image_digest: ${{ steps.build.outputs.digest }}
@@ -167,12 +242,12 @@ jobs:
           echo "**Digest:** \`${{ steps.build.outputs.digest }}\`" >> $GITHUB_STEP_SUMMARY
 
   # ===========================================================================
-  # Job 3: Deploy to S3 (Dev)
+  # Job 4: Deploy to S3 (Dev)
   # ===========================================================================
   deploy-s3-dev:
     name: Deploy to S3 (Dev)
     runs-on: ubuntu-latest
-    needs: [build-and-test, docker-build-push]
+    needs: [semantic-release, build-and-test, docker-build-push]
     if: ${{ !inputs.skip_s3_deploy }}
     environment: dev
 
@@ -285,3 +360,60 @@ jobs:
           echo "# S3에서 이전 버전으로 롤백" >> $GITHUB_STEP_SUMMARY
           echo "aws s3 sync s3://\${BUCKET}/${VERSION}-${SHORT_SHA}/ s3://\${BUCKET}/ --delete" >> $GITHUB_STEP_SUMMARY
           echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+
+  # ===========================================================================
+  # Job 5: Create Release (실제 버전업)
+  # ===========================================================================
+  create-release:
+    name: Create Release
+    runs-on: ubuntu-latest
+    needs: [semantic-release, build-and-test, docker-build-push, deploy-s3-dev]
+    if: needs.semantic-release.outputs.released == 'true'
+
+    defaults:
+      run:
+        working-directory: services/frontend
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: "pnpm"
+          cache-dependency-path: services/frontend/pnpm-lock.yaml
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Configure Git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Run Semantic Release
+        run: npx semantic-release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Release Summary
+        run: |
+          echo "## 🎉 New Release Created" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Version:** \`v${{ needs.semantic-release.outputs.new_version }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Changes:" >> $GITHUB_STEP_SUMMARY
+          echo "- package.json updated" >> $GITHUB_STEP_SUMMARY
+          echo "- CHANGELOG.md generated" >> $GITHUB_STEP_SUMMARY
+          echo "- Git tag created: \`frontend-v${{ needs.semantic-release.outputs.new_version }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- GitHub Release created" >> $GITHUB_STEP_SUMMARY
