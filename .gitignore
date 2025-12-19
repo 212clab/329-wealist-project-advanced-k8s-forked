@@ -72,6 +72,9 @@ minio-data/
 /uploads/
 /storage/
 /files/
+uploads/
+storage/
+files/
 
 # ============================================
 # Go
