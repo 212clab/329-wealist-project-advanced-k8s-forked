@@ -1,0 +1,287 @@
+# =============================================================================
+# Frontend CI/CD - Development Environment
+# =============================================================================
+# 트리거: dev 브랜치 push (services/frontend/** 변경 시)
+#
+# 이 워크플로우가 하는 일:
+#   1. 타입 체크 및 빌드
+#   2. Docker 이미지 빌드 → GHCR Push
+#   3. S3 버전별 폴더에 배포
+#   4. CloudFront 캐시 무효화
+#
+# 이미지 태그 전략:
+#   - :sha-{commit} - 커밋별 고정 태그 (영구 보관)
+#   - :v{version}   - 릴리스 버전 (package.json 기반)
+#   - :latest-dev   - dev 환경 최신 (매 배포마다 업데이트)
+#
+# Required Secrets:
+#   AWS_ROLE_ARN, AWS_S3_BUCKET_DEV, AWS_CLOUDFRONT_DISTRIBUTION_ID_DEV
+# Optional Secrets:
+#   VITE_API_BASE_URL, API_DOMAIN_DEV
+# =============================================================================
+
+name: Frontend CI/CD (Dev)
+
+on:
+  push:
+    branches:
+      - dev
+      - dev-frontend
+    paths:
+      - "services/frontend/**"
+  workflow_dispatch:
+    inputs:
+      skip_s3_deploy:
+        description: "Skip S3 deployment (image build only)"
+        required: false
+        default: false
+        type: boolean
+
+env:
+  NODE_VERSION: "20"
+  PNPM_VERSION: "8"
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}/frontend
+
+permissions:
+  contents: read
+  packages: write
+  id-token: write
+
+jobs:
+  # ===========================================================================
+  # Job 1: Build & Test
+  # ===========================================================================
+  build-and-test:
+    name: Build & Type Check
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      short_sha: ${{ steps.version.outputs.short_sha }}
+
+    defaults:
+      run:
+        working-directory: services/frontend
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: "pnpm"
+          cache-dependency-path: services/frontend/pnpm-lock.yaml
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Type check
+        run: pnpm type-check
+
+      - name: Build (for validation)
+        run: pnpm build
+        env:
+          VITE_API_BASE_URL: ${{ secrets.VITE_API_BASE_URL || '' }}
+
+      - name: Extract version info
+        id: version
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          SHORT_SHA=$(echo "${{ github.sha }}" | cut -c1-7)
+          echo "version=${VERSION}" >> $GITHUB_OUTPUT
+          echo "short_sha=${SHORT_SHA}" >> $GITHUB_OUTPUT
+          echo "📦 Version: ${VERSION}"
+          echo "🔖 Short SHA: ${SHORT_SHA}"
+
+  # ===========================================================================
+  # Job 2: Docker Build & Push to GHCR
+  # ===========================================================================
+  docker-build-push:
+    name: Docker Build & Push
+    runs-on: ubuntu-latest
+    needs: build-and-test
+    outputs:
+      image_tag: ${{ steps.meta.outputs.version }}
+      image_digest: ${{ steps.build.outputs.digest }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata for Docker
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            # SHA 태그 (영구 보관)
+            type=sha,prefix=sha-,format=short
+            # 버전 태그
+            type=raw,value=v${{ needs.build-and-test.outputs.version }}
+            # latest-dev 태그 (dev 최신)
+            type=raw,value=latest-dev
+
+      - name: Build and push Docker image
+        id: build
+        uses: docker/build-push-action@v5
+        with:
+          context: ./services/frontend
+          file: ./services/frontend/Dockerfile
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          build-args: |
+            VITE_API_BASE_URL=${{ secrets.VITE_API_BASE_URL || '' }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          platforms: linux/amd64
+
+      - name: Image Summary
+        run: |
+          echo "## 🐳 Docker Image Built" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Registry:** \`${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Tags:**" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+          echo "${{ steps.meta.outputs.tags }}" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Digest:** \`${{ steps.build.outputs.digest }}\`" >> $GITHUB_STEP_SUMMARY
+
+  # ===========================================================================
+  # Job 3: Deploy to S3 (Dev)
+  # ===========================================================================
+  deploy-s3-dev:
+    name: Deploy to S3 (Dev)
+    runs-on: ubuntu-latest
+    needs: [build-and-test, docker-build-push]
+    if: ${{ !inputs.skip_s3_deploy }}
+    environment: dev
+
+    defaults:
+      run:
+        working-directory: services/frontend
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: "pnpm"
+          cache-dependency-path: services/frontend/pnpm-lock.yaml
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build for production
+        run: pnpm build
+        env:
+          VITE_API_BASE_URL: ${{ secrets.VITE_API_BASE_URL || '' }}
+
+      - name: Inject runtime config
+        env:
+          API_DOMAIN_RAW: ${{ secrets.API_DOMAIN_DEV }}
+        run: |
+          API_DOMAIN=$(echo "$API_DOMAIN_RAW" | tr -d '[:space:]')
+          VERSION="v${{ needs.build-and-test.outputs.version }}"
+          SHORT_SHA="${{ needs.build-and-test.outputs.short_sha }}"
+          BUILD_TIME=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+
+          cat > dist/config.js << EOF
+          window.__ENV__ = {
+            API_BASE_URL: "",
+            API_DOMAIN: "${API_DOMAIN}",
+            VERSION: "${VERSION}",
+            BUILD_SHA: "${SHORT_SHA}",
+            BUILD_TIME: "${BUILD_TIME}",
+            ENVIRONMENT: "dev"
+          };
+          EOF
+
+          echo "📝 Generated config.js:"
+          cat dist/config.js
+
+      - name: Configure AWS Credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ap-northeast-2
+
+      - name: Deploy to S3 (versioned folder)
+        env:
+          S3_BUCKET: ${{ secrets.AWS_S3_BUCKET_DEV }}
+          VERSION: v${{ needs.build-and-test.outputs.version }}
+          SHORT_SHA: ${{ needs.build-and-test.outputs.short_sha }}
+        run: |
+          # 버전별 폴더에 배포 (영구 보관)
+          echo "📦 Deploying to versioned folder: /${VERSION}-${SHORT_SHA}/"
+          aws s3 sync dist/ "s3://${S3_BUCKET}/${VERSION}-${SHORT_SHA}/" \
+            --cache-control "public, max-age=31536000, immutable"
+
+          # 최신 버전을 루트에도 배포 (현재 서빙용)
+          echo "🚀 Deploying to root (current version)"
+          aws s3 sync dist/ "s3://${S3_BUCKET}/" \
+            --delete \
+            --cache-control "public, max-age=31536000, immutable" \
+            --exclude "index.html" \
+            --exclude "config.js"
+
+          # index.html, config.js는 캐시 없이
+          aws s3 cp dist/index.html "s3://${S3_BUCKET}/index.html" \
+            --cache-control "no-cache, no-store, must-revalidate"
+
+          aws s3 cp dist/config.js "s3://${S3_BUCKET}/config.js" \
+            --cache-control "no-cache, no-store, must-revalidate"
+
+      - name: Invalidate CloudFront Cache
+        run: |
+          aws cloudfront create-invalidation \
+            --distribution-id ${{ secrets.AWS_CLOUDFRONT_DISTRIBUTION_ID_DEV }} \
+            --paths "/*"
+
+      - name: Deployment Summary
+        env:
+          VERSION: v${{ needs.build-and-test.outputs.version }}
+          SHORT_SHA: ${{ needs.build-and-test.outputs.short_sha }}
+        run: |
+          echo "## 🚀 Dev Deployment Complete" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Item | Value |" >> $GITHUB_STEP_SUMMARY
+          echo "|------|-------|" >> $GITHUB_STEP_SUMMARY
+          echo "| **Version** | \`${VERSION}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Commit** | \`${SHORT_SHA}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| **S3 Bucket** | \`${{ secrets.AWS_S3_BUCKET_DEV }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Versioned Path** | \`/${VERSION}-${SHORT_SHA}/\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Docker Image** | \`${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:sha-${SHORT_SHA}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 🔄 Rollback Command" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`bash" >> $GITHUB_STEP_SUMMARY
+          echo "# S3에서 이전 버전으로 롤백" >> $GITHUB_STEP_SUMMARY
+          echo "aws s3 sync s3://\${BUCKET}/${VERSION}-${SHORT_SHA}/ s3://\${BUCKET}/ --delete" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
