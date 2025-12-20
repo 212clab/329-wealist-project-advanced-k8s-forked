@@ -278,6 +278,8 @@ spec:
       request: {{ .Values.httpRoute.routes.video.timeout | default "3600s" }}
 
 # Frontend Route (catch-all, must have lowest priority)
+# dev 환경에서는 비활성화 (CloudFront/S3에서 서빙)
+{{- if .Values.httpRoute.frontend.enabled }}
 ---
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute

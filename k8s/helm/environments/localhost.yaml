@@ -206,6 +206,9 @@ istio:
     hosts:
       - "localhost"
       - "*"
+    # Frontend Pod 라우팅 (localhost 환경)
+    frontend:
+      enabled: true
 
   # mTLS - 서비스 간 암호화
   mtls:

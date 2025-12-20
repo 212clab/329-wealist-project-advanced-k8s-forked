@@ -1,9 +1,12 @@
 # =============================================================================
 # 개발 환경 설정 (ENV=dev)
 # =============================================================================
-# 도메인: localhost (Kind 클러스터)
+# 도메인: dev.wealist.co.kr (CloudFront + Route53)
 # 네임스페이스: wealist-dev
-# 특징: 호스트 PC의 PostgreSQL/Redis 사용 (클러스터 재시작 시 데이터 유지)
+# 특징:
+#   - Frontend: CloudFront/S3 (Pod 없음)
+#   - Backend: Kind 클러스터
+#   - DB: 호스트 PC의 PostgreSQL/Redis
 #
 # 사전 요구사항:
 #   1. PostgreSQL 설치: brew install postgresql / apt install postgresql
@@ -16,8 +19,14 @@
 global:
   namespace: wealist-dev
   environment: development
-  domain: localhost
+  domain: dev.wealist.co.kr
   imageRegistry: localhost:5001
+
+# -----------------------------------------------------------------------------
+# Frontend (비활성화 - CloudFront/S3에서 서빙)
+# -----------------------------------------------------------------------------
+frontend:
+  enabled: false
 
 # -----------------------------------------------------------------------------
 # cert-manager (localhost에서는 비활성화)
@@ -143,7 +152,8 @@ istio:
       name: istio-ingressgateway
       namespace: istio-system
     hosts:
-      - "localhost"
+      - "dev.wealist.co.kr"
+      - "api.dev.wealist.co.kr"
       - "*"
     routes:
       auth:
@@ -181,6 +191,9 @@ istio:
         host: video-service
         port: 8004
         timeout: 3600s
+    # Frontend 비활성화 (CloudFront/S3에서 서빙)
+    frontend:
+      enabled: false
 
   # ==========================================================================
   # mTLS 설정 (서비스 간 암호화 통신)

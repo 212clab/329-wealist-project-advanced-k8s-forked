@@ -117,6 +117,10 @@ httpRoute:
       host: video-service
       port: 8004
       timeout: 3600s
+  # Frontend route (catch-all)
+  # dev 환경에서는 비활성화 (CloudFront/S3에서 서빙)
+  frontend:
+    enabled: true  # localhost: true, dev: false
 
 mtls:
   enabled: true
