@@ -90,7 +90,7 @@ curl -s 'http://localhost:3100/ready'
 ```
 make kind-setup                      # 클러스터 생성
 make kind-load-images-mono           # 이미지 빌드/로드 (프론트 포함)
-make helm-install-all ENV=local-kind # 배포 (DB/Redis Pod + 서비스 + 모니터링)
+make helm-install-all ENV=localhost # 배포 (DB/Redis Pod + 서비스 + 모니터링)
 ```
 
 # helm(kind) 테스트 - DB 포드 비포함
@@ -100,7 +100,7 @@ make kind-local-all EXTERNAL_DB=true
 또는
 make kind-setup
 make kind-load-images-mono # 빠르게
-make helm-install-all ENV=local-kind EXTERNAL_DB=true
+make helm-install-all ENV=localhost EXTERNAL_DB=true
 ```
 
 ```

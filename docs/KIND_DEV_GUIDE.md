@@ -55,6 +55,7 @@ vi helm/environments/local-kind-secrets.yaml
 ```
 
 > ⚠️ **secrets 파일이 없으면:**
+>
 > - Google OAuth 로그인 실패 (invalid_client 에러)
 > - JWT 토큰 생성 실패 (WeakKeyException)
 > - API 호출 시 401/500 에러
@@ -77,16 +78,18 @@ cp helm/environments/secrets.example.yaml helm/environments/local-kind-secrets.y
 vi helm/environments/local-kind-secrets.yaml  # GOOGLE_CLIENT_ID 등 입력
 
 # 4단계: Helm으로 전체 배포
-make helm-install-all ENV=local-kind
+make helm-install-all ENV=localhost
 ```
 
 **완료 후 확인:**
+
 ```bash
 make status                    # Pod 상태 확인
-kubectl get pods -n wealist-kind-local
+kubectl get pods -n wealist-localhost
 ```
 
 **접속 URL:**
+
 - Frontend: http://localhost
 - API Gateway: http://localhost/api/...
 
@@ -133,12 +136,12 @@ docker stop wealist-control-plane wealist-worker wealist-worker2
 
 ### 명령어 패턴
 
-| 명령어 | 설명 |
-|--------|------|
-| `make {서비스}-build` | Docker 이미지만 빌드 |
-| `make {서비스}-load` | 빌드 + 레지스트리에 푸시 |
-| `make {서비스}-redeploy` | Pod 재시작 (이미지 다시 풀) |
-| `make {서비스}-all` | 빌드 + 푸시 + 재시작 (가장 많이 사용) |
+| 명령어                   | 설명                                  |
+| ------------------------ | ------------------------------------- |
+| `make {서비스}-build`    | Docker 이미지만 빌드                  |
+| `make {서비스}-load`     | 빌드 + 레지스트리에 푸시              |
+| `make {서비스}-redeploy` | Pod 재시작 (이미지 다시 풀)           |
+| `make {서비스}-all`      | 빌드 + 푸시 + 재시작 (가장 많이 사용) |
 
 ### 사용 예시
 
@@ -173,7 +176,7 @@ make redeploy-all
 
 ```bash
 # 로컬 Kind 클러스터 (기본)
-make helm-install-all ENV=local-kind
+make helm-install-all ENV=localhost
 
 # 로컬 Ubuntu 서버 (외부 DB 사용)
 make helm-install-all ENV=local-ubuntu
@@ -186,22 +189,22 @@ make helm-install-all ENV=prod
 
 ### 환경별 네임스페이스
 
-| ENV | Namespace | 도메인 |
-|-----|-----------|--------|
-| local-kind | wealist-kind-local | localhost |
-| local-ubuntu | wealist-dev | local.wealist.co.kr |
-| dev | wealist-dev | dev.wealist.co.kr |
-| staging | wealist-staging | staging.wealist.co.kr |
-| prod | wealist-prod | wealist.co.kr |
+| ENV          | Namespace         | 도메인                |
+| ------------ | ----------------- | --------------------- |
+| local-kind   | wealist-localhost | localhost             |
+| local-ubuntu | wealist-dev       | local.wealist.co.kr   |
+| dev          | wealist-dev       | dev.wealist.co.kr     |
+| staging      | wealist-staging   | staging.wealist.co.kr |
+| prod         | wealist-prod      | wealist.co.kr         |
 
 ### 업그레이드 / 삭제
 
 ```bash
 # 설정 변경 후 업그레이드
-make helm-upgrade-all ENV=local-kind
+make helm-upgrade-all ENV=localhost
 
 # 전체 삭제
-make helm-uninstall-all ENV=local-kind
+make helm-uninstall-all ENV=localhost
 ```
 
 ### 최초 설치 (DB 마이그레이션 포함)
@@ -209,7 +212,7 @@ make helm-uninstall-all ENV=local-kind
 처음 배포하거나 DB 스키마가 변경되었을 때:
 
 ```bash
-make helm-install-all-init ENV=local-kind
+make helm-install-all-init ENV=localhost
 ```
 
 ---
@@ -221,13 +224,13 @@ make helm-install-all-init ENV=local-kind
 ```bash
 # Pod 상태
 make status
-kubectl get pods -n wealist-kind-local
+kubectl get pods -n wealist-localhost
 
 # 특정 Pod 로그
-kubectl logs -f deployment/board-service -n wealist-kind-local
+kubectl logs -f deployment/board-service -n wealist-localhost
 
 # Pod 상세 정보 (에러 확인)
-kubectl describe pod -l app=board-service -n wealist-kind-local
+kubectl describe pod -l app=board-service -n wealist-localhost
 ```
 
 ### 클러스터 관리
@@ -260,14 +263,14 @@ make helm-validate
 
 ```bash
 # Pod 안에서 직접 명령 실행
-kubectl exec -it deployment/board-service -n wealist-kind-local -- sh
+kubectl exec -it deployment/board-service -n wealist-localhost -- sh
 
 # DB 연결 테스트
-kubectl exec -it deployment/board-service -n wealist-kind-local -- \
+kubectl exec -it deployment/board-service -n wealist-localhost -- \
   env | grep DB
 
 # 서비스 간 통신 테스트
-kubectl run -it --rm debug --image=curlimages/curl -n wealist-kind-local -- \
+kubectl run -it --rm debug --image=curlimages/curl -n wealist-localhost -- \
   curl http://user-service:8081/health/live
 ```
 
@@ -327,10 +330,10 @@ make sonar-clean    # 데이터 초기화 (주의!)
 
 ```bash
 # 1. 에러 확인
-kubectl describe pod -l app=board-service -n wealist-kind-local
+kubectl describe pod -l app=board-service -n wealist-localhost
 
 # 2. 로그 확인
-kubectl logs deployment/board-service -n wealist-kind-local --previous
+kubectl logs deployment/board-service -n wealist-localhost --previous
 
 # 3. Health check 경로 문제인 경우가 많음
 # Helm values에서 healthCheck 설정 확인
@@ -343,7 +346,7 @@ kubectl logs deployment/board-service -n wealist-kind-local --previous
 make board-service-all
 
 # 그래도 안 되면 Pod 강제 삭제
-kubectl delete pod -l app=board-service -n wealist-kind-local
+kubectl delete pod -l app=board-service -n wealist-localhost
 ```
 
 ### 클러스터 접속 안 됨 (재부팅 후)
@@ -356,20 +359,20 @@ make kind-recover
 make kind-delete
 make kind-setup
 make kind-load-images
-make helm-install-all ENV=local-kind
+make helm-install-all ENV=localhost
 ```
 
 ### DB 연결 실패
 
 ```bash
 # 1. PostgreSQL Pod 상태 확인
-kubectl get pods -l app=postgres -n wealist-kind-local
+kubectl get pods -l app=postgres -n wealist-localhost
 
 # 2. 서비스 환경변수 확인
-kubectl exec deployment/board-service -n wealist-kind-local -- env | grep DB
+kubectl exec deployment/board-service -n wealist-localhost -- env | grep DB
 
 # 3. DB 직접 연결 테스트
-kubectl exec -it statefulset/postgres -n wealist-kind-local -- \
+kubectl exec -it statefulset/postgres -n wealist-localhost -- \
   psql -U postgres -c "\l"
 ```
 
@@ -377,19 +380,19 @@ kubectl exec -it statefulset/postgres -n wealist-kind-local -- \
 
 ```bash
 # 모든 Pod 재시작 (새 설정 로드)
-make redeploy-all ENV=local-kind
+make redeploy-all ENV=localhost
 ```
 
 ---
 
 ## 참고 문서
 
-| 문서 | 설명 |
-|------|------|
-| [CLAUDE.md](../CLAUDE.md) | 프로젝트 전체 구조 및 규칙 |
-| [CONFIGURATION.md](./CONFIGURATION.md) | 포트, URL, 환경변수 설정 |
-| [docker/SONARQUBE_GUIDE.md](../docker/SONARQUBE_GUIDE.md) | SonarQube 상세 가이드 |
-| [helm/README.md](../helm/README.md) | Helm 차트 구조 |
+| 문서                                                      | 설명                       |
+| --------------------------------------------------------- | -------------------------- |
+| [CLAUDE.md](../CLAUDE.md)                                 | 프로젝트 전체 구조 및 규칙 |
+| [CONFIGURATION.md](./CONFIGURATION.md)                    | 포트, URL, 환경변수 설정   |
+| [docker/SONARQUBE_GUIDE.md](../docker/SONARQUBE_GUIDE.md) | SonarQube 상세 가이드      |
+| [helm/README.md](../helm/README.md)                       | Helm 차트 구조             |
 
 ---
 
@@ -405,11 +408,11 @@ make kind-recover              # 재부팅 후 복구
 # === 처음 설정할 때 ===
 make kind-setup                # 클러스터 생성
 make kind-load-images          # 이미지 로드
-make helm-install-all ENV=local-kind  # 배포
+make helm-install-all ENV=localhost  # 배포
 
 # === Helm 관련 ===
-make helm-upgrade-all ENV=local-kind  # 업그레이드
-make helm-uninstall-all ENV=local-kind # 삭제
+make helm-upgrade-all ENV=localhost  # 업그레이드
+make helm-uninstall-all ENV=localhost # 삭제
 make helm-deps-build           # 의존성 빌드
 
 # === SonarQube ===
@@ -418,7 +421,7 @@ export SONAR_TOKEN="..."       # 토큰 설정
 make sonar-all                 # 전체 분석
 
 # === 디버깅 ===
-kubectl logs -f deployment/board-service -n wealist-kind-local
-kubectl describe pod -l app=board-service -n wealist-kind-local
-kubectl exec -it deployment/board-service -n wealist-kind-local -- sh
+kubectl logs -f deployment/board-service -n wealist-localhost
+kubectl describe pod -l app=board-service -n wealist-localhost
+kubectl exec -it deployment/board-service -n wealist-localhost -- sh
 ```

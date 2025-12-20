@@ -422,7 +422,7 @@ apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
 metadata:
   name: user-route
-  namespace: wealist-kind-local
+  namespace: wealist-localhost
 spec:
   parentRefs:
   - name: istio-ingressgateway

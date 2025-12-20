@@ -18,9 +18,13 @@ EXTERNAL_DB ?= false
 ENV ?= local-kind
 
 # Namespace, Domain, and Protocol mapping based on environment
-ifeq ($(ENV),local-kind)
-  K8S_NAMESPACE = wealist-kind-local
-  DOMAIN = localhost
+ifeq ($(ENV),localhost)
+  K8S_NAMESPACE = wealist-localhost
+  DOMAIN = localhost:8080
+  PROTOCOL = http
+else ifeq ($(ENV),local-kind)
+  K8S_NAMESPACE = wealist-localhost
+  DOMAIN = localhost:8080
   PROTOCOL = http
 # DEPRECATED-SOON: local-ubuntu will be replaced by staging
 else ifeq ($(ENV),local-ubuntu)
@@ -40,8 +44,8 @@ else ifeq ($(ENV),prod)
   DOMAIN = wealist.co.kr
   PROTOCOL = https
 else
-  K8S_NAMESPACE = wealist-kind-local
-  DOMAIN = localhost
+  K8S_NAMESPACE = wealist-localhost
+  DOMAIN = localhost:8080
   PROTOCOL = http
 endif
 

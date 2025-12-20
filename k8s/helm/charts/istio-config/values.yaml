@@ -3,7 +3,7 @@
 
 # Direct values (used when not using environment files)
 enabled: true
-namespace: wealist-kind-local
+namespace: wealist-localhost
 
 # =============================================================================
 # Gateway Configuration (Istio's own Gateway API - DEPRECATED)
@@ -117,10 +117,28 @@ httpRoute:
       host: video-service
       port: 8004
       timeout: 3600s
+  # Frontend route (catch-all)
+  # dev 환경에서는 비활성화 (CloudFront/S3에서 서빙)
+  frontend:
+    enabled: true  # localhost: true, dev: false
 
+# =============================================================================
+# mTLS Configuration
+# =============================================================================
 mtls:
   enabled: true
   mode: PERMISSIVE  # Allow both mTLS and plain HTTP for DB connections
+
+# =============================================================================
+# Database mTLS Configuration
+# =============================================================================
+# PostgreSQL/Redis use their own wire protocols (not HTTP)
+# mTLS interferes with these connections, so we disable it for DB pods
+database:
+  postgres:
+    disableMtls: true  # Disable mTLS for postgres pods
+  redis:
+    disableMtls: true  # Disable mTLS for redis pods
 
 destinationRules:
   enabled: true
@@ -152,7 +170,7 @@ retryPolicy:
 
 authorizationPolicy:
   enabled: true
-  denyAll: true  # Zero Trust: deny by default, allow explicitly
+  denyAll: false  # 기본값: 허용 (localhost), dev/staging/prod에서 true로 설정
   # Service-level authorization rules
   rules:
     # Which services each service can call

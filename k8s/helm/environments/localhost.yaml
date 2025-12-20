@@ -152,12 +152,12 @@ shared:
     ENV: "development"
     LOG_LEVEL: "debug"
     CORS_ORIGINS: "*"
-    S3_PUBLIC_ENDPOINT: "http://localhost/minio"
-    LIVEKIT_WS_URL: "ws://localhost/svc/livekit"
+    S3_PUBLIC_ENDPOINT: "http://localhost:8080/minio"
+    LIVEKIT_WS_URL: "ws://localhost:8080/svc/livekit"
 
-    # OAuth2 리다이렉트 URL (localhost, TLS 없음)
-    OAUTH2_CLIENT_REDIRECT_URI: "http://localhost/login/oauth2/code/google"
-    OAUTH2_REDIRECT_URL_ENV: "http://localhost/oauth/callback"
+    # OAuth2 리다이렉트 URL (localhost, Kind NodePort 8080)
+    OAUTH2_CLIENT_REDIRECT_URI: "http://localhost:8080/svc/auth/oauth2/callback/google"
+    OAUTH2_REDIRECT_URL_ENV: "http://localhost:8080/oauth/callback"
 
     # DB 자동 마이그레이션 (내부 DB - 초기 설정 시 활성화)
     DB_AUTO_MIGRATE: "true"
@@ -176,19 +176,10 @@ shared:
     REDIS_PASSWORD: ""
 
 # -----------------------------------------------------------------------------
-# Ingress 설정 (localhost, TLS 없음)
+# Ingress 설정 (nginx - 비활성화, Istio Gateway 사용)
 # -----------------------------------------------------------------------------
 ingress:
-  enabled: true
-  className: nginx
-  annotations:
-    nginx.ingress.kubernetes.io/ssl-redirect: "false"
-    # /svc/* 경로에서 prefix 제거
-    nginx.ingress.kubernetes.io/use-regex: "true"
-    nginx.ingress.kubernetes.io/rewrite-target: /$2
-  hosts:
-    - host: localhost
-  tls: []
+  enabled: false  # Istio HTTPRoute 사용
 
 # -----------------------------------------------------------------------------
 # Istio 서비스 메시 설정
@@ -198,7 +189,7 @@ istio:
   namespace: wealist-localhost
 
   gateway:
-    enabled: true
+    enabled: false  # setup-cluster.sh에서 이미 생성됨
     name: wealist-gateway
     hosts:
       - "localhost"
@@ -206,24 +197,84 @@ istio:
     tls:
       enabled: false
 
+  # HTTPRoute 설정 (Kubernetes Gateway API)
+  httpRoute:
+    enabled: true
+    gatewayRef:
+      name: istio-ingressgateway
+      namespace: istio-system
+    hosts:
+      - "localhost"
+      - "*"
+    # Frontend Pod 라우팅 (localhost 환경)
+    frontend:
+      enabled: true
+
+  # mTLS - 서비스 간 암호화
   mtls:
     enabled: true
-    mode: PERMISSIVE  # mTLS와 일반 HTTP 모두 허용
+    mode: PERMISSIVE  # 개발 환경: mTLS + 일반 HTTP 모두 허용
 
+  # Database mTLS 설정 (PostgreSQL/Redis는 자체 프로토콜 사용)
+  database:
+    postgres:
+      disableMtls: true  # postgres pod에 mTLS 비활성화
+    redis:
+      disableMtls: true  # redis pod에 mTLS 비활성화
+
+  # 트래픽 제어 - Circuit Breaker, Connection Pool
   destinationRules:
     enabled: true
+    loadBalancer:
+      simple: ROUND_ROBIN
+    connectionPool:
+      tcp:
+        maxConnections: 100
+        connectTimeout: 10s
+      http:
+        h2UpgradePolicy: DO_NOT_UPGRADE
+        http1MaxPendingRequests: 100
+        http2MaxRequests: 1000
+        maxRequestsPerConnection: 100
+        maxRetries: 3
+    # Circuit Breaker - 장애 서비스 격리
+    outlierDetection:
+      consecutive5xxErrors: 5
+      consecutiveGatewayErrors: 5
+      interval: 10s
+      baseEjectionTime: 30s
+      maxEjectionPercent: 50
+      minHealthPercent: 30
 
+  # 서비스 간 통신 제어
+  # localhost: 개발 편의를 위해 완화된 정책
+  # dev/prod: Zero Trust (denyAll: true) 적용
   authorizationPolicy:
     enabled: true
-    denyAll: false
+    denyAll: false  # localhost: 기본 허용 (개발 편의)
 
+  # 서비스별 호출 권한 (L7 정책)
+  serviceAuthorization:
+    enabled: false  # localhost: 비활성화 (개발 편의)
+
+  # JWT 인증
+  # localhost: 비활성화 (서비스가 직접 처리)
+  # dev/prod: Istio에서 JWT 검증
   jwtAuth:
     enabled: false
 
+  # Ambient 모드 (Sidecar-less)
+  ambient:
+    enabled: true
+    waypoint:
+      enabled: true
+      name: wealist-waypoint
+
+  # 텔레메트리 - 트레이싱, 로깅
   telemetry:
     tracing:
       enabled: true
-      samplingPercentage: 100
+      samplingPercentage: 100  # 개발환경 100%, 프로덕션 1-10%
     accessLogging:
       enabled: true
 
@@ -235,7 +286,7 @@ istio:
 prometheus:
   enabled: true
   config:
-    externalUrl: "http://localhost/monitoring/prometheus"
+    externalUrl: "http://localhost:8080/monitoring/prometheus"
 
 # Grafana - 시각화 대시보드
 grafana:
@@ -245,18 +296,13 @@ grafana:
     port: 3000
   config:
     allowSignUp: false
-    rootUrl: "http://localhost/monitoring/grafana"
+    rootUrl: "http://localhost:8080/monitoring/grafana"
     serveFromSubPath: "true"
 
-# 모니터링 Ingress
+# 모니터링 Ingress (nginx - 비활성화)
+# NodePort로 직접 접근: Grafana(30001), Prometheus(30090)
 monitoringIngress:
-  enabled: true
-  className: nginx
-  annotations:
-    nginx.ingress.kubernetes.io/ssl-redirect: "false"
-  hosts:
-    - host: localhost
-  tls: []
+  enabled: false
 
 # -----------------------------------------------------------------------------
 # 데이터베이스 Exporter (내부 Pod 메트릭 수집)

@@ -1,9 +1,12 @@
 # =============================================================================
 # 개발 환경 설정 (ENV=dev)
 # =============================================================================
-# 도메인: localhost (Kind 클러스터)
+# 도메인: dev.wealist.co.kr (CloudFront + Route53)
 # 네임스페이스: wealist-dev
-# 특징: 호스트 PC의 PostgreSQL/Redis 사용 (클러스터 재시작 시 데이터 유지)
+# 특징:
+#   - Frontend: CloudFront/S3 (Pod 없음)
+#   - Backend: Kind 클러스터
+#   - DB: 호스트 PC의 PostgreSQL/Redis
 #
 # 사전 요구사항:
 #   1. PostgreSQL 설치: brew install postgresql / apt install postgresql
@@ -16,8 +19,14 @@
 global:
   namespace: wealist-dev
   environment: development
-  domain: localhost
+  domain: dev.wealist.co.kr
   imageRegistry: localhost:5001
+
+# -----------------------------------------------------------------------------
+# Frontend (비활성화 - CloudFront/S3에서 서빙)
+# -----------------------------------------------------------------------------
+frontend:
+  enabled: false
 
 # -----------------------------------------------------------------------------
 # cert-manager (localhost에서는 비활성화)
@@ -120,56 +129,174 @@ shared:
     REDIS_PASSWORD: ""
 
 # -----------------------------------------------------------------------------
-# Ingress 설정 (localhost, TLS 없음)
+# Ingress 설정 (비활성화 - Istio HTTPRoute 사용)
 # -----------------------------------------------------------------------------
 ingress:
-  enabled: true
-  className: nginx
-  annotations:
-    nginx.ingress.kubernetes.io/ssl-redirect: "false"
-    # /svc/* 경로에서 prefix 제거
-    nginx.ingress.kubernetes.io/use-regex: "true"
-    nginx.ingress.kubernetes.io/rewrite-target: /$2
-  hosts:
-    - host: localhost
-  tls: []
+  enabled: false  # Istio HTTPRoute 사용
 
 # -----------------------------------------------------------------------------
-# Istio 서비스 메시 설정
+# Istio 서비스 메시 설정 (전체 보안 기능 활성화)
 # -----------------------------------------------------------------------------
 istio:
   enabled: true  # Istio 설정 배포 활성화
   namespace: wealist-dev
 
+  # Istio Gateway (deprecated - Kubernetes Gateway API 사용)
   gateway:
+    enabled: false  # K8s Gateway API in istio-system 사용
+
+  # HTTPRoute (Kubernetes Gateway API)
+  httpRoute:
     enabled: true
-    name: wealist-gateway
+    gatewayRef:
+      name: istio-ingressgateway
+      namespace: istio-system
     hosts:
-      - "localhost"
+      - "dev.wealist.co.kr"
+      - "api.dev.wealist.co.kr"
       - "*"
-    tls:
+    routes:
+      auth:
+        prefix: /svc/auth
+        host: auth-service
+        port: 8080
+        timeout: 30s
+      user:
+        prefix: /svc/user
+        host: user-service
+        port: 8081
+        timeout: 30s
+      board:
+        prefix: /svc/board
+        host: board-service
+        port: 8000
+        timeout: 3600s
+      chat:
+        prefix: /svc/chat
+        host: chat-service
+        port: 8001
+        timeout: 3600s
+      noti:
+        prefix: /svc/noti
+        host: noti-service
+        port: 8002
+        timeout: 3600s
+      storage:
+        prefix: /svc/storage
+        host: storage-service
+        port: 8003
+        timeout: 300s
+      video:
+        prefix: /svc/video
+        host: video-service
+        port: 8004
+        timeout: 3600s
+    # Frontend 비활성화 (CloudFront/S3에서 서빙)
+    frontend:
       enabled: false
 
+  # ==========================================================================
+  # mTLS 설정 (서비스 간 암호화 통신)
+  # ==========================================================================
   mtls:
     enabled: true
-    mode: PERMISSIVE  # mTLS와 일반 HTTP 모두 허용 (마이그레이션 중)
+    mode: STRICT  # dev: 전체 mTLS 강제 (PERMISSIVE → STRICT)
 
+  # Database mTLS 설정 (dev 환경은 외부 DB 사용, Pod 없음)
+  database:
+    postgres:
+      disableMtls: false  # 외부 DB 사용 - Pod 없음
+    redis:
+      disableMtls: false  # 외부 DB 사용 - Pod 없음
+
+  # ==========================================================================
+  # DestinationRule (Circuit Breaker, Connection Pool, Outlier Detection)
+  # ==========================================================================
   destinationRules:
     enabled: true
+    loadBalancer:
+      simple: ROUND_ROBIN
+    connectionPool:
+      tcp:
+        maxConnections: 100
+        connectTimeout: 10s
+      http:
+        h2UpgradePolicy: DO_NOT_UPGRADE  # Go 서비스는 HTTP/1.1 사용
+        http1MaxPendingRequests: 100
+        http2MaxRequests: 1000
+        maxRequestsPerConnection: 100
+        maxRetries: 3
+    outlierDetection:
+      consecutive5xxErrors: 5
+      consecutiveGatewayErrors: 5
+      interval: 10s
+      baseEjectionTime: 30s
+      maxEjectionPercent: 50
+      minHealthPercent: 30
 
+  # ==========================================================================
+  # Retry Policy
+  # ==========================================================================
+  retryPolicy:
+    enabled: true
+    attempts: 3
+    perTryTimeout: 5s
+    retryOn: gateway-error,connect-failure,refused-stream,retriable-4xx,reset
+
+  # ==========================================================================
+  # Authorization Policy (Zero Trust 모델)
+  # ==========================================================================
   authorizationPolicy:
     enabled: true
-    denyAll: false  # 로컬에서는 deny-all 비활성화
+    denyAll: true  # dev: Zero Trust - 기본 거부, 명시적 허용만
 
+  # ==========================================================================
+  # Service-to-Service Authorization (ServiceAccount 기반)
+  # ==========================================================================
+  serviceAuthorization:
+    enabled: true  # dev: 서비스 간 통신 제어 활성화
+
+  # ==========================================================================
+  # JWT 인증 (RS256 JWKS 기반)
+  # ==========================================================================
   jwtAuth:
-    enabled: false  # JWKS 엔드포인트 준비 후 활성화
+    enabled: true  # dev: JWT 검증 활성화
+    issuer: wealist-auth-service
+    jwksUri: "http://auth-service:8080/.well-known/jwks.json"
+    excludePaths:
+      - /health/*
+      - /actuator/health/*
+      - /.well-known/*
+      - /oauth2/*
+      - /login/oauth2/*
+      - /api/auth/login
+      - /api/auth/register
+      - /api/auth/refresh
+      - /api/auth/oauth2/*
+      - /swagger-ui/*
+      - /v3/api-docs/*
+      - /  # Frontend static files
 
+  # ==========================================================================
+  # Telemetry (추적 및 로깅)
+  # ==========================================================================
   telemetry:
     tracing:
       enabled: true
-      samplingPercentage: 100  # 로컬 디버깅용 100% 샘플링
+      samplingPercentage: 100  # 개발 디버깅용 100% 샘플링
+      provider: jaeger
     accessLogging:
       enabled: true
+      provider: envoy
+
+  # ==========================================================================
+  # Ambient Mesh 설정 (사이드카 없는 서비스 메시)
+  # ==========================================================================
+  ambient:
+    enabled: true
+    waypoint:
+      enabled: true  # Waypoint Proxy로 L7 기능 사용
+      name: wealist-waypoint
 
 # =============================================================================
 # 모니터링 스택 설정 (wealist-monitoring 차트 값)
@@ -194,15 +321,9 @@ grafana:
     rootUrl: "http://localhost/monitoring/grafana"
     serveFromSubPath: "true"
 
-# 모니터링 Ingress - localhost/monitoring/* 접근
+# 모니터링 Ingress (비활성화 - Istio HTTPRoute 사용)
 monitoringIngress:
-  enabled: true
-  className: nginx
-  annotations:
-    nginx.ingress.kubernetes.io/ssl-redirect: "false"
-  hosts:
-    - host: localhost
-  tls: []
+  enabled: false  # Istio HTTPRoute 사용
 
 # -----------------------------------------------------------------------------
 # 데이터베이스 Exporter (PostgreSQL/Redis 메트릭 수집)

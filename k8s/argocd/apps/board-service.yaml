@@ -20,7 +20,7 @@ spec:
           value: "localhost:5001"
   destination:
     server: https://kubernetes.default.svc
-    namespace: wealist-kind-local
+    namespace: wealist-localhost
   syncPolicy:
     automated:
       prune: true

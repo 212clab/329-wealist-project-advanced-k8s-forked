@@ -231,7 +231,7 @@ spec:
 kubectl logs -l app=ztunnel -n istio-system --tail=100
 
 # Waypoint 프록시 로그 확인 (L7 트래픽)
-kubectl logs -l gateway.networking.k8s.io/gateway-name=wealist-waypoint -n wealist-kind-local --tail=100
+kubectl logs -l gateway.networking.k8s.io/gateway-name=wealist-waypoint -n wealist-localhost --tail=100
 
 # 실시간 ztunnel 로그 스트리밍
 kubectl logs -f -l app=ztunnel -n istio-system

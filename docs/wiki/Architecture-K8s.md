@@ -45,7 +45,7 @@ weAlist의 Kubernetes 플랫폼 아키텍처입니다.
 
 | Namespace | 용도 | 환경 |
 |-----------|------|------|
-| `wealist-kind-local` | Kind 로컬 개발 | Local |
+| `wealist-localhost` | Kind 로컬 개발 | Local |
 | `wealist-dev` | 개발/테스트 | Dev |
 | `wealist-staging` | 스테이징 | Staging |
 | `wealist-prod` | 운영 | Production |

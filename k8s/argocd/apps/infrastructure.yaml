@@ -15,7 +15,7 @@ spec:
         # - values-develop-registry-local.yaml
   destination:
     server: https://kubernetes.default.svc
-    namespace: wealist-kind-local
+    namespace: wealist-localhost
   syncPolicy:
     automated:
       prune: true

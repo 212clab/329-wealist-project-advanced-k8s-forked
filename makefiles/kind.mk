@@ -203,7 +203,7 @@ kind-localhost-setup: ## 🏠 통합 환경: 클러스터 생성 → 모든 이�
 	@echo "----------------------------------------------"
 	@echo "  2단계: Kind 클러스터 생성"
 	@echo "----------------------------------------------"
-	@$(MAKE) kind-setup
+	@$(MAKE) kind-setup ENV=localhost
 	@echo ""
 	@echo "----------------------------------------------"
 	@echo "  3단계: 모든 이미지 로드 (DB + Backend + Frontend)"
@@ -223,16 +223,111 @@ kind-localhost-setup: ## 🏠 통합 환경: 클러스터 생성 → 모든 이�
 	@echo ""
 	@echo "=============================================="
 
+# -----------------------------------------------------------------------------
+# kind-dev-setup: 개발 환경 (외부 DB + Istio)
+# -----------------------------------------------------------------------------
+kind-dev-setup: ## 🔧 개발 환경: 클러스터 생성 → 서비스 이미지 로드 (외부 DB 사용)
+	@echo "=============================================="
+	@echo "  weAlist Kind 개발 환경 설정"
+	@echo "=============================================="
+	@echo ""
+	@echo "이 명령어는 다음을 순서대로 실행합니다:"
+	@echo "  0. 필수 도구 확인 (istioctl)"
+	@echo "  1. Secrets 파일 확인/생성"
+	@echo "  2. Kind 클러스터 생성 + Istio Ambient"
+	@echo "  3. 서비스 이미지 로드 (Backend + Frontend)"
+	@echo ""
+	@echo "※ 이 환경은 호스트 PC의 PostgreSQL/Redis를 사용합니다."
+	@echo "  - PostgreSQL: 호스트 머신 (172.18.0.1:5432)"
+	@echo "  - Redis: 호스트 머신 (172.18.0.1:6379)"
+	@echo ""
+	@echo "----------------------------------------------"
+	@echo "  0단계: 필수 도구 확인"
+	@echo "----------------------------------------------"
+	@echo ""
+	@if ! command -v istioctl >/dev/null 2>&1; then \
+		if [ -f "./istio-1.24.0/bin/istioctl" ]; then \
+			echo "✅ istioctl: 로컬 설치됨 (./istio-1.24.0/bin/istioctl)"; \
+		else \
+			echo "❌ istioctl: 미설치"; \
+			echo ""; \
+			echo "istioctl을 자동 설치하시겠습니까? [Y/n]"; \
+			read -r answer; \
+			if [ "$$answer" != "n" ] && [ "$$answer" != "N" ]; then \
+				echo ""; \
+				echo "istioctl 설치 중..."; \
+				curl -L https://istio.io/downloadIstio | ISTIO_VERSION=1.24.0 sh -; \
+				echo ""; \
+				echo "✅ istioctl 설치 완료!"; \
+			else \
+				echo ""; \
+				echo "istioctl 없이는 진행할 수 없습니다."; \
+				exit 1; \
+			fi; \
+		fi; \
+	else \
+		echo "✅ istioctl: $$(istioctl version --short 2>/dev/null || echo '설치됨')"; \
+	fi
+	@echo ""
+	@echo "----------------------------------------------"
+	@echo "  1단계: Secrets 파일 확인"
+	@echo "----------------------------------------------"
+	@echo ""
+	@if [ ! -f "./k8s/helm/environments/secrets.yaml" ]; then \
+		echo "⚠️  secrets.yaml 파일이 없습니다."; \
+		echo "   secrets.example.yaml에서 자동 생성합니다..."; \
+		echo ""; \
+		cp ./k8s/helm/environments/secrets.example.yaml ./k8s/helm/environments/secrets.yaml; \
+		echo "✅ secrets.yaml 생성 완료!"; \
+		echo ""; \
+	else \
+		echo "✅ secrets.yaml 파일 존재 확인"; \
+	fi
+	@echo ""
+	@echo "----------------------------------------------"
+	@echo "  2단계: Kind 클러스터 생성"
+	@echo "----------------------------------------------"
+	@$(MAKE) kind-setup ENV=dev
+	@echo ""
+	@echo "----------------------------------------------"
+	@echo "  3단계: 서비스 이미지 로드 (Backend + Frontend)"
+	@echo "----------------------------------------------"
+	@./k8s/helm/scripts/dev/1.load_infra_images.sh
+	@./k8s/helm/scripts/dev/2.build_all_and_load.sh
+	@echo ""
+	@echo "=============================================="
+	@echo "  🎉 개발 환경 설정 완료!"
+	@echo "=============================================="
+	@echo ""
+	@echo "  ⚠️  외부 DB 확인:"
+	@echo "    - PostgreSQL: 172.18.0.1:5432 접근 가능해야 함"
+	@echo "    - Redis: 172.18.0.1:6379 접근 가능해야 함"
+	@echo ""
+	@echo "  다음 단계:"
+	@echo "    1. (선택) secrets.yaml 편집:"
+	@echo "       vi k8s/helm/environments/secrets.yaml"
+	@echo ""
+	@echo "    2. Helm 배포:"
+	@echo "       make helm-install-all ENV=dev"
+	@echo ""
+	@echo "=============================================="
+
 # =============================================================================
 # 개별 설정 명령어
 # =============================================================================
 
-kind-setup: ## 클러스터 생성 + Nginx Ingress (권장)
-	@echo "=== Kind 클러스터 + Nginx Ingress 생성 ==="
+kind-setup: ## 클러스터 생성 + Istio Ambient (ENV에 따라 스크립트 선택)
+	@echo "=== Kind 클러스터 + Istio Ambient 생성 (ENV=$(ENV)) ==="
 	@echo ""
-	@echo "외부 DB 사용 시 먼저 'make kind-check-db'로 DB 상태를 확인하세요."
-	@echo ""
-	./k8s/installShell/0.setup-cluster.sh
+ifeq ($(ENV),localhost)
+	./k8s/helm/scripts/localhost/0.setup-cluster.sh
+else ifeq ($(ENV),dev)
+	./k8s/helm/scripts/dev/0.setup-cluster.sh
+else
+	@echo "ENV를 지정하세요: make kind-setup ENV=localhost 또는 ENV=dev"
+	@echo "기본값으로 localhost 스크립트 실행..."
+	./k8s/helm/scripts/localhost/0.setup-cluster.sh
+endif
 	@echo ""
 	@echo "클러스터 준비 완료! 다음: make kind-load-images"
 
