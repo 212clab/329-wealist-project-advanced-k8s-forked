@@ -154,7 +154,21 @@ kubectl patch service istio-ingressgateway-istio -n istio-system --type='json' -
 echo "📦 wealist-localhost 네임스페이스 생성 (Ambient 모드)..."
 kubectl create namespace wealist-localhost 2>/dev/null || true
 kubectl label namespace wealist-localhost istio.io/dataplane-mode=ambient --overwrite
-echo "✅ 네임스페이스에 Ambient 모드 라벨 적용 완료"
+
+# Git 정보 라벨 추가 (배포 추적용)
+GIT_REPO=$(git config --get remote.origin.url 2>/dev/null | sed 's/.*github.com[:/]\(.*\)\.git/\1/' || echo "unknown")
+GIT_BRANCH=$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "unknown")
+GIT_COMMIT=$(git rev-parse --short HEAD 2>/dev/null || echo "unknown")
+DEPLOY_TIME=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+
+kubectl annotate namespace wealist-localhost \
+  "wealist.io/git-repo=${GIT_REPO}" \
+  "wealist.io/git-branch=${GIT_BRANCH}" \
+  "wealist.io/git-commit=${GIT_COMMIT}" \
+  "wealist.io/deploy-time=${DEPLOY_TIME}" \
+  --overwrite
+
+echo "✅ 네임스페이스에 Ambient 모드 + Git 정보 라벨 적용 완료"
 
 echo ""
 echo "=============================================="
