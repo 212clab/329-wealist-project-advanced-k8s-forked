@@ -4,7 +4,7 @@
 
 ##@ Kubernetes (Kind)
 
-.PHONY: kind-setup kind-setup-simple kind-setup-db kind-check-db kind-check-db-setup kind-load-images kind-load-images-ex-db kind-load-images-mono kind-delete kind-recover
+.PHONY: kind-setup kind-setup-simple kind-setup-db kind-check-db kind-check-db-setup kind-localhost-setup kind-load-images kind-load-images-ex-db kind-load-images-all kind-load-images-mono kind-delete kind-recover
 .PHONY: _setup-db-macos _setup-db-debian _check-db-installed
 
 # =============================================================================
@@ -135,6 +135,91 @@ kind-check-db-setup: ## 🚀 통합 설정: Secrets → DB 확인 → 클러스�
 	@echo ""
 	@echo "    2. Helm 배포:"
 	@echo "       make helm-install-all ENV=dev"
+	@echo ""
+	@echo "=============================================="
+
+# -----------------------------------------------------------------------------
+# kind-localhost-setup: 통합 환경 (DB내장 + 프론트내장 + Istio)
+# -----------------------------------------------------------------------------
+kind-localhost-setup: ## 🏠 통합 환경: 클러스터 생성 → 모든 이미지 로드 (DB + Frontend 포함)
+	@echo "=============================================="
+	@echo "  weAlist Kind 로컬 통합 환경 설정"
+	@echo "=============================================="
+	@echo ""
+	@echo "이 명령어는 다음을 순서대로 실행합니다:"
+	@echo "  0. 필수 도구 확인 (istioctl)"
+	@echo "  1. Secrets 파일 확인/생성"
+	@echo "  2. Kind 클러스터 생성 + Istio Ambient"
+	@echo "  3. 모든 이미지 로드 (DB + Backend + Frontend)"
+	@echo ""
+	@echo "※ 이 환경은 모든 컴포넌트가 클러스터 내부에서 실행됩니다."
+	@echo "  - PostgreSQL: Pod로 실행"
+	@echo "  - Redis: Pod로 실행"
+	@echo "  - Frontend: Pod로 실행"
+	@echo ""
+	@echo "----------------------------------------------"
+	@echo "  0단계: 필수 도구 확인"
+	@echo "----------------------------------------------"
+	@echo ""
+	@if ! command -v istioctl >/dev/null 2>&1; then \
+		if [ -f "./istio-1.24.0/bin/istioctl" ]; then \
+			echo "✅ istioctl: 로컬 설치됨 (./istio-1.24.0/bin/istioctl)"; \
+		else \
+			echo "❌ istioctl: 미설치"; \
+			echo ""; \
+			echo "istioctl을 자동 설치하시겠습니까? [Y/n]"; \
+			read -r answer; \
+			if [ "$$answer" != "n" ] && [ "$$answer" != "N" ]; then \
+				echo ""; \
+				echo "istioctl 설치 중..."; \
+				curl -L https://istio.io/downloadIstio | ISTIO_VERSION=1.24.0 sh -; \
+				echo ""; \
+				echo "✅ istioctl 설치 완료!"; \
+			else \
+				echo ""; \
+				echo "istioctl 없이는 진행할 수 없습니다."; \
+				exit 1; \
+			fi; \
+		fi; \
+	else \
+		echo "✅ istioctl: $$(istioctl version --short 2>/dev/null || echo '설치됨')"; \
+	fi
+	@echo ""
+	@echo "----------------------------------------------"
+	@echo "  1단계: Secrets 파일 확인"
+	@echo "----------------------------------------------"
+	@echo ""
+	@if [ ! -f "./k8s/helm/environments/localhost-secrets.yaml" ]; then \
+		echo "⚠️  localhost-secrets.yaml 파일이 없습니다."; \
+		echo "   secrets.example.yaml에서 자동 생성합니다..."; \
+		echo ""; \
+		cp ./k8s/helm/environments/secrets.example.yaml ./k8s/helm/environments/localhost-secrets.yaml; \
+		echo "✅ localhost-secrets.yaml 생성 완료!"; \
+		echo ""; \
+	else \
+		echo "✅ localhost-secrets.yaml 파일 존재 확인"; \
+	fi
+	@echo ""
+	@echo "----------------------------------------------"
+	@echo "  2단계: Kind 클러스터 생성"
+	@echo "----------------------------------------------"
+	@$(MAKE) kind-setup
+	@echo ""
+	@echo "----------------------------------------------"
+	@echo "  3단계: 모든 이미지 로드 (DB + Backend + Frontend)"
+	@echo "----------------------------------------------"
+	@$(MAKE) kind-load-images-all
+	@echo ""
+	@echo "=============================================="
+	@echo "  🎉 통합 환경 설정 완료!"
+	@echo "=============================================="
+	@echo ""
+	@echo "  다음 단계:"
+	@echo "    1. (선택) localhost-secrets.yaml 편집:"
+	@echo "       vi k8s/helm/environments/localhost-secrets.yaml"
+	@echo ""
+	@echo "    2. Helm 배포:"
+	@echo "       make helm-install-all ENV=localhost"
 	@echo ""
 	@echo "=============================================="
 
@@ -336,6 +421,21 @@ kind-load-images-ex-db: ## 서비스 이미지만 로드 (PostgreSQL/Redis 제�
 	@echo "서비스 이미지 로드 완료! (DB 제외)"
 	@echo ""
 	@echo "다음: make helm-install-all ENV=dev"
+
+kind-load-images-all: ## 🏠 모든 이미지 로드 (DB + Backend + Frontend - localhost 환경용)
+	@echo "=== 모든 이미지 로드 (localhost 환경) ==="
+	@echo ""
+	@echo "※ DB, Backend, Frontend 모든 이미지를 빌드/로드합니다."
+	@echo ""
+	@echo "--- 인프라 이미지 로드 중 (DB 포함) ---"
+	./k8s/helm/scripts/localhost/1.load_infra_images.sh
+	@echo ""
+	@echo "--- 서비스 이미지 빌드 중 (Backend + Frontend) ---"
+	./k8s/helm/scripts/localhost/2.build_all_and_load.sh
+	@echo ""
+	@echo "모든 이미지 로드 완료!"
+	@echo ""
+	@echo "다음: make helm-install-all ENV=localhost"
 
 kind-load-images-mono: ## Go 서비스를 모노레포 패턴으로 빌드 (더 빠른 리빌드)
 	@echo "=== 모노레포 빌드로 이미지 로드 (BuildKit 캐시) ==="
