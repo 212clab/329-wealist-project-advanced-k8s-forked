@@ -9,14 +9,24 @@ YELLOW='\033[1;33m'
 RED='\033[0;31m'
 NC='\033[0m'
 
+# 스크립트 실행 위치 저장
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+ARGOCD_DIR="$(dirname "$SCRIPT_DIR")"  # k8s/argocd
+PROJECT_ROOT="$(dirname "$(dirname "$ARGOCD_DIR")")"  # 프로젝트 루트
+
 # GitHub 저장소 정보
-REPO_URL="https://github.com/OrangesCloud/wealist-argo-helm.git"
-SEALED_SECRETS_KEY="${1:-sealed-secrets-dev-20251218-121235.key}"
+REPO_URL="https://github.com/OrangesCloud/wealist-project-advanced-k8s.git"
+SEALED_SECRETS_KEY="${1:-$SCRIPT_DIR/sealed-secrets-dev-20251218-152119.key}"
 
 echo ""
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 echo "  Wealist Platform Deployment"
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo ""
+echo "📂 Paths:"
+echo "   Script:  $SCRIPT_DIR"
+echo "   ArgoCD:  $ARGOCD_DIR"
+echo "   Root:    $PROJECT_ROOT"
 echo ""
 
 # ============================================
@@ -139,10 +149,8 @@ echo ""
 # ============================================
 # 8. SealedSecret 적용
 # ============================================
-echo -e "${YELLOW}🔐 Step 8: Applying SealedSecrets...${NC}"
-
-# 프로젝트 루트 기준 경로
-SEALED_SECRET_FILE="k8s/argocd/scripts/secret/sealed-secret-dev.yaml"
+echo -e "${YELLOW}🔐 Step 8: Applying SealedSecret...${NC}"
+SEALED_SECRET_FILE="$ARGOCD_DIR/sealed-secrets/wealist-argocd-secret.yaml"
 
 if [ -f "$SEALED_SECRET_FILE" ]; then
     kubectl apply -f "$SEALED_SECRET_FILE"
@@ -167,65 +175,16 @@ if [ -f "$SEALED_SECRET_FILE" ]; then
             echo -e "${YELLOW}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
             echo ""
             echo "You need to re-seal the secrets with the new key:"
-            echo "  cd k8s/helm/charts/wealist-infrastructure/templates"
-            echo "  # Create plain secret, then:"
-            echo "  kubeseal -f secret.yaml -w sealed-secret-dev.yaml \\"
-            echo "    --controller-namespace=kube-system \\"
-            echo "    --controller-name=sealed-secrets"
+            echo "  kubeseal --fetch-cert \\"
+            echo "    --controller-namespace=kube-system > pub-cert.pem"
+            echo "  kubeseal -f secret.yaml -w sealed-secret.yaml --cert=pub-cert.pem"
             echo ""
         else
-            echo ""
-            echo -e "${RED}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
             echo -e "${RED}⚠️  DECRYPTION FAILED WITH RESTORED KEY!${NC}"
-            echo -e "${RED}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
-            echo ""
-            echo "Possible causes:"
-            echo "  1. Wrong key file was provided"
-            echo "  2. SealedSecret was encrypted with a different key"
-            echo "  3. Controller not using the restored key"
-            echo ""
-            echo "Troubleshooting:"
-            echo "  # Check controller logs:"
-            echo "  kubectl logs -n kube-system -l app.kubernetes.io/name=sealed-secrets"
-            echo ""
-            echo "  # Verify key fingerprint:"
-            echo "  kubeseal --fetch-cert --controller-namespace=kube-system"
-            echo ""
-            exit 1
         fi
     fi
 else
     echo -e "${YELLOW}⚠️  SealedSecret file not found: $SEALED_SECRET_FILE${NC}"
-fi
-echo ""
-
-# ============================================
-# 8.5. ArgoCD SealedSecret 적용
-# ============================================
-echo -e "${YELLOW}🔐 Step 8.5: Applying ArgoCD SealedSecret...${NC}"
-ARGOCD_SEALED_SECRET="k8s/argocd/sealed-secrets/wealist-argocd-secret.yaml"
-if [ -f "$ARGOCD_SEALED_SECRET" ]; then
-    kubectl apply -f "$ARGOCD_SEALED_SECRET"
-    echo -e "${GREEN}✅ ArgoCD SealedSecret applied${NC}"
-    
-    # 복호화 확인
-    echo "⏳ Waiting for ArgoCD secret decryption..."
-    sleep 10
-    
-    if kubectl get secret wealist-argocd-secret -n wealist-dev &> /dev/null; then
-        echo -e "${GREEN}✅ ArgoCD secret successfully decrypted!${NC}"
-    else
-        echo -e "${RED}❌ Failed to decrypt secret: wealist-argocd-secret${NC}"
-        
-        if [ "$USE_EXISTING_KEY" = false ]; then
-            echo -e "${YELLOW}⚠️  This is expected with new keys - you need to re-seal this secret too${NC}"
-        else
-            echo -e "${RED}⚠️  Decryption failed with restored key${NC}"
-            echo "This secret may have been encrypted with a different key"
-        fi
-    fi
-else
-    echo -e "${YELLOW}⚠️  ArgoCD SealedSecret file not found: $ARGOCD_SEALED_SECRET${NC}"
 fi
 echo ""
 
@@ -264,51 +223,100 @@ echo ""
 # 11. AppProject 생성
 # ============================================
 echo -e "${YELLOW}🎯 Step 11: Creating AppProject...${NC}"
-PROJECT_FILE="k8s/argocd/apps/project.yaml"
+PROJECT_FILE="$ARGOCD_DIR/apps/project.yaml"
+
 if [ -f "$PROJECT_FILE" ]; then
     kubectl apply -f "$PROJECT_FILE"
     echo -e "${GREEN}✅ AppProject created${NC}"
 else
     echo -e "${YELLOW}⚠️  Project file not found: $PROJECT_FILE${NC}"
+    echo -e "${YELLOW}   Creating default project...${NC}"
+    
+    cat <<EOFPROJECT | kubectl apply -f -
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: wealist
+  namespace: argocd
+spec:
+  description: Wealist Platform
+  sourceRepos:
+    - 'https://github.com/OrangesCloud/wealist-project-advanced-k8s.git'
+  destinations:
+    - namespace: 'wealist-*'
+      server: https://kubernetes.default.svc
+    - namespace: argocd
+      server: https://kubernetes.default.svc
+  clusterResourceWhitelist:
+    - group: '*'
+      kind: '*'
+EOFPROJECT
+    
+    echo -e "${GREEN}✅ Default AppProject created${NC}"
 fi
 echo ""
 
 # ============================================
-# 12. Root Application 생성
+# 12. Root Application 생성 (App of Apps)
 # ============================================
-echo -e "${YELLOW}🌟 Step 12: Creating Root Application...${NC}"
-ROOT_APP_FILE="k8s/argocd/apps/root-app.yaml"
+echo -e "${YELLOW}🌟 Step 12: Creating Root Application (App of Apps)...${NC}"
+ROOT_APP_FILE="$ARGOCD_DIR/apps/root-app.yaml"
+
 if [ -f "$ROOT_APP_FILE" ]; then
     kubectl apply -f "$ROOT_APP_FILE"
     echo -e "${GREEN}✅ Root Application created${NC}"
+    echo -e "${YELLOW}   ⏳ Root app will auto-create all child applications...${NC}"
+    sleep 5
 else
-    echo -e "${YELLOW}⚠️  Root app file not found: $ROOT_APP_FILE${NC}"
+    echo -e "${YELLOW}⚠️  Root app not found: $ROOT_APP_FILE${NC}"
+    echo -e "${YELLOW}   Creating individual applications...${NC}"
+    
+    # Root app이 없으면 개별 application 적용
+    APPS_DIR="$ARGOCD_DIR/apps"
+    if [ -d "$APPS_DIR" ]; then
+        APPLICATION_COUNT=0
+        for app_file in "$APPS_DIR"/*.yaml; do
+            if [ -f "$app_file" ]; then
+                filename=$(basename "$app_file")
+                # project.yaml과 root-app.yaml 제외
+                if [[ "$filename" != "project.yaml" ]] && [[ "$filename" != "root-app.yaml" ]]; then
+                    echo "  Applying: $filename"
+                    kubectl apply -f "$app_file"
+                    APPLICATION_COUNT=$((APPLICATION_COUNT + 1))
+                fi
+            fi
+        done
+        
+        if [ $APPLICATION_COUNT -gt 0 ]; then
+            echo -e "${GREEN}✅ Created $APPLICATION_COUNT Application(s)${NC}"
+        else
+            echo -e "${YELLOW}⚠️  No application files found${NC}"
+        fi
+    else
+        echo -e "${YELLOW}⚠️  Applications directory not found: $APPS_DIR${NC}"
+    fi
 fi
 echo ""
 
 # ============================================
-# 13. 새 키 백업 (새로 생성된 경우)
+# 13. 새 키 백업
 # ============================================
 if [ "$USE_EXISTING_KEY" = false ]; then
     echo -e "${YELLOW}💾 Step 13: Backing up new keys...${NC}"
-    NEW_KEY_FILE="sealed-secrets-new-$(date +%Y%m%d-%H%M%S).key"
+    NEW_KEY_FILE="$SCRIPT_DIR/sealed-secrets-new-$(date +%Y%m%d-%H%M%S).key"
     kubectl get secret -n kube-system -l sealedsecrets.bitnami.com/sealed-secrets-key -o yaml > "$NEW_KEY_FILE"
     echo -e "${GREEN}✅ New key backed up: $NEW_KEY_FILE${NC}"
     echo -e "${RED}⚠️  IMPORTANT: Store this file securely!${NC}"
 else
-    echo -e "${YELLOW}⏭️  Step 13: Using existing key (no backup needed)${NC}"
+    echo -e "${YELLOW}⏭️  Step 13: Using existing key${NC}"
 fi
 echo ""
-# kubectl patch secret wealist-argocd-secret -n wealist-dev --type='merge' -p='{"data":{"S3_ACCESS_KEY":"bWluaW9hZG1pbg==","S3_SECRET_KEY":"bWluaW9hZG1pbg=="}}'
 
 # ============================================
-# 14. ArgoCD 비밀번호
+# 14. 최종 정보
 # ============================================
 ARGOCD_PASSWORD=$(kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath="{.data.password}" | base64 -d 2>/dev/null || echo "Password not found")
 
-# ============================================
-# 최종 정보
-# ============================================
 echo ""
 echo -e "${GREEN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
 echo -e "${GREEN}✅ Deployment Complete!${NC}"
@@ -331,8 +339,9 @@ echo ""
 echo "🔍 Verification:"
 echo "   kubectl get applications -n argocd"
 echo "   kubectl get pods -n wealist-dev"
-echo "   kubectl get sealedsecrets -n wealist-dev"
-echo "   kubectl get secrets -n wealist-dev"
+echo ""
+echo "📊 Application Status:"
+kubectl get applications -n argocd 2>/dev/null || echo "   No applications found"
 echo ""
 echo -e "${GREEN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
 echo ""
