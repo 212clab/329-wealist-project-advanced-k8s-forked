@@ -159,12 +159,16 @@ kubectl label namespace wealist-dev istio.io/dataplane-mode=ambient --overwrite
 GIT_REPO=$(git config --get remote.origin.url 2>/dev/null | sed 's/.*github.com[:/]\(.*\)\.git/\1/' || echo "unknown")
 GIT_BRANCH=$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "unknown")
 GIT_COMMIT=$(git rev-parse --short HEAD 2>/dev/null || echo "unknown")
+GIT_USER=$(git config --get user.name 2>/dev/null || echo "unknown")
+GIT_EMAIL=$(git config --get user.email 2>/dev/null || echo "unknown")
 DEPLOY_TIME=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
 
 kubectl annotate namespace wealist-dev \
   "wealist.io/git-repo=${GIT_REPO}" \
   "wealist.io/git-branch=${GIT_BRANCH}" \
   "wealist.io/git-commit=${GIT_COMMIT}" \
+  "wealist.io/deployed-by=${GIT_USER}" \
+  "wealist.io/deployed-by-email=${GIT_EMAIL}" \
   "wealist.io/deploy-time=${DEPLOY_TIME}" \
   --overwrite
 
