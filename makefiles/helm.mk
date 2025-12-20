@@ -47,22 +47,22 @@ helm-validate: ## Helm 종합 검증 실행
 ##@ Helm 설치
 
 # -----------------------------------------------------------------------------
-# secrets 파일 체크 (dev 환경 필수)
+# secrets 파일 체크 (로컬 환경 공통)
 # -----------------------------------------------------------------------------
-helm-check-secrets: ## 환경별 secrets 파일 존재 여부 확인
+helm-check-secrets: ## secrets.yaml 파일 존재 여부 확인
 	@echo "=============================================="
-	@echo "  시크릿 파일 확인 중 (ENV=$(ENV))"
+	@echo "  시크릿 파일 확인 중"
 	@echo "=============================================="
-	@if [ "$(ENV)" = "dev" ] || [ "$(ENV)" = "staging" ] || [ "$(ENV)" = "prod" ]; then \
-		if [ ! -f "./k8s/helm/environments/$(ENV)-secrets.yaml" ]; then \
+	@if [ "$(ENV)" = "dev" ] || [ "$(ENV)" = "localhost" ] || [ "$(ENV)" = "staging" ] || [ "$(ENV)" = "prod" ]; then \
+		if [ ! -f "./k8s/helm/environments/secrets.yaml" ]; then \
 			echo ""; \
-			echo "❌ 오류: $(ENV) 환경의 시크릿 파일이 없습니다!"; \
+			echo "❌ 오류: 시크릿 파일이 없습니다!"; \
 			echo ""; \
 			echo "다음 명령어로 시크릿 파일을 생성하세요:"; \
 			echo ""; \
-			echo "  cp ./k8s/helm/environments/secrets.example.yaml ./k8s/helm/environments/$(ENV)-secrets.yaml"; \
+			echo "  cp ./k8s/helm/environments/secrets.example.yaml ./k8s/helm/environments/secrets.yaml"; \
 			echo ""; \
-			echo "그 후 $(ENV)-secrets.yaml 파일을 열어 다음 값들을 설정하세요:"; \
+			echo "그 후 secrets.yaml 파일을 열어 다음 값들을 설정하세요:"; \
 			echo "  - GOOGLE_CLIENT_ID: Google OAuth 클라이언트 ID"; \
 			echo "  - GOOGLE_CLIENT_SECRET: Google OAuth 클라이언트 시크릿"; \
 			echo "  - JWT_SECRET: JWT 서명용 비밀키 (64자 이상 권장)"; \
@@ -71,7 +71,7 @@ helm-check-secrets: ## 환경별 secrets 파일 존재 여부 확인
 			echo ""; \
 			exit 1; \
 		else \
-			echo "✅ 시크릿 파일 확인됨: ./k8s/helm/environments/$(ENV)-secrets.yaml"; \
+			echo "✅ 시크릿 파일 확인됨: ./k8s/helm/environments/secrets.yaml"; \
 		fi; \
 	else \
 		echo "ℹ️  $(ENV) 환경은 시크릿 파일이 선택사항입니다."; \

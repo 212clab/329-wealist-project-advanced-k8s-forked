@@ -55,18 +55,18 @@ kind-check-db-setup: ## 🚀 통합 설정: Secrets → DB 확인 → 클러스�
 	@echo "  1단계: Secrets 파일 확인"
 	@echo "----------------------------------------------"
 	@echo ""
-	@if [ ! -f "./k8s/helm/environments/dev-secrets.yaml" ]; then \
-		echo "⚠️  dev-secrets.yaml 파일이 없습니다."; \
+	@if [ ! -f "./k8s/helm/environments/secrets.yaml" ]; then \
+		echo "⚠️  secrets.yaml 파일이 없습니다."; \
 		echo "   secrets.example.yaml에서 자동 생성합니다..."; \
 		echo ""; \
-		cp ./k8s/helm/environments/secrets.example.yaml ./k8s/helm/environments/dev-secrets.yaml; \
-		echo "✅ dev-secrets.yaml 생성 완료!"; \
+		cp ./k8s/helm/environments/secrets.example.yaml ./k8s/helm/environments/secrets.yaml; \
+		echo "✅ secrets.yaml 생성 완료!"; \
 		echo ""; \
 		echo "📝 주의: 배포 전 아래 파일을 편집하여 실제 값을 입력하세요:"; \
-		echo "   k8s/helm/environments/dev-secrets.yaml"; \
+		echo "   k8s/helm/environments/secrets.yaml"; \
 		echo ""; \
 	else \
-		echo "✅ dev-secrets.yaml 파일 존재 확인"; \
+		echo "✅ secrets.yaml 파일 존재 확인"; \
 	fi
 	@echo ""
 	@echo "----------------------------------------------"
@@ -130,8 +130,8 @@ kind-check-db-setup: ## 🚀 통합 설정: Secrets → DB 확인 → 클러스�
 	@echo "=============================================="
 	@echo ""
 	@echo "  다음 단계:"
-	@echo "    1. dev-secrets.yaml 편집 (API 키, 비밀번호 등 입력):"
-	@echo "       vi k8s/helm/environments/dev-secrets.yaml"
+	@echo "    1. (선택) secrets.yaml 편집 (API 키, 비밀번호 등 입력):"
+	@echo "       vi k8s/helm/environments/secrets.yaml"
 	@echo ""
 	@echo "    2. Helm 배포:"
 	@echo "       make helm-install-all ENV=dev"
@@ -189,15 +189,15 @@ kind-localhost-setup: ## 🏠 통합 환경: 클러스터 생성 → 모든 이�
 	@echo "  1단계: Secrets 파일 확인"
 	@echo "----------------------------------------------"
 	@echo ""
-	@if [ ! -f "./k8s/helm/environments/localhost-secrets.yaml" ]; then \
-		echo "⚠️  localhost-secrets.yaml 파일이 없습니다."; \
+	@if [ ! -f "./k8s/helm/environments/secrets.yaml" ]; then \
+		echo "⚠️  secrets.yaml 파일이 없습니다."; \
 		echo "   secrets.example.yaml에서 자동 생성합니다..."; \
 		echo ""; \
-		cp ./k8s/helm/environments/secrets.example.yaml ./k8s/helm/environments/localhost-secrets.yaml; \
-		echo "✅ localhost-secrets.yaml 생성 완료!"; \
+		cp ./k8s/helm/environments/secrets.example.yaml ./k8s/helm/environments/secrets.yaml; \
+		echo "✅ secrets.yaml 생성 완료!"; \
 		echo ""; \
 	else \
-		echo "✅ localhost-secrets.yaml 파일 존재 확인"; \
+		echo "✅ secrets.yaml 파일 존재 확인"; \
 	fi
 	@echo ""
 	@echo "----------------------------------------------"
@@ -215,8 +215,8 @@ kind-localhost-setup: ## 🏠 통합 환경: 클러스터 생성 → 모든 이�
 	@echo "=============================================="
 	@echo ""
 	@echo "  다음 단계:"
-	@echo "    1. (선택) localhost-secrets.yaml 편집:"
-	@echo "       vi k8s/helm/environments/localhost-secrets.yaml"
+	@echo "    1. (선택) secrets.yaml 편집:"
+	@echo "       vi k8s/helm/environments/secrets.yaml"
 	@echo ""
 	@echo "    2. Helm 배포:"
 	@echo "       make helm-install-all ENV=localhost"
