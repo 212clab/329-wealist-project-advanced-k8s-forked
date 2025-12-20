@@ -176,19 +176,10 @@ shared:
     REDIS_PASSWORD: ""
 
 # -----------------------------------------------------------------------------
-# Ingress 설정 (localhost, TLS 없음)
+# Ingress 설정 (nginx - 비활성화, Istio Gateway 사용)
 # -----------------------------------------------------------------------------
 ingress:
-  enabled: true
-  className: nginx
-  annotations:
-    nginx.ingress.kubernetes.io/ssl-redirect: "false"
-    # /svc/* 경로에서 prefix 제거
-    nginx.ingress.kubernetes.io/use-regex: "true"
-    nginx.ingress.kubernetes.io/rewrite-target: /$2
-  hosts:
-    - host: localhost
-  tls: []
+  enabled: false  # Istio HTTPRoute 사용
 
 # -----------------------------------------------------------------------------
 # Istio 서비스 메시 설정
@@ -198,13 +189,23 @@ istio:
   namespace: wealist-localhost
 
   gateway:
-    enabled: true
+    enabled: false  # setup-cluster.sh에서 이미 생성됨
     name: wealist-gateway
     hosts:
       - "localhost"
       - "*"
     tls:
       enabled: false
+
+  # HTTPRoute 설정 (Kubernetes Gateway API)
+  httpRoute:
+    enabled: true
+    gatewayRef:
+      name: istio-ingressgateway
+      namespace: istio-system
+    hosts:
+      - "localhost"
+      - "*"
 
   mtls:
     enabled: true
@@ -248,15 +249,10 @@ grafana:
     rootUrl: "http://localhost/monitoring/grafana"
     serveFromSubPath: "true"
 
-# 모니터링 Ingress
+# 모니터링 Ingress (nginx - 비활성화)
+# NodePort로 직접 접근: Grafana(30001), Prometheus(30090)
 monitoringIngress:
-  enabled: true
-  className: nginx
-  annotations:
-    nginx.ingress.kubernetes.io/ssl-redirect: "false"
-  hosts:
-    - host: localhost
-  tls: []
+  enabled: false
 
 # -----------------------------------------------------------------------------
 # 데이터베이스 Exporter (내부 Pod 메트릭 수집)
