@@ -37,7 +37,7 @@ const getIngressServicePrefix = (path: string): string => {
   if (path?.includes('/api/users')) return '/svc/user';           // user: 프론트가 /api/users 포함
   if (path?.includes('/api/workspaces')) return '/svc/user';      // user: 프론트가 /api/workspaces 포함
   if (path?.includes('/api/profiles')) return '/svc/user';        // user: 프론트가 /api/profiles 포함
-  if (path?.includes('/api/boards')) return '/svc/board';         // board: 프론트가 /api/boards 포함
+  if (path?.includes('/api/boards')) return '/svc/board/api';      // board: 프론트가 /projects 호출
   if (path?.includes('/api/chats')) return '/svc/chat/api/chats'; // chat: 프론트가 /my만 호출 (basePath 필요)
   if (path?.includes('/api/notifications')) return '/svc/noti';   // noti: 프론트가 /api/notifications 포함
   if (path?.includes('/api/storage')) return '/svc/storage';      // storage: 프론트가 /api/storage 포함
@@ -65,7 +65,7 @@ const getApiBaseUrl = (path: string): string => {
       if (path?.includes('/api/users')) return `${localBaseUrl}/svc/user`;          // user: 프론트가 /api/users 포함
       if (path?.includes('/api/workspaces')) return `${localBaseUrl}/svc/user`;     // user: 프론트가 /api/workspaces 포함
       if (path?.includes('/api/profiles')) return `${localBaseUrl}/svc/user`;       // user: 프론트가 /api/profiles 포함
-      if (path?.includes('/api/boards')) return `${localBaseUrl}/svc/board`;        // board: 프론트가 /api/boards 포함
+      if (path?.includes('/api/boards')) return `${localBaseUrl}/svc/board/api`;  // board: 프론트가 /projects 호출, 백엔드는 /api/projects
       if (path?.includes('/api/chats')) return `${localBaseUrl}/svc/chat/api/chats`; // chat: 프론트가 /my만 호출 (basePath 필요)
       if (path?.includes('/api/notifications')) return `${localBaseUrl}/svc/noti`;  // noti: 프론트가 /api/notifications 포함
       if (path?.includes('/api/storage')) return `${localBaseUrl}/svc/storage`;     // storage: 프론트가 /api/storage 포함
