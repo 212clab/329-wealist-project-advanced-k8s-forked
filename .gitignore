@@ -149,6 +149,11 @@ grafana/volume/**
 prometheus/volume/
 prometheus/data/
 
+# ============================================
+# Downloaded CLI Tools (자동 설치됨)
+# ============================================
+istio-*/
+
 # SonarQube
 .scannerwork/
 
