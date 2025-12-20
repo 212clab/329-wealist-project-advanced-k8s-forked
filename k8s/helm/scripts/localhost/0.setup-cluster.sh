@@ -4,7 +4,7 @@
 # =============================================================================
 # - 로컬 레지스트리: localhost:5001
 # - Istio Ambient: Service Mesh (sidecar-less)
-# - Gateway API: Kubernetes 표준 + hostPort 80
+# - Gateway API: Kubernetes 표준 (NodePort 30080 → hostPort 8080)
 
 set -e
 
@@ -134,31 +134,20 @@ kubectl wait --namespace istio-system \
   --selector=gateway.networking.k8s.io/gateway-name=istio-ingressgateway \
   --timeout=120s || echo "WARNING: Istio gateway not ready yet"
 
-# 9. Istio Gateway를 hostPort 80으로 설정 (localhost:80 접근)
-# Gateway 이름: istio-ingressgateway → Deployment 이름: istio-ingressgateway-istio
-echo "⚙️ Istio Gateway hostPort 80 설정 중..."
-kubectl patch deployment istio-ingressgateway-istio -n istio-system --type='json' -p='[
+# 9. Istio Gateway Service를 NodePort로 노출 (Kind hostPort 8080 사용)
+echo "⚙️ Istio Gateway NodePort 설정 중..."
+kubectl patch service istio-ingressgateway-istio -n istio-system --type='json' -p='[
   {
     "op": "replace",
-    "path": "/spec/template/spec/containers/0/ports",
-    "value": [
-      {"containerPort": 80, "hostPort": 80, "protocol": "TCP", "name": "http"},
-      {"containerPort": 443, "hostPort": 443, "protocol": "TCP", "name": "https"},
-      {"containerPort": 15020, "protocol": "TCP", "name": "metrics"},
-      {"containerPort": 15021, "protocol": "TCP", "name": "status-port"}
-    ]
+    "path": "/spec/type",
+    "value": "NodePort"
   },
   {
     "op": "add",
-    "path": "/spec/template/spec/nodeSelector",
-    "value": {"ingress-ready": "true"}
+    "path": "/spec/ports/0/nodePort",
+    "value": 30080
   }
-]'
-
-# Gateway Pod 재시작 대기
-echo "⏳ Gateway Pod 재시작 대기 중..."
-sleep 3
-kubectl rollout status deployment/istio-ingressgateway-istio -n istio-system --timeout=120s || true
+]' || echo "INFO: Service 이미 NodePort로 설정됨"
 
 echo ""
 echo "=============================================="
@@ -166,7 +155,7 @@ echo "  ✅ localhost 클러스터 준비 완료!"
 echo "=============================================="
 echo ""
 echo "📦 로컬 레지스트리: localhost:${REG_PORT}"
-echo "🌐 Istio Gateway: localhost (hostPort 80)"
+echo "🌐 Istio Gateway: localhost:8080 (NodePort 30080)"
 echo ""
 echo "📝 다음 단계:"
 echo "   1. 이미지 로드:"
@@ -177,6 +166,6 @@ echo "   2. Helm 배포:"
 echo "      make helm-install-all ENV=localhost"
 echo ""
 echo "   3. 접근:"
-echo "      http://localhost/"
-echo "      http://localhost/svc/auth/api/..."
+echo "      http://localhost:8080/"
+echo "      http://localhost:8080/svc/auth/api/..."
 echo "=============================================="
