@@ -135,6 +135,7 @@ kubectl wait --namespace istio-system \
   --timeout=120s || echo "WARNING: Istio gateway not ready yet"
 
 # 9. Istio Gateway Service를 NodePort로 노출 (Kind hostPort 8080 사용)
+# ports[0]=status-port(15021), ports[1]=http(80) → http에 NodePort 30080 할당
 echo "⚙️ Istio Gateway NodePort 설정 중..."
 kubectl patch service istio-ingressgateway-istio -n istio-system --type='json' -p='[
   {
@@ -144,7 +145,7 @@ kubectl patch service istio-ingressgateway-istio -n istio-system --type='json' -
   },
   {
     "op": "add",
-    "path": "/spec/ports/0/nodePort",
+    "path": "/spec/ports/1/nodePort",
     "value": 30080
   }
 ]' || echo "INFO: Service 이미 NodePort로 설정됨"
