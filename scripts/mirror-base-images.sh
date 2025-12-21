@@ -13,6 +13,7 @@ set -e
 GHCR_REGISTRY="ghcr.io/orangescloud/base"
 
 # 미러링할 base 이미지 목록
+# 빌드용 base 이미지
 BASE_IMAGES=(
     "golang:1.24-bookworm"
     "alpine:latest"
@@ -22,12 +23,43 @@ BASE_IMAGES=(
     "nginx:stable-alpine"
 )
 
+# 인프라 이미지 (DB, 캐시, 스토리지, 통신)
+INFRA_IMAGES=(
+    "postgres:16-alpine"
+    "redis:7-alpine"
+    "minio/minio:latest"
+    "livekit/livekit-server:latest"
+)
+
+# 모니터링 이미지
+MONITORING_IMAGES=(
+    "prom/prometheus:v2.48.0"
+    "grafana/grafana:10.2.2"
+    "grafana/loki:2.9.2"
+    "grafana/promtail:2.9.2"
+    "prometheuscommunity/postgres-exporter:v0.15.0"
+    "oliver006/redis_exporter:v1.55.0"
+)
+
+# Istio Addon 이미지
+ISTIO_ADDON_IMAGES=(
+    "jaegertracing/all-in-one:1.52"
+    "quay.io/kiali/kiali:v1.77"
+)
+
+# 전체 이미지 목록 (BASE + INFRA + MONITORING + ISTIO)
+ALL_IMAGES=("${BASE_IMAGES[@]}" "${INFRA_IMAGES[@]}" "${MONITORING_IMAGES[@]}" "${ISTIO_ADDON_IMAGES[@]}")
+
 echo "=============================================="
-echo "  Base 이미지 GHCR 미러링"
+echo "  전체 이미지 GHCR 미러링"
 echo "=============================================="
 echo ""
 echo "대상 레지스트리: ${GHCR_REGISTRY}"
-echo "미러링할 이미지: ${#BASE_IMAGES[@]}개"
+echo "미러링할 이미지: ${#ALL_IMAGES[@]}개"
+echo "  - 빌드용 base: ${#BASE_IMAGES[@]}개"
+echo "  - 인프라: ${#INFRA_IMAGES[@]}개"
+echo "  - 모니터링: ${#MONITORING_IMAGES[@]}개"
+echo "  - Istio Addon: ${#ISTIO_ADDON_IMAGES[@]}개"
 echo ""
 
 # GHCR 로그인 확인 (docker config 파일에서 ghcr.io 확인)
@@ -69,12 +101,14 @@ echo "  이미지 미러링 시작 (amd64 + arm64)"
 echo "----------------------------------------------"
 echo ""
 
-for image in "${BASE_IMAGES[@]}"; do
+for image in "${ALL_IMAGES[@]}"; do
     echo "📦 ${image}"
 
-    # 이미지 이름 변환 (: → -)
+    # 이미지 이름 변환
     # 예: golang:1.24-bookworm → golang-1.24-bookworm
-    target_name=$(echo "$image" | tr ':' '-')
+    # 예: minio/minio:latest → minio-latest
+    # 예: livekit/livekit-server:latest → livekit-server-latest
+    target_name=$(echo "$image" | sed 's|.*/||' | tr ':' '-')
     target_image="${GHCR_REGISTRY}/${target_name}"
 
     echo "   → ${target_image}"
@@ -99,13 +133,43 @@ echo "=============================================="
 echo "  🎉 미러링 완료!"
 echo "=============================================="
 echo ""
-echo "미러링된 이미지:"
+echo "📦 빌드용 Base 이미지:"
 for image in "${BASE_IMAGES[@]}"; do
-    target_name=$(echo "$image" | tr ':' '-')
+    target_name=$(echo "$image" | sed 's|.*/||' | tr ':' '-')
     echo "  - ${GHCR_REGISTRY}/${target_name}"
 done
 echo ""
-echo "📝 Dockerfile에서 사용 예시:"
-echo "   FROM ghcr.io/orangescloud/base/golang-1.24-bookworm AS builder"
-echo "   FROM ghcr.io/orangescloud/base/alpine-latest"
+echo "🔧 인프라 이미지:"
+for image in "${INFRA_IMAGES[@]}"; do
+    target_name=$(echo "$image" | sed 's|.*/||' | tr ':' '-')
+    echo "  - ${GHCR_REGISTRY}/${target_name}"
+done
+echo ""
+echo "📊 모니터링 이미지:"
+for image in "${MONITORING_IMAGES[@]}"; do
+    target_name=$(echo "$image" | sed 's|.*/||' | tr ':' '-')
+    echo "  - ${GHCR_REGISTRY}/${target_name}"
+done
+echo ""
+echo "🔷 Istio Addon 이미지:"
+for image in "${ISTIO_ADDON_IMAGES[@]}"; do
+    target_name=$(echo "$image" | sed 's|.*/||' | tr ':' '-')
+    echo "  - ${GHCR_REGISTRY}/${target_name}"
+done
+echo ""
+echo "📝 사용 예시:"
+echo ""
+echo "  # Dockerfile"
+echo "  FROM ghcr.io/orangescloud/base/golang-1.24-bookworm AS builder"
+echo "  FROM ghcr.io/orangescloud/base/alpine-latest"
+echo ""
+echo "  # Helm values.yaml (인프라)"
+echo "  postgres:"
+echo "    image: ghcr.io/orangescloud/base/postgres-16-alpine"
+echo "  redis:"
+echo "    image: ghcr.io/orangescloud/base/redis-7-alpine"
+echo "  minio:"
+echo "    image: ghcr.io/orangescloud/base/minio-latest"
+echo "  livekit:"
+echo "    image: ghcr.io/orangescloud/base/livekit-server-latest"
 echo ""

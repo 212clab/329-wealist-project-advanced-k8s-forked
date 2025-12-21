@@ -196,15 +196,46 @@ load_to_kind() {
     return 1
 }
 
-# MinIO - S3 호환 스토리지
-echo ""
-echo "🗄️  MinIO 이미지 로드 중..."
-load_to_kind "minio/minio:latest"
+# =============================================================================
+# 인프라 이미지 (GHCR 미러 우선, Docker Hub fallback)
+# =============================================================================
+# GHCR 미러링: ./scripts/mirror-base-images.sh 실행 필요
+# 미러링 안 된 경우 Docker Hub에서 직접 pull
 
-# LiveKit - 실시간 통신 (필요시)
-echo ""
-echo "📹 LiveKit 이미지 로드 중..."
-load_to_kind "livekit/livekit-server:v1.5"
+GHCR_BASE="ghcr.io/orangescloud/base"
+
+# 이미지 로드 (GHCR 우선, Docker Hub fallback)
+load_image_with_fallback() {
+    local ghcr_image=$1
+    local dockerhub_image=$2
+    local name=$3
+
+    echo ""
+    echo "📦 ${name} 이미지 로드 중..."
+
+    # GHCR 이미지 시도
+    echo "   GHCR에서 시도: ${ghcr_image}"
+    if docker pull --platform "${PLATFORM}" "${ghcr_image}" 2>/dev/null; then
+        load_to_kind "${ghcr_image}"
+        return 0
+    fi
+
+    # Docker Hub fallback
+    echo "   ⚠️  GHCR 실패, Docker Hub fallback: ${dockerhub_image}"
+    load_to_kind "${dockerhub_image}"
+}
+
+# MinIO - S3 호환 스토리지
+load_image_with_fallback \
+    "${GHCR_BASE}/minio-latest" \
+    "minio/minio:latest" \
+    "MinIO"
+
+# LiveKit - 실시간 통신
+load_image_with_fallback \
+    "${GHCR_BASE}/livekit-server-latest" \
+    "livekit/livekit-server:latest" \
+    "LiveKit"
 
 echo ""
 echo "✅ 인프라 이미지 로드 완료!"

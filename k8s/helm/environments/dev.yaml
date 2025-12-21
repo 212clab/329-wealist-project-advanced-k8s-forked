@@ -233,20 +233,38 @@ istio:
       enabled: true
 
 # =============================================================================
-# 모니터링 스택 설정
+# 모니터링 스택 설정 (GHCR 미러 이미지 사용)
 # =============================================================================
+# Docker Hub rate limit 회피를 위해 GHCR에 미러링된 이미지 사용
+# 미러링: ./scripts/mirror-base-images.sh
 
 # Prometheus - 메트릭 수집
 prometheus:
   enabled: true
+  image:
+    repository: ghcr.io/orangescloud/base/prometheus-v2.48.0
+    tag: "latest"
 
 # Loki - 로그 수집
 loki:
   enabled: true
+  image:
+    repository: ghcr.io/orangescloud/base/loki-2.9.2
+    tag: "latest"
+
+# Promtail - 로그 수집 에이전트
+promtail:
+  enabled: true
+  image:
+    repository: ghcr.io/orangescloud/base/promtail-2.9.2
+    tag: "latest"
 
 # Grafana - 시각화 대시보드
 grafana:
   enabled: true
+  image:
+    repository: ghcr.io/orangescloud/base/grafana-10.2.2
+    tag: "latest"
 
 # 모니터링 Ingress (Istio HTTPRoute로 처리)
 monitoringIngress:
@@ -260,12 +278,18 @@ monitoringIngress:
 #   - Native Linux: 172.18.0.1 (Kind bridge gateway)
 postgresExporter:
   enabled: true
+  image:
+    repository: ghcr.io/orangescloud/base/postgres-exporter-v0.15.0
+    tag: "latest"
   config:
     host: "host.docker.internal"  # Docker Desktop (Mac/WSL)
     port: 5432
 
 redisExporter:
   enabled: true
+  image:
+    repository: ghcr.io/orangescloud/base/redis_exporter-v1.55.0
+    tag: "latest"
   config:
     host: "host.docker.internal"  # Docker Desktop (Mac/WSL)
     port: 6379
