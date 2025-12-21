@@ -738,10 +738,10 @@ kind-dev-setup: ## 🔧 개발 환경: 클러스터 생성 → 서비스 이미�
 				sudo sed -i 's/^# *bind .*/bind 0.0.0.0/' "$$REDIS_CONF"; \
 				sudo sed -i 's/^protected-mode yes/protected-mode no/' "$$REDIS_CONF"; \
 				sudo sed -i 's/^# *protected-mode yes/protected-mode no/' "$$REDIS_CONF"; \
-				if ! grep -q "^bind 0.0.0.0" "$$REDIS_CONF"; then \
+				if ! sudo grep -q "^bind 0.0.0.0" "$$REDIS_CONF"; then \
 					echo "bind 0.0.0.0" | sudo tee -a "$$REDIS_CONF" > /dev/null; \
 				fi; \
-				if ! grep -q "^protected-mode no" "$$REDIS_CONF"; then \
+				if ! sudo grep -q "^protected-mode no" "$$REDIS_CONF"; then \
 					echo "protected-mode no" | sudo tee -a "$$REDIS_CONF" > /dev/null; \
 				fi; \
 				echo "  ✅ bind 0.0.0.0, protected-mode no 설정 완료"; \
