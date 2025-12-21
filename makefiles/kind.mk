@@ -27,6 +27,85 @@ kind-check-db-setup: ## 🚀 통합 설정: Secrets → DB 확인 → 클러스�
 	@echo "  0단계: 필수 도구 확인"
 	@echo "----------------------------------------------"
 	@echo ""
+	@# kubectl 확인 및 설치
+	@if ! command -v kubectl >/dev/null 2>&1; then \
+		echo "❌ kubectl: 미설치"; \
+		echo ""; \
+		echo "kubectl을 자동 설치하시겠습니까? [Y/n]"; \
+		read -r answer; \
+		if [ "$$answer" != "n" ] && [ "$$answer" != "N" ]; then \
+			echo ""; \
+			echo "kubectl 설치 중..."; \
+			if [ "$$(uname)" = "Darwin" ]; then \
+				brew install kubectl; \
+			else \
+				curl -LO "https://dl.k8s.io/release/$$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"; \
+				chmod +x kubectl; \
+				sudo mv kubectl /usr/local/bin/kubectl; \
+			fi; \
+			echo ""; \
+			echo "✅ kubectl 설치 완료!"; \
+		else \
+			echo ""; \
+			echo "kubectl 없이는 진행할 수 없습니다."; \
+			exit 1; \
+		fi; \
+	else \
+		echo "✅ kubectl: $$(kubectl version --client --short 2>/dev/null || echo '설치됨')"; \
+	fi
+	@echo ""
+	@# Kind 확인 및 설치
+	@if ! command -v kind >/dev/null 2>&1; then \
+		echo "❌ kind: 미설치"; \
+		echo ""; \
+		echo "kind를 자동 설치하시겠습니까? [Y/n]"; \
+		read -r answer; \
+		if [ "$$answer" != "n" ] && [ "$$answer" != "N" ]; then \
+			echo ""; \
+			echo "kind 설치 중..."; \
+			if [ "$$(uname)" = "Darwin" ]; then \
+				brew install kind; \
+			else \
+				curl -Lo /tmp/kind https://kind.sigs.k8s.io/dl/v0.20.0/kind-linux-amd64; \
+				chmod +x /tmp/kind; \
+				sudo mv /tmp/kind /usr/local/bin/kind; \
+			fi; \
+			echo ""; \
+			echo "✅ kind 설치 완료!"; \
+		else \
+			echo ""; \
+			echo "kind 없이는 진행할 수 없습니다."; \
+			exit 1; \
+		fi; \
+	else \
+		echo "✅ kind: $$(kind version 2>/dev/null || echo '설치됨')"; \
+	fi
+	@echo ""
+	@# Helm 확인 및 설치
+	@if ! command -v helm >/dev/null 2>&1; then \
+		echo "❌ helm: 미설치"; \
+		echo ""; \
+		echo "helm을 자동 설치하시겠습니까? [Y/n]"; \
+		read -r answer; \
+		if [ "$$answer" != "n" ] && [ "$$answer" != "N" ]; then \
+			echo ""; \
+			echo "helm 설치 중..."; \
+			curl -fsSL -o /tmp/get_helm.sh https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3; \
+			chmod 700 /tmp/get_helm.sh; \
+			/tmp/get_helm.sh; \
+			rm -f /tmp/get_helm.sh; \
+			echo ""; \
+			echo "✅ helm 설치 완료!"; \
+		else \
+			echo ""; \
+			echo "helm 없이는 진행할 수 없습니다."; \
+			exit 1; \
+		fi; \
+	else \
+		echo "✅ helm: $$(helm version --short 2>/dev/null || echo '설치됨')"; \
+	fi
+	@echo ""
+	@# istioctl 확인 및 설치
 	@if ! command -v istioctl >/dev/null 2>&1; then \
 		if [ -f "./istio-1.24.0/bin/istioctl" ]; then \
 			echo "✅ istioctl: 로컬 설치됨 (./istio-1.24.0/bin/istioctl)"; \
@@ -161,6 +240,85 @@ kind-localhost-setup: ## 🏠 통합 환경: 클러스터 생성 → 모든 이�
 	@echo "  0단계: 필수 도구 확인"
 	@echo "----------------------------------------------"
 	@echo ""
+	@# kubectl 확인 및 설치
+	@if ! command -v kubectl >/dev/null 2>&1; then \
+		echo "❌ kubectl: 미설치"; \
+		echo ""; \
+		echo "kubectl을 자동 설치하시겠습니까? [Y/n]"; \
+		read -r answer; \
+		if [ "$$answer" != "n" ] && [ "$$answer" != "N" ]; then \
+			echo ""; \
+			echo "kubectl 설치 중..."; \
+			if [ "$$(uname)" = "Darwin" ]; then \
+				brew install kubectl; \
+			else \
+				curl -LO "https://dl.k8s.io/release/$$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"; \
+				chmod +x kubectl; \
+				sudo mv kubectl /usr/local/bin/kubectl; \
+			fi; \
+			echo ""; \
+			echo "✅ kubectl 설치 완료!"; \
+		else \
+			echo ""; \
+			echo "kubectl 없이는 진행할 수 없습니다."; \
+			exit 1; \
+		fi; \
+	else \
+		echo "✅ kubectl: $$(kubectl version --client --short 2>/dev/null || echo '설치됨')"; \
+	fi
+	@echo ""
+	@# Kind 확인 및 설치
+	@if ! command -v kind >/dev/null 2>&1; then \
+		echo "❌ kind: 미설치"; \
+		echo ""; \
+		echo "kind를 자동 설치하시겠습니까? [Y/n]"; \
+		read -r answer; \
+		if [ "$$answer" != "n" ] && [ "$$answer" != "N" ]; then \
+			echo ""; \
+			echo "kind 설치 중..."; \
+			if [ "$$(uname)" = "Darwin" ]; then \
+				brew install kind; \
+			else \
+				curl -Lo /tmp/kind https://kind.sigs.k8s.io/dl/v0.20.0/kind-linux-amd64; \
+				chmod +x /tmp/kind; \
+				sudo mv /tmp/kind /usr/local/bin/kind; \
+			fi; \
+			echo ""; \
+			echo "✅ kind 설치 완료!"; \
+		else \
+			echo ""; \
+			echo "kind 없이는 진행할 수 없습니다."; \
+			exit 1; \
+		fi; \
+	else \
+		echo "✅ kind: $$(kind version 2>/dev/null || echo '설치됨')"; \
+	fi
+	@echo ""
+	@# Helm 확인 및 설치
+	@if ! command -v helm >/dev/null 2>&1; then \
+		echo "❌ helm: 미설치"; \
+		echo ""; \
+		echo "helm을 자동 설치하시겠습니까? [Y/n]"; \
+		read -r answer; \
+		if [ "$$answer" != "n" ] && [ "$$answer" != "N" ]; then \
+			echo ""; \
+			echo "helm 설치 중..."; \
+			curl -fsSL -o /tmp/get_helm.sh https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3; \
+			chmod 700 /tmp/get_helm.sh; \
+			/tmp/get_helm.sh; \
+			rm -f /tmp/get_helm.sh; \
+			echo ""; \
+			echo "✅ helm 설치 완료!"; \
+		else \
+			echo ""; \
+			echo "helm 없이는 진행할 수 없습니다."; \
+			exit 1; \
+		fi; \
+	else \
+		echo "✅ helm: $$(helm version --short 2>/dev/null || echo '설치됨')"; \
+	fi
+	@echo ""
+	@# istioctl 확인 및 설치
 	@if ! command -v istioctl >/dev/null 2>&1; then \
 		if [ -f "./istio-1.24.0/bin/istioctl" ]; then \
 			echo "✅ istioctl: 로컬 설치됨 (./istio-1.24.0/bin/istioctl)"; \
@@ -245,6 +403,85 @@ kind-dev-setup: ## 🔧 개발 환경: 클러스터 생성 → 서비스 이미�
 	@echo "  0단계: 필수 도구 확인"
 	@echo "----------------------------------------------"
 	@echo ""
+	@# kubectl 확인 및 설치
+	@if ! command -v kubectl >/dev/null 2>&1; then \
+		echo "❌ kubectl: 미설치"; \
+		echo ""; \
+		echo "kubectl을 자동 설치하시겠습니까? [Y/n]"; \
+		read -r answer; \
+		if [ "$$answer" != "n" ] && [ "$$answer" != "N" ]; then \
+			echo ""; \
+			echo "kubectl 설치 중..."; \
+			if [ "$$(uname)" = "Darwin" ]; then \
+				brew install kubectl; \
+			else \
+				curl -LO "https://dl.k8s.io/release/$$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"; \
+				chmod +x kubectl; \
+				sudo mv kubectl /usr/local/bin/kubectl; \
+			fi; \
+			echo ""; \
+			echo "✅ kubectl 설치 완료!"; \
+		else \
+			echo ""; \
+			echo "kubectl 없이는 진행할 수 없습니다."; \
+			exit 1; \
+		fi; \
+	else \
+		echo "✅ kubectl: $$(kubectl version --client --short 2>/dev/null || echo '설치됨')"; \
+	fi
+	@echo ""
+	@# Kind 확인 및 설치
+	@if ! command -v kind >/dev/null 2>&1; then \
+		echo "❌ kind: 미설치"; \
+		echo ""; \
+		echo "kind를 자동 설치하시겠습니까? [Y/n]"; \
+		read -r answer; \
+		if [ "$$answer" != "n" ] && [ "$$answer" != "N" ]; then \
+			echo ""; \
+			echo "kind 설치 중..."; \
+			if [ "$$(uname)" = "Darwin" ]; then \
+				brew install kind; \
+			else \
+				curl -Lo /tmp/kind https://kind.sigs.k8s.io/dl/v0.20.0/kind-linux-amd64; \
+				chmod +x /tmp/kind; \
+				sudo mv /tmp/kind /usr/local/bin/kind; \
+			fi; \
+			echo ""; \
+			echo "✅ kind 설치 완료!"; \
+		else \
+			echo ""; \
+			echo "kind 없이는 진행할 수 없습니다."; \
+			exit 1; \
+		fi; \
+	else \
+		echo "✅ kind: $$(kind version 2>/dev/null || echo '설치됨')"; \
+	fi
+	@echo ""
+	@# Helm 확인 및 설치
+	@if ! command -v helm >/dev/null 2>&1; then \
+		echo "❌ helm: 미설치"; \
+		echo ""; \
+		echo "helm을 자동 설치하시겠습니까? [Y/n]"; \
+		read -r answer; \
+		if [ "$$answer" != "n" ] && [ "$$answer" != "N" ]; then \
+			echo ""; \
+			echo "helm 설치 중..."; \
+			curl -fsSL -o /tmp/get_helm.sh https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3; \
+			chmod 700 /tmp/get_helm.sh; \
+			/tmp/get_helm.sh; \
+			rm -f /tmp/get_helm.sh; \
+			echo ""; \
+			echo "✅ helm 설치 완료!"; \
+		else \
+			echo ""; \
+			echo "helm 없이는 진행할 수 없습니다."; \
+			exit 1; \
+		fi; \
+	else \
+		echo "✅ helm: $$(helm version --short 2>/dev/null || echo '설치됨')"; \
+	fi
+	@echo ""
+	@# istioctl 확인 및 설치
 	@if ! command -v istioctl >/dev/null 2>&1; then \
 		if [ -f "./istio-1.24.0/bin/istioctl" ]; then \
 			echo "✅ istioctl: 로컬 설치됨 (./istio-1.24.0/bin/istioctl)"; \
