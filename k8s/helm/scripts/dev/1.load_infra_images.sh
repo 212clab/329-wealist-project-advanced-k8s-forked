@@ -135,29 +135,65 @@ echo ""
 echo "--- 인프라 이미지 로드 (Kind 클러스터) ---"
 
 # Kind 클러스터에 이미지 로드하는 함수
-# Docker Desktop containerd 호환성을 위해 tar 파일로 저장 후 로드
+# 방법 1: kind load docker-image (빠름, 일부 환경에서 동작 안함)
+# 방법 2: kind load image-archive (tar 저장 후 로드)
+# 방법 3: 노드에 직접 ctr import (fallback)
 load_to_kind() {
     local image=$1
     local tar_file="/tmp/kind-image-$(echo "$image" | tr '/:' '-').tar"
     echo "  📦 ${image}"
 
-    # 기존 이미지 삭제 (containerd 캐시 문제 방지)
+    # 기존 이미지 삭제 (캐시 문제 방지)
     docker rmi "$image" 2>/dev/null || true
 
     # 플랫폼 명시하여 pull
     echo "     Pulling with platform: ${PLATFORM}"
     docker pull --platform "${PLATFORM}" "$image"
 
-    # tar 파일로 저장 후 Kind에 로드 (containerd 우회)
+    # 방법 1: kind load docker-image 시도
+    echo "     Loading to Kind cluster (docker-image)..."
+    if kind load docker-image "$image" --name "$CLUSTER_NAME" 2>/dev/null; then
+        echo "     ✅ 로드 완료 (docker-image)"
+        return 0
+    fi
+
+    echo "     ⚠️  docker-image 방식 실패, image-archive 시도..."
+
+    # 방법 2: tar 저장 후 image-archive 로드
     echo "     Saving to tar..."
     docker save "$image" -o "$tar_file"
 
-    echo "     Loading to Kind cluster..."
-    kind load image-archive "$tar_file" --name "$CLUSTER_NAME"
+    echo "     Loading to Kind cluster (image-archive)..."
+    if kind load image-archive "$tar_file" --name "$CLUSTER_NAME" 2>/dev/null; then
+        rm -f "$tar_file"
+        echo "     ✅ 로드 완료 (image-archive)"
+        return 0
+    fi
 
-    # 임시 파일 삭제
+    echo "     ⚠️  image-archive 방식 실패, 직접 import 시도..."
+
+    # 방법 3: 노드에 직접 ctr import (최후의 수단)
+    # Kind 노드의 containerd에 직접 이미지 로드
+    local node="${CLUSTER_NAME}-control-plane"
+    echo "     Loading directly to node: $node"
+
+    # gunzip 없이 직접 import
+    if docker exec -i "$node" ctr --namespace=k8s.io images import - < "$tar_file" 2>/dev/null; then
+        rm -f "$tar_file"
+        echo "     ✅ 로드 완료 (direct ctr import)"
+        return 0
+    fi
+
+    # 모든 방법 실패
     rm -f "$tar_file"
-    echo "     ✅ 로드 완료"
+    echo "     ❌ 이미지 로드 실패: $image"
+    echo ""
+    echo "     수동 로드 방법:"
+    echo "       docker pull $image"
+    echo "       docker save $image -o /tmp/image.tar"
+    echo "       docker exec -i ${CLUSTER_NAME}-control-plane ctr -n k8s.io images import - < /tmp/image.tar"
+    echo ""
+    return 1
 }
 
 # MinIO - S3 호환 스토리지
