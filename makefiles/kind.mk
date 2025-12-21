@@ -668,15 +668,18 @@ kind-dev-setup: ## 🔧 개발 환경: 클러스터 생성 → 서비스 이미�
 			fi; \
 			if [ -n "$$PG_HBA" ] && [ -f "$$PG_HBA" ]; then \
 				echo "  📄 pg_hba.conf: $$PG_HBA"; \
-				if ! sudo grep -q "172.18.0.0/16" "$$PG_HBA"; then \
-					echo "host    all    all    172.18.0.0/16    md5" | sudo tee -a "$$PG_HBA" > /dev/null; \
-					echo "  ✅ Kind 네트워크 접근 허용 추가"; \
+				. /tmp/kind_db_host.env; \
+				DB_SUBNET=$$(echo "$$DB_HOST" | sed 's/\.[0-9]*\.[0-9]*$/.0.0\/16/'); \
+				echo "  🔗 DB 서브넷: $$DB_SUBNET"; \
+				if ! sudo grep -q "$$DB_SUBNET" "$$PG_HBA"; then \
+					echo "host    all    all    $$DB_SUBNET    md5" | sudo tee -a "$$PG_HBA" > /dev/null; \
+					echo "  ✅ $$DB_SUBNET 접근 허용 추가"; \
 				else \
-					echo "  ✅ Kind 네트워크 접근 이미 설정됨"; \
+					echo "  ✅ $$DB_SUBNET 접근 이미 설정됨"; \
 				fi; \
 			else \
 				echo "  ❌ pg_hba.conf를 찾을 수 없습니다"; \
-				echo "     수동으로 host all all 172.18.0.0/16 md5 설정이 필요합니다"; \
+				echo "     수동으로 host all all <subnet>/16 md5 설정이 필요합니다"; \
 			fi; \
 			echo ""; \
 			echo "🔄 PostgreSQL 재시작 중..."; \
@@ -694,7 +697,7 @@ kind-dev-setup: ## 🔧 개발 환경: 클러스터 생성 → 서비스 이미�
 				echo ""; \
 				echo "  수동 확인 필요:"; \
 				echo "    1. postgresql.conf: listen_addresses = '*'"; \
-				echo "    2. pg_hba.conf: host all all 172.18.0.0/16 md5"; \
+				echo "    2. pg_hba.conf: host all all $$DB_SUBNET md5"; \
 				echo "    3. sudo systemctl restart postgresql"; \
 				echo ""; \
 				echo "계속 진행하시겠습니까? (DB 연결 없이) [y/N]"; \
@@ -731,8 +734,16 @@ kind-dev-setup: ## 🔧 개발 환경: 클러스터 생성 → 서비스 이미�
 			done; \
 			if [ -n "$$REDIS_CONF" ] && [ -f "$$REDIS_CONF" ]; then \
 				echo "  📄 redis.conf: $$REDIS_CONF"; \
-				sudo sed -i "s/^bind 127.0.0.1.*/bind 0.0.0.0/" "$$REDIS_CONF"; \
-				sudo sed -i "s/^protected-mode yes/protected-mode no/" "$$REDIS_CONF"; \
+				sudo sed -i 's/^bind .*/bind 0.0.0.0/' "$$REDIS_CONF"; \
+				sudo sed -i 's/^# *bind .*/bind 0.0.0.0/' "$$REDIS_CONF"; \
+				sudo sed -i 's/^protected-mode yes/protected-mode no/' "$$REDIS_CONF"; \
+				sudo sed -i 's/^# *protected-mode yes/protected-mode no/' "$$REDIS_CONF"; \
+				if ! grep -q "^bind 0.0.0.0" "$$REDIS_CONF"; then \
+					echo "bind 0.0.0.0" | sudo tee -a "$$REDIS_CONF" > /dev/null; \
+				fi; \
+				if ! grep -q "^protected-mode no" "$$REDIS_CONF"; then \
+					echo "protected-mode no" | sudo tee -a "$$REDIS_CONF" > /dev/null; \
+				fi; \
 				echo "  ✅ bind 0.0.0.0, protected-mode no 설정 완료"; \
 			else \
 				echo "  ❌ redis.conf를 찾을 수 없습니다"; \
