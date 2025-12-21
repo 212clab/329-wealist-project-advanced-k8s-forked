@@ -4,10 +4,11 @@
 # =============================================================================
 # dev 환경:
 # - PostgreSQL/Redis: 호스트 PC 외부 DB 사용 (이미지 불필요)
-# - MinIO: 클러스터 내 Pod로 실행 (이미지 필요)
+# - MinIO, LiveKit: 클러스터 내 Pod로 실행
+# - 모니터링: Prometheus, Grafana, Loki, Promtail, Exporters
 # - Backend: GHCR에서 pull
 
-set -e
+# set -e 제거 - 개별 이미지 실패해도 계속 진행
 
 CLUSTER_NAME="wealist"
 GHCR_REGISTRY="ghcr.io/orangescloud"
@@ -116,7 +117,9 @@ fi
 echo "ℹ️  dev 환경 구성:"
 echo "   - PostgreSQL: 호스트 PC (외부) - 이미지 불필요"
 echo "   - Redis: 호스트 PC (외부) - 이미지 불필요"
-echo "   - MinIO: 클러스터 내 Pod - 이미지 로드 필요"
+echo "   - MinIO, LiveKit: 클러스터 내 Pod"
+echo "   - 모니터링: Prometheus, Grafana, Loki, Promtail"
+echo "   - Exporters: PostgreSQL, Redis"
 echo "   - Backend: GHCR 이미지"
 echo ""
 
