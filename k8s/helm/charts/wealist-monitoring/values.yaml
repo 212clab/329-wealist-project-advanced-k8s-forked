@@ -43,6 +43,8 @@ prometheus:
     scrapeInterval: 15s
     evaluationInterval: 15s
     retentionTime: 7d
+    # Sub-path configuration (for Gateway access via /monitoring/prometheus)
+    externalUrl: "/monitoring/prometheus"
 
   # 스크래핑 대상 서비스들
   scrapeTargets:
