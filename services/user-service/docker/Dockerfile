@@ -1,6 +1,17 @@
 # syntax=docker/dockerfile:1.4
-# Builder stage - 공개 이미지 사용 (localhost 빌드 지원)
-FROM golang:1.23-bookworm AS builder
+# =============================================================================
+# Base Image 설정 (환경별 선택 가능)
+# =============================================================================
+# localhost: 기본값 (공개 이미지)
+# dev/prod:  --build-arg로 ECR 이미지 지정
+#   docker build --build-arg GO_IMAGE=<ecr>/golang:1.23-bookworm \
+#                --build-arg RUNTIME_IMAGE=<ecr>/alpine:latest ...
+# =============================================================================
+ARG GO_IMAGE=golang:1.23-bookworm
+ARG RUNTIME_IMAGE=alpine:latest
+
+# Builder stage
+FROM ${GO_IMAGE} AS builder
 
 # Install build dependencies (cached layer)
 RUN apt-get update && apt-get install -y --no-install-recommends git ca-certificates tzdata && rm -rf /var/lib/apt/lists/*
@@ -36,8 +47,8 @@ RUN --mount=type=cache,target=/go/pkg/mod \
     GOWORK=off go mod tidy && \
     CGO_ENABLED=0 GOOS=linux GOARCH=amd64 GOWORK=off go build -ldflags="-w -s" -o user-api ./cmd/api
 
-# Runtime stage - 공개 이미지 사용
-FROM alpine:latest
+# Runtime stage
+FROM ${RUNTIME_IMAGE}
 
 # Install runtime dependencies
 RUN apk --no-cache add ca-certificates tzdata wget
