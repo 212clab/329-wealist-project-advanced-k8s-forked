@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1.4
-# Builder stage - optimized layer caching (2025-12-18)
-FROM ghcr.io/orangescloud/base/golang-1.24-bookworm AS builder
+# Builder stage - 공개 이미지 사용 (localhost 빌드 지원)
+FROM golang:1.23-bookworm AS builder
 
 # Install build dependencies (cached layer)
 RUN apt-get update && apt-get install -y --no-install-recommends git ca-certificates tzdata && rm -rf /var/lib/apt/lists/*
@@ -36,8 +36,8 @@ RUN --mount=type=cache,target=/go/pkg/mod \
     GOWORK=off go mod tidy && \
     CGO_ENABLED=0 GOOS=linux GOARCH=amd64 GOWORK=off go build -ldflags="-w -s" -o video-api ./cmd/api
 
-# Runtime stage
-FROM ghcr.io/orangescloud/base/alpine-latest
+# Runtime stage - 공개 이미지 사용
+FROM alpine:latest
 
 # Install runtime dependencies
 RUN apk --no-cache add ca-certificates tzdata wget

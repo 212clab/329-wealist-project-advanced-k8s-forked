@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1.4
-# Build stage
-FROM ghcr.io/orangescloud/base/gradle-8-jdk21 AS builder
+# Build stage - 공개 이미지 사용 (localhost 빌드 지원)
+FROM gradle:8-jdk21 AS builder
 WORKDIR /home/gradle/src
 
 # Use Gradle Wrapper for consistent builds
@@ -17,8 +17,8 @@ COPY --chown=gradle:gradle src ./src
 RUN --mount=type=cache,target=/home/gradle/.gradle \
     ./gradlew bootJar --no-daemon
 
-# Runtime stage
-FROM ghcr.io/orangescloud/base/eclipse-temurin-21-jre-jammy as final
+# Runtime stage - 공개 이미지 사용
+FROM eclipse-temurin:21-jre-jammy as final
 ENV TZ=Asia/Seoul
 
 # Create a non-root user

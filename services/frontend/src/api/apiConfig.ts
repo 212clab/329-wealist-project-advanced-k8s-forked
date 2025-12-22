@@ -33,15 +33,15 @@ const getInjectedApiBaseUrl = (): string | undefined => {
 // ingress가 /svc/{service}/* 로 라우팅하고, rewrite로 prefix 제거
 // ⚠️ 프론트엔드 호출이 이미 /api를 포함하면 baseURL에서 제외
 const getIngressServicePrefix = (path: string): string => {
-  if (path?.includes('/api/auth')) return '/svc/auth'; // auth: 프론트가 /api/auth 포함
-  if (path?.includes('/api/users')) return '/svc/user'; // user: 프론트가 /api/users 포함
-  if (path?.includes('/api/workspaces')) return '/svc/user'; // user: 프론트가 /api/workspaces 포함
-  if (path?.includes('/api/profiles')) return '/svc/user'; // user: 프론트가 /api/profiles 포함
-  if (path?.includes('/api/boards')) return '/svc/board/api'; // board: 프론트가 /projects 호출
+  if (path?.includes('/api/auth')) return '/svc/auth';            // auth: 프론트가 /api/auth 포함
+  if (path?.includes('/api/users')) return '/svc/user';           // user: 프론트가 /api/users 포함
+  if (path?.includes('/api/workspaces')) return '/svc/user';      // user: 프론트가 /api/workspaces 포함
+  if (path?.includes('/api/profiles')) return '/svc/user';        // user: 프론트가 /api/profiles 포함
+  if (path?.includes('/api/boards')) return '/svc/board/api';      // board: 프론트가 /projects 호출
   if (path?.includes('/api/chats')) return '/svc/chat/api/chats'; // chat: 프론트가 /my만 호출 (basePath 필요)
-  if (path?.includes('/api/notifications')) return '/svc/noti'; // noti: 프론트가 /api/notifications 포함
-  if (path?.includes('/api/storage')) return '/svc/storage'; // storage: 프론트가 /api/storage 포함
-  if (path?.includes('/api/video')) return '/svc/video'; // video: 프론트가 /api/video 포함
+  if (path?.includes('/api/notifications')) return '/svc/noti';   // noti: 프론트가 /api/notifications 포함
+  if (path?.includes('/api/storage')) return '/svc/storage';      // storage: 프론트가 /api/storage 포함
+  if (path?.includes('/api/video')) return '/svc/video';          // video: 프론트가 /api/video 포함
   return ''; // 매칭 안 되면 prefix 없이
 };
 
@@ -63,15 +63,15 @@ const getApiBaseUrl = (path: string): string => {
       // HTTPRoute가 /svc/{service}/ → / 로 리라이트하므로,
       // 백엔드 basePath를 포함해야 올바른 경로로 도달
       // ⚠️ 단, 프론트엔드 호출이 이미 /api를 포함하면 baseURL에서 제외
-      if (path?.includes('/api/auth')) return `${localBaseUrl}/svc/auth`; // auth: Java, 프론트가 /api/auth 포함
-      if (path?.includes('/api/users')) return `${localBaseUrl}/svc/user`; // user: 프론트가 /api/users 포함
-      if (path?.includes('/api/workspaces')) return `${localBaseUrl}/svc/user`; // user: 프론트가 /api/workspaces 포함
-      if (path?.includes('/api/profiles')) return `${localBaseUrl}/svc/user`; // user: 프론트가 /api/profiles 포함
-      if (path?.includes('/api/boards')) return `${localBaseUrl}/svc/board/api`; // board: 프론트가 /projects 호출, 백엔드는 /api/projects
+      if (path?.includes('/api/auth')) return `${localBaseUrl}/svc/auth`;           // auth: Java, 프론트가 /api/auth 포함
+      if (path?.includes('/api/users')) return `${localBaseUrl}/svc/user`;          // user: 프론트가 /api/users 포함
+      if (path?.includes('/api/workspaces')) return `${localBaseUrl}/svc/user`;     // user: 프론트가 /api/workspaces 포함
+      if (path?.includes('/api/profiles')) return `${localBaseUrl}/svc/user`;       // user: 프론트가 /api/profiles 포함
+      if (path?.includes('/api/boards')) return `${localBaseUrl}/svc/board/api`;  // board: 프론트가 /projects 호출, 백엔드는 /api/projects
       if (path?.includes('/api/chats')) return `${localBaseUrl}/svc/chat/api/chats`; // chat: 프론트가 /my만 호출 (basePath 필요)
-      if (path?.includes('/api/notifications')) return `${localBaseUrl}/svc/noti`; // noti: 프론트가 /api/notifications 포함
-      if (path?.includes('/api/storage')) return `${localBaseUrl}/svc/storage`; // storage: 프론트가 /api/storage 포함
-      if (path?.includes('/api/video')) return `${localBaseUrl}/svc/video`; // video: 프론트가 /api/video 포함
+      if (path?.includes('/api/notifications')) return `${localBaseUrl}/svc/noti`;  // noti: 프론트가 /api/notifications 포함
+      if (path?.includes('/api/storage')) return `${localBaseUrl}/svc/storage`;     // storage: 프론트가 /api/storage 포함
+      if (path?.includes('/api/video')) return `${localBaseUrl}/svc/video`;         // video: 프론트가 /api/video 포함
       return localBaseUrl;
     }
     return getIngressServicePrefix(path);
@@ -543,7 +543,7 @@ export const getOAuthBaseUrl = (): string => {
   // Docker-compose (로컬 개발): nginx 게이트웨이 사용 (포트 80)
   // nginx가 /oauth2/* 경로를 auth-service:8080으로 프록시함
   if (injectedApiBaseUrl?.includes('localhost')) {
-    return injectedApiBaseUrl; // http://localhost (nginx gateway)
+    return injectedApiBaseUrl;  // http://localhost (nginx gateway)
   }
 
   // 운영 환경
