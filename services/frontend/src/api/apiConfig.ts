@@ -515,21 +515,22 @@ export const getNotificationSSEUrl = (token?: string): string => {
 
 /**
  * OAuth2 Base URL 생성 (Google 로그인 등)
- * OAuth2는 세션 쿠키 도메인 일치를 위해 같은 origin 사용
+ * CloudFront Behaviors를 통해 /oauth2/* 경로가 api.dev.wealist.co.kr로 라우팅됨
  */
 export const getOAuthBaseUrl = (): string => {
   const isIngressMode = getIsIngressModeInternal();
   const injectedApiBaseUrl = getInjectedApiBaseUrl();
 
-  // K8s ingress 모드: 같은 origin의 /svc/auth 경로 사용
+  // K8s ingress 모드
   if (isIngressMode) {
     const hostname = window.location.hostname;
-    // dev/prod 환경 (Kind 미니PC 또는 EKS): 같은 origin 사용
+    // dev 환경: CloudFront가 /oauth2/* 경로를 api.dev.wealist.co.kr 오리진으로 라우팅
     if (hostname === 'dev.wealist.co.kr') {
-      return `${window.location.origin}/svc/auth`;
+      return 'https://api.dev.wealist.co.kr';
     }
+    // prod 환경: CloudFront가 /oauth2/* 경로를 api.wealist.co.kr 오리진으로 라우팅
     if (hostname === 'wealist.co.kr' || hostname === 'www.wealist.co.kr') {
-      return `${window.location.origin}/svc/auth`;
+      return 'https://api.wealist.co.kr';
     }
     // Kind 개발 환경 (localhost): Istio Gateway 사용
     if (hostname === 'localhost' || hostname === '127.0.0.1') {
