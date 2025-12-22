@@ -1,0 +1,298 @@
+# .github/workflows/ci-build-images.yml
+name: Build and Push Images to GHCR
+
+on:
+  push:
+    branches:
+      - service-deploy-dev
+    paths:
+      - 'services/**'
+  workflow_dispatch:
+    inputs:
+      services:
+        description: 'Services to build (comma-separated, e.g., user-service,board-service). Leave empty for all services.'
+        required: false
+        type: string
+      skip_gitops:
+        description: 'Skip GitOps update trigger'
+        required: false
+        type: boolean
+        default: false
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_PREFIX: ${{ github.repository_owner }}
+
+jobs:
+  detect-changes:
+    runs-on: ubuntu-latest
+    outputs:
+      services: ${{ steps.set-services.outputs.services }}
+      branch: ${{ steps.branch.outputs.name }}
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Get branch name
+        id: branch
+        run: echo "name=${GITHUB_REF#refs/heads/}" >> $GITHUB_OUTPUT
+      
+      # Push 이벤트: 자동 감지
+      - uses: dorny/paths-filter@v2
+        if: github.event_name == 'push'
+        id: filter
+        with:
+          filters: |
+            auth-service:
+              - 'services/auth-service/**'
+            board-service:
+              - 'services/board-service/**'
+            chat-service:
+              - 'services/chat-service/**'
+            noti-service:
+              - 'services/noti-service/**'
+            storage-service:
+              - 'services/storage-service/**'
+            user-service:
+              - 'services/user-service/**'
+            video-service:
+              - 'services/video-service/**'
+      
+      # 수동 실행 또는 자동 감지 결과 설정
+      - name: Set services to build
+        id: set-services
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            if [ -n "${{ github.event.inputs.services }}" ]; then
+              SERVICES=$(echo '${{ github.event.inputs.services }}' | jq -R 'split(",") | map(gsub("^\\s+|\\s+$";""))')
+              echo "Manual trigger with services: ${SERVICES}"
+            else
+              SERVICES='["auth-service","board-service","chat-service","noti-service","storage-service","user-service","video-service"]'
+              echo "Manual trigger: building all services"
+            fi
+          else
+            SERVICES='${{ steps.filter.outputs.changes }}'
+            echo "Auto-detected services: ${SERVICES}"
+          fi
+          
+          echo "services=${SERVICES}" >> $GITHUB_OUTPUT
+
+  build-and-push:
+    needs: detect-changes
+    if: ${{ needs.detect-changes.outputs.services != '[]' && needs.detect-changes.outputs.services != '' }}
+    runs-on: ubuntu-latest
+    environment: service-deploy-dev
+    
+    strategy:
+      matrix:
+        service: ${{ fromJSON(needs.detect-changes.outputs.services) }}
+      fail-fast: false
+    
+    permissions:
+      packages: write
+      contents: read
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      
+      # 서비스별 Dockerfile 경로 및 빌드 컨텍스트 설정
+      - name: Set build configuration
+        id: build-config
+        run: |
+          SERVICE="${{ matrix.service }}"
+          
+          case "${SERVICE}" in
+            "auth-service")
+              # Java/Gradle 서비스
+              DOCKERFILE="services/${SERVICE}/Dockerfile"
+              CONTEXT="services/${SERVICE}"
+              ;;
+            "board-service"|"chat-service"|"noti-service"|"storage-service"|"user-service"|"video-service")
+              # Go 서비스들
+              DOCKERFILE="services/${SERVICE}/docker/Dockerfile"
+              CONTEXT="."
+              ;;
+            *)
+              echo "Error: Unknown service ${SERVICE}"
+              exit 1
+              ;;
+          esac
+          
+          echo "dockerfile=${DOCKERFILE}" >> $GITHUB_OUTPUT
+          echo "context=${CONTEXT}" >> $GITHUB_OUTPUT
+          echo "Service: ${SERVICE}"
+          echo "Dockerfile: ${DOCKERFILE}"
+          echo "Context: ${CONTEXT}"
+      
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}/${{ matrix.service }}
+          tags: |
+            type=sha,format=short,prefix=${{ needs.detect-changes.outputs.branch }}-
+            type=raw,value=${{ needs.detect-changes.outputs.branch }}-latest
+            type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}
+          labels: |
+            org.opencontainers.image.title=${{ matrix.service }}
+            org.opencontainers.image.description=Wealist ${{ matrix.service }} service
+            org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
+            org.opencontainers.image.revision=${{ github.sha }}
+      
+      - name: Build and push ${{ matrix.service }}
+        uses: docker/build-push-action@v5
+        with:
+          context: ${{ steps.build-config.outputs.context }}
+          file: ${{ steps.build-config.outputs.dockerfile }}
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha,scope=${{ matrix.service }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.service }}
+      
+      - name: Output image info
+        run: |
+          echo "### 🚀 Image Published" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Service:** ${{ matrix.service }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Branch:** ${{ needs.detect-changes.outputs.branch }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Trigger:** ${{ github.event_name }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Dockerfile:** ${{ steps.build-config.outputs.dockerfile }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Context:** ${{ steps.build-config.outputs.context }}" >> $GITHUB_STEP_SUMMARY
+          echo "**SHA:** ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Platforms:** linux/amd64,linux/arm64" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Published Tags:**" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          echo "$${{ steps.meta.outputs.tags }}" >> $$GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+
+  update-gitops-manifests:
+    needs: [detect-changes, build-and-push]
+    if: |
+      needs.detect-changes.outputs.services != '[]' && 
+      needs.detect-changes.outputs.services != '' &&
+      success() &&
+      github.event.inputs.skip_gitops != 'true'
+    runs-on: ubuntu-latest
+    environment: service-deploy-dev
+    
+    permissions:
+      contents: write
+    
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITOPS_PAT }}
+          fetch-depth: 0
+      
+      - name: Set environment variables
+        run: |
+          SHORT_SHA="${{ github.sha }}"
+          SHORT_SHA=${SHORT_SHA:0:7}
+          NEW_TAG="${{ needs.detect-changes.outputs.branch }}-${SHORT_SHA}"
+          
+          echo "SHORT_SHA=${SHORT_SHA}" >> $GITHUB_ENV
+          echo "NEW_TAG=${NEW_TAG}" >> $GITHUB_ENV
+      
+      - name: Configure Git
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action Bot"
+      
+      - name: Check if k8s-deploy-dev branch exists
+        run: |
+          if git ls-remote --heads origin k8s-deploy-dev | grep -q k8s-deploy-dev; then
+            echo "Branch k8s-deploy-dev exists"
+            git fetch origin k8s-deploy-dev
+            git checkout k8s-deploy-dev
+          else
+            echo "Branch k8s-deploy-dev does not exist. Creating it..."
+            git checkout -b k8s-deploy-dev
+            git push origin k8s-deploy-dev
+          fi
+      
+      - name: Update manifest files
+        run: |
+          # 서비스별로 매니페스트 업데이트
+          SERVICES='${{ needs.detect-changes.outputs.services }}'
+          
+          echo "Updating image tags to: ${NEW_TAG}"
+          echo "Services to update: ${SERVICES}"
+          
+          # 각 서비스의 Application 매니페스트 업데이트
+          for service in $(echo $SERVICES | jq -r '.[]'); do
+            MANIFEST_FILE="k8s/argocd/apps/${service}.yaml"
+            
+            if [ -f "$MANIFEST_FILE" ]; then
+              echo "Updating ${MANIFEST_FILE}"
+              
+              # 더 안전한 sed 명령어 사용
+              sed -i.bak '/- name: image\.tag/{
+                n
+                s|value: ".*"|value: "'"${NEW_TAG}"'"|
+              }' "$MANIFEST_FILE"
+              
+              # 백업 파일 삭제
+              rm -f "${MANIFEST_FILE}.bak"
+              
+              echo "Updated ${service} to tag: ${NEW_TAG}"
+              
+              # 변경사항 확인
+              echo "=== Changes in ${MANIFEST_FILE} ==="
+              git diff "$MANIFEST_FILE" || true
+              echo "=================================="
+            else
+              echo "Warning: Manifest file not found: ${MANIFEST_FILE}"
+              echo "Available files:"
+              find k8s -name "*.yaml" -type f | head -10
+            fi
+          done
+      
+      - name: Commit and push changes
+        run: |
+          # 변경사항이 있는지 확인
+          if git diff --quiet; then
+            echo "No changes to commit"
+            exit 0
+          fi
+          
+          # 변경된 파일들 보기
+          echo "Changed files:"
+          git diff --name-only
+          
+          # 변경사항 커밋 및 푸시
+          git add .
+          git commit -m "🚀 Update image tags for services: ${{ needs.detect-changes.outputs.services }}
+
+          - Branch: ${{ needs.detect-changes.outputs.branch }}
+          - SHA: ${{ github.sha }}
+          - New tag: ${NEW_TAG}
+          
+          Updated by: ${{ github.actor }}
+          Triggered by: ${{ github.event_name }}"
+          
+          git push origin k8s-deploy-dev
+          
+          echo "✅ Successfully updated manifests in k8s-deploy-dev branch"
+
+      - name: Create deployment summary
+        run: |
+          echo "## 🚀 GitOps Manifest Update" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Updated Services:** ${{ needs.detect-changes.outputs.services }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Target Branch:** k8s-deploy-dev" >> $GITHUB_STEP_SUMMARY
+          echo "**New Image Tag:** ${NEW_TAG}" >> $GITHUB_STEP_SUMMARY
+          echo "**Commit:** ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**ArgoCD will automatically sync these changes.**" >> $GITHUB_STEP_SUMMARY
