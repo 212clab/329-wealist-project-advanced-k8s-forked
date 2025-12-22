@@ -17,7 +17,7 @@ GATEWAY_API_VERSION="v1.2.0"
 # 스크립트 디렉토리 및 kind-config.yaml 경로
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 HELM_DIR="$(cd "${SCRIPT_DIR}/../.." && pwd)"
-KIND_CONFIG="${HELM_DIR}/kind-config.yaml"
+KIND_CONFIG="${SCRIPT_DIR}/kind-config.yaml"  # 환경별 분리된 설정 사용
 
 echo "🚀 Kind 클러스터 + Istio Ambient 설정 (localhost)"
 echo "   - Istio: ${ISTIO_VERSION}"

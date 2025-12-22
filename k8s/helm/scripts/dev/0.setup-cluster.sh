@@ -16,7 +16,7 @@ GATEWAY_API_VERSION="v1.2.0"
 # 스크립트 디렉토리 및 kind-config.yaml 경로
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 HELM_DIR="$(cd "${SCRIPT_DIR}/../.." && pwd)"
-KIND_CONFIG="${HELM_DIR}/kind-config.yaml"
+KIND_CONFIG="${SCRIPT_DIR}/kind-config.yaml"  # 환경별 분리된 설정 사용
 
 echo "🚀 Kind 클러스터 + Istio Ambient 설정 (dev - GHCR)"
 echo "   - Istio: ${ISTIO_VERSION}"
@@ -117,8 +117,10 @@ kubectl wait --namespace istio-system \
   --selector=gateway.networking.k8s.io/gateway-name=istio-ingressgateway \
   --timeout=120s || echo "WARNING: Istio gateway not ready yet"
 
-# 6. Istio Gateway Service를 NodePort로 노출 (Kind hostPort 8080 사용)
+# 6. Istio Gateway Service를 NodePort로 노출 (Kind hostPort 80/443 사용)
 echo "⚙️ Istio Gateway NodePort 설정 중..."
+# HTTP (port 80) → NodePort 30080 → hostPort 80
+# HTTPS (port 443) → NodePort 30443 → hostPort 443
 kubectl patch service istio-ingressgateway-istio -n istio-system --type='json' -p='[
   {
     "op": "replace",
@@ -131,6 +133,10 @@ kubectl patch service istio-ingressgateway-istio -n istio-system --type='json' -
     "value": 30080
   }
 ]' || echo "INFO: Service 이미 NodePort로 설정됨"
+
+echo "✅ Istio Gateway 설정 완료"
+echo "   - HTTP:  localhost:80 (또는 :8080)"
+echo "   - HTTPS: localhost:443"
 
 # 7. 애플리케이션 네임스페이스 생성 (Ambient 모드 라벨 포함)
 echo "📦 wealist-dev 네임스페이스 생성 (Ambient 모드)..."
