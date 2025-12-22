@@ -4,9 +4,19 @@
 # GitHub Actions에서 AWS에 OIDC로 인증하기 위한 설정
 
 # -----------------------------------------------------------------------------
-# OIDC Provider
+# OIDC Provider - 기존 것 사용 또는 새로 생성
 # -----------------------------------------------------------------------------
+
+# 기존 OIDC Provider 조회 (이미 존재하는 경우)
+data "aws_iam_openid_connect_provider" "github" {
+  count = var.create_oidc_provider ? 0 : 1
+  url   = "https://token.actions.githubusercontent.com"
+}
+
+# 새 OIDC Provider 생성 (존재하지 않는 경우)
 resource "aws_iam_openid_connect_provider" "github" {
+  count = var.create_oidc_provider ? 1 : 0
+
   url = "https://token.actions.githubusercontent.com"
 
   client_id_list = ["sts.amazonaws.com"]
@@ -18,6 +28,10 @@ resource "aws_iam_openid_connect_provider" "github" {
   ]
 
   tags = var.tags
+}
+
+locals {
+  oidc_provider_arn = var.create_oidc_provider ? aws_iam_openid_connect_provider.github[0].arn : data.aws_iam_openid_connect_provider.github[0].arn
 }
 
 # -----------------------------------------------------------------------------
@@ -33,7 +47,7 @@ resource "aws_iam_role" "github_actions" {
       {
         Effect = "Allow"
         Principal = {
-          Federated = aws_iam_openid_connect_provider.github.arn
+          Federated = local.oidc_provider_arn
         }
         Action = "sts:AssumeRoleWithWebIdentity"
         Condition = {
@@ -58,6 +72,8 @@ resource "aws_iam_role" "github_actions" {
 # IAM Policy - ECR Access
 # -----------------------------------------------------------------------------
 resource "aws_iam_role_policy" "ecr_access" {
+  count = var.enable_ecr_access ? 1 : 0
+
   name = "ecr-access"
   role = aws_iam_role.github_actions.id
 

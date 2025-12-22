@@ -16,27 +16,32 @@ github_org = "OrangesCloud"
 # GitHub Repository
 github_repo = "wealist-project-advanced-k8s"
 
-# 허용할 브랜치 목록
-allowed_branches = [
-  "service-deploy-dev",
-  "service-deploy-prod",
-  "k8s-deploy-dev",
-  "k8s-deploy-prod",
-  "dev",
-  "main"
+# IAM Role 이름 prefix
+# 생성되는 Role: {prefix}-frontend, {prefix}-backend
+role_name_prefix = "wealist-github-actions"
+
+# -----------------------------------------------------------------------------
+# Frontend 설정
+# -----------------------------------------------------------------------------
+# Frontend 배포 허용 브랜치
+frontend_branches = [
+  "dev-frontend",
+  "prod-frontend"
 ]
 
-# IAM Role 이름
-role_name = "wealist-github-actions-role"
-
-# S3 접근 활성화 (Frontend 배포용)
-enable_s3_access = true
-
-# S3 버킷 이름 목록 (S3 접근 활성화 시 필요)
+# S3 버킷 이름 목록 (Frontend 배포용)
 s3_bucket_names = [
   "wealist-dev-frontend",
   "wealist-prod-frontend"
 ]
 
-# CloudFront 접근 활성화 (캐시 무효화용)
-enable_cloudfront_access = true
+# -----------------------------------------------------------------------------
+# Backend 설정
+# -----------------------------------------------------------------------------
+# Backend 배포 허용 브랜치
+backend_branches = [
+  "service-deploy-dev",
+  "service-deploy-prod",
+  "k8s-deploy-dev",
+  "k8s-deploy-prod"
+]
