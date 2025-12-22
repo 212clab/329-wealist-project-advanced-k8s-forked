@@ -37,7 +37,7 @@ RUN --mount=type=cache,target=/go/pkg/mod \
     CGO_ENABLED=0 GOOS=linux GOARCH=amd64 GOWORK=off go build -ldflags="-w -s" -o user-api ./cmd/api
 
 # Runtime stage
-FROM ghcr.io/orangescloud/base/alpine-latest
+FROM alpine:latest
 
 # Install runtime dependencies
 RUN apk --no-cache add ca-certificates tzdata wget

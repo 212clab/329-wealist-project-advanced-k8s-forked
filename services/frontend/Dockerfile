@@ -44,7 +44,7 @@ RUN pnpm run build || (echo "Build failed. Check Vite config or env vars." && ex
 
 # === Production Stage ===
 # Serves static files with nginx
-FROM ghcr.io/orangescloud/base/nginx-stable-alpine AS production
+FROM nginx:stable-alpine AS production
 
 # Copy built assets
 COPY --from=builder /app/dist /usr/share/nginx/html

@@ -18,7 +18,7 @@ RUN --mount=type=cache,target=/home/gradle/.gradle \
     ./gradlew bootJar --no-daemon
 
 # Runtime stage
-FROM ghcr.io/orangescloud/base/eclipse-temurin-21-jre-jammy as final
+FROM eclipse-temurin:21-jre-jammy as final
 ENV TZ=Asia/Seoul
 
 # Create a non-root user
