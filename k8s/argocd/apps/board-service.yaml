@@ -17,10 +17,12 @@ spec:
         - ../../environments/base.yaml
         - ../../environments/dev.yaml
       parameters:
-        - name: image.tag
-          value: "dev-fcf0ba0"  # ← CI가 여기 업데이트
+        - name: global.imageRegistry
+          value: ""  # ← CI가 ECR URL로 업데이트
         - name: image.repository
-          value: "ghcr.io/orangescloud/board-service"
+          value: "board-service"
+        - name: image.tag
+          value: "dev-latest"  # ← CI가 여기 업데이트
   destination:
     server: https://kubernetes.default.svc
     namespace: wealist-dev 
