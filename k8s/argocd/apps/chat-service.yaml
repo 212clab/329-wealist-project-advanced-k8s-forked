@@ -22,7 +22,7 @@ spec:
         - name: image.repository
           value: "chat-service"
         - name: image.tag
-          value: "dev-d67b51a"  # ← CI가 여기 업데이트
+          value: "dev-b0cebee"  # ← CI가 여기 업데이트
   destination:
     server: https://kubernetes.default.svc
     namespace: wealist-dev 
