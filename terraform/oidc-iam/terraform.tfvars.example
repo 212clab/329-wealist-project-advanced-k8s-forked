@@ -1,0 +1,42 @@
+# =============================================================================
+# OIDC/IAM Configuration - Example Variables
+# =============================================================================
+# 이 파일을 terraform.tfvars로 복사하고 값을 설정하세요.
+# cp terraform.tfvars.example terraform.tfvars
+
+# AWS Account ID (필수)
+aws_account_id = "123456789012"
+
+# AWS Region
+aws_region = "ap-northeast-2"
+
+# GitHub Organization
+github_org = "OrangesCloud"
+
+# GitHub Repository
+github_repo = "wealist-project-advanced-k8s"
+
+# 허용할 브랜치 목록
+allowed_branches = [
+  "service-deploy-dev",
+  "service-deploy-prod",
+  "k8s-deploy-dev",
+  "k8s-deploy-prod",
+  "dev",
+  "main"
+]
+
+# IAM Role 이름
+role_name = "wealist-github-actions-role"
+
+# S3 접근 활성화 (Frontend 배포용)
+enable_s3_access = true
+
+# S3 버킷 이름 목록 (S3 접근 활성화 시 필요)
+s3_bucket_names = [
+  "wealist-dev-frontend",
+  "wealist-prod-frontend"
+]
+
+# CloudFront 접근 활성화 (캐시 무효화용)
+enable_cloudfront_access = true
