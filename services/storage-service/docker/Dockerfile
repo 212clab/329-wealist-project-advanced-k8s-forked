@@ -1,4 +1,5 @@
 # syntax=docker/dockerfile:1.4
+<<<<<<< Updated upstream
 # =============================================================================
 # Base Image 설정 (환경별 선택 가능)
 # =============================================================================
@@ -12,6 +13,10 @@ ARG RUNTIME_IMAGE=alpine:latest
 
 # Builder stage
 FROM ${GO_IMAGE} AS builder
+=======
+# Builder stage - optimized layer caching (2025-12-18)
+FROM public.ecr.aws/docker/library/golang:1.24-bookworm AS builder
+>>>>>>> Stashed changes
 
 # Install build dependencies (cached layer)
 RUN apt-get update && apt-get install -y --no-install-recommends git ca-certificates tzdata && rm -rf /var/lib/apt/lists/*
@@ -48,7 +53,11 @@ RUN --mount=type=cache,target=/go/pkg/mod \
     CGO_ENABLED=0 GOOS=linux GOARCH=amd64 GOWORK=off go build -ldflags="-w -s" -o storage-api ./cmd/api
 
 # Runtime stage
+<<<<<<< Updated upstream
 FROM ${RUNTIME_IMAGE}
+=======
+FROM public.ecr.aws/docker/library/alpine:latest
+>>>>>>> Stashed changes
 
 # Install runtime dependencies
 RUN apk --no-cache add ca-certificates tzdata wget

@@ -30,6 +30,7 @@ echo "   Root:    $PROJECT_ROOT"
 echo ""
 
 # ============================================
+<<<<<<< Updated upstream
 # 0. GHCR 설정 확인
 # ============================================
 echo -e "${YELLOW}🔍 Step 0: Checking GHCR configuration...${NC}"
@@ -48,6 +49,13 @@ if kubectl get secret ghcr-secret -n wealist-dev &>/dev/null; then
 else
     echo -e "${YELLOW}⚠️  GHCR secret not found${NC}"
 fi
+=======
+# 0. ECR 설정 확인 (AWS EKS)
+# ============================================
+echo -e "${YELLOW}🔍 Step 0: Checking ECR configuration...${NC}"
+echo -e "${GREEN}   ECR uses IAM authentication (IRSA or Node IAM Role)${NC}"
+echo -e "${GREEN}   No imagePullSecrets required for EKS nodes${NC}"
+>>>>>>> Stashed changes
 echo ""
 
 # ============================================
@@ -168,6 +176,7 @@ fi
 echo ""
 
 # ============================================
+<<<<<<< Updated upstream
 # 9. GHCR 설정 (필요한 경우에만)
 # ============================================
 if [ "$GHCR_CONFIGURED" = false ]; then
@@ -249,6 +258,30 @@ if kubectl get pod ghcr-test -n wealist-dev &>/dev/null; then
 else
     echo -e "${YELLOW}⚠️  GHCR test pod not found${NC}"
 fi
+=======
+# 9. GitHub 저장소 인증 정보 수집
+# ============================================
+echo -e "${YELLOW}🔗 Step 9: Collecting GitHub repository credentials...${NC}"
+echo ""
+read -p "Enter your GitHub username: " GITHUB_USERNAME
+echo -n "Enter your GitHub Personal Access Token (with repo permissions): "
+read -s GITHUB_TOKEN
+echo ""
+echo ""
+
+# 입력값 검증
+if [ -z "$GITHUB_USERNAME" ] || [ -z "$GITHUB_TOKEN" ]; then
+    echo -e "${RED}❌ GitHub credentials are required for ArgoCD repository access${NC}"
+    exit 1
+fi
+echo -e "${GREEN}✅ Credentials collected${NC}"
+echo ""
+
+# ECR 참고 정보 출력
+echo -e "${YELLOW}📝 ECR Information:${NC}"
+echo "   ECR images will be pulled using AWS IAM authentication"
+echo "   Ensure EKS nodes have proper IAM permissions or IRSA is configured"
+>>>>>>> Stashed changes
 echo ""
 
 # ============================================
@@ -437,21 +470,34 @@ else
 fi
 echo ""
 echo "🐳 Container Registry:"
+<<<<<<< Updated upstream
 echo "   Registry:   ghcr.io (GitHub Container Registry)"
 if [ -n "$GITHUB_USERNAME" ]; then
     echo "   Username:   $GITHUB_USERNAME"
 fi
 echo "   Secret:     ghcr-secret (wealist-dev)"
 echo "   Status:     ✅ Configured"
+=======
+echo "   Registry:   Amazon ECR (ap-northeast-2)"
+echo "   Auth:       AWS IAM (IRSA or Node Instance Profile)"
+echo "   Note:       Ensure EKS nodes have AmazonEC2ContainerRegistryReadOnly policy"
+>>>>>>> Stashed changes
 echo ""
 echo "🔍 Verification Commands:"
 echo "   kubectl get applications -n argocd"
 echo "   kubectl get pods -n wealist-dev"
+<<<<<<< Updated upstream
 echo "   kubectl get secret ghcr-secret -n wealist-dev"
 echo "   kubectl describe sa default -n wealist-dev"
 echo ""
 echo "🧪 Test Container Registry:"
 echo "   kubectl run test-ghcr --image=ghcr.io/orangescloud/auth-service:latest -n wealist-dev"
+=======
+echo "   aws ecr describe-repositories"
+echo ""
+echo "🧪 Test Container Registry:"
+echo "   ECR images are pulled automatically with proper IAM permissions"
+>>>>>>> Stashed changes
 echo ""
 echo "📊 Application Status:"
 kubectl get applications -n argocd 2>/dev/null || echo "   No applications found"
