@@ -25,29 +25,25 @@ variable "github_repo" {
   default     = "wealist-project-advanced-k8s"
 }
 
-variable "allowed_branches" {
-  description = "List of branch patterns allowed to assume the role"
-  type        = list(string)
-  default = [
-    "service-deploy-dev",
-    "service-deploy-prod",
-    "k8s-deploy-dev",
-    "k8s-deploy-prod",
-    "dev",
-    "main"
-  ]
-}
-
-variable "role_name" {
-  description = "Name of the IAM role for GitHub Actions"
+variable "role_name_prefix" {
+  description = "Prefix for IAM role names"
   type        = string
-  default     = "wealist-github-actions-role"
+  default     = "wealist-github-actions"
 }
 
-variable "enable_s3_access" {
-  description = "Enable S3 access for frontend deployment"
+# -----------------------------------------------------------------------------
+# Frontend 설정
+# -----------------------------------------------------------------------------
+variable "enable_frontend_role" {
+  description = "Enable frontend IAM role creation"
   type        = bool
   default     = true
+}
+
+variable "frontend_branches" {
+  description = "List of branches allowed to assume the frontend role"
+  type        = list(string)
+  default     = ["dev-frontend"]
 }
 
 variable "s3_bucket_names" {
@@ -56,8 +52,16 @@ variable "s3_bucket_names" {
   default     = []
 }
 
-variable "enable_cloudfront_access" {
-  description = "Enable CloudFront access for cache invalidation"
-  type        = bool
-  default     = true
+# -----------------------------------------------------------------------------
+# Backend 설정
+# -----------------------------------------------------------------------------
+variable "backend_branches" {
+  description = "List of branches allowed to assume the backend role"
+  type        = list(string)
+  default = [
+    "service-deploy-dev",
+    "service-deploy-prod",
+    "k8s-deploy-dev",
+    "k8s-deploy-prod"
+  ]
 }

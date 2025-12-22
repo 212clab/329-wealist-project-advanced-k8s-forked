@@ -35,6 +35,12 @@ variable "role_name" {
   default     = "github-actions-role"
 }
 
+variable "enable_ecr_access" {
+  description = "Enable ECR access for the role"
+  type        = bool
+  default     = true
+}
+
 variable "enable_s3_access" {
   description = "Enable S3 access for the role"
   type        = bool
@@ -57,4 +63,10 @@ variable "tags" {
   description = "Tags to apply to resources"
   type        = map(string)
   default     = {}
+}
+
+variable "create_oidc_provider" {
+  description = "Whether to create OIDC provider (set to false if it already exists)"
+  type        = bool
+  default     = true
 }

@@ -149,11 +149,11 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      # AWS 자격 증명 설정
+      # AWS 자격 증명 설정 (Backend 전용 Role)
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN_BACKEND }}
           aws-region: ${{ env.AWS_REGION }}
 
       # ECR 로그인
