@@ -8,6 +8,7 @@ on:
       - service-deploy-prod  # prod 환경 배포
     paths:
       - 'services/**'
+      - 'packages/wealist-advanced-go-pkg/**'  # 공통 모듈 변경 감지
   workflow_dispatch:
     inputs:
       services:
@@ -93,6 +94,8 @@ jobs:
         id: filter
         with:
           filters: |
+            common-package:
+              - 'packages/wealist-advanced-go-pkg/**'
             auth-service:
               - 'services/auth-service/**'
             board-service:
@@ -120,8 +123,22 @@ jobs:
               SERVICES='["auth-service","board-service","chat-service","noti-service","storage-service","user-service","video-service"]'
               echo "Manual trigger: building all services"
             fi
+          # 공통 패키지 변경 시 모든 Go 서비스 빌드
+          elif [ "${{ steps.filter.outputs.common-package }}" = "true" ]; then
+            # 공통 패키지만 변경된 경우 모든 Go 서비스
+            GO_SERVICES='["board-service","chat-service","noti-service","storage-service","user-service","video-service"]'
+            # 다른 서비스도 변경되었으면 병합
+            OTHER_CHANGES='${{ steps.filter.outputs.changes }}'
+            if [ "${OTHER_CHANGES}" != "[]" ] && [ -n "${OTHER_CHANGES}" ]; then
+              # common-package 제외하고 병합
+              SERVICES=$(echo "${GO_SERVICES}" "${OTHER_CHANGES}" | jq -s 'add | unique | map(select(. != "common-package"))')
+            else
+              SERVICES="${GO_SERVICES}"
+            fi
+            echo "Common package changed - building Go services: ${SERVICES}"
           else
-            SERVICES='${{ steps.filter.outputs.changes }}'
+            # common-package 제외
+            SERVICES=$(echo '${{ steps.filter.outputs.changes }}' | jq -c 'map(select(. != "common-package"))')
             echo "Auto-detected services: ${SERVICES}"
           fi
 
