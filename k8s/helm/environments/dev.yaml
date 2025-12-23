@@ -12,15 +12,15 @@ global:
   namespace: wealist-dev
   environment: development
   domain: dev.wealist.co.kr
-  # imageRegistry는 ArgoCD Application parameters에서 ECR URL로 덮어씁니다
-  # 예: <AWS_ACCOUNT_ID>.dkr.ecr.ap-northeast-2.amazonaws.com
-  imageRegistry: ""
-  # EKS에서는 IRSA 사용
+  # AWS ECR 레지스트리 (Kind-dev, EKS 모두 사용)
+  # TODO: 290008131187를 실제 AWS 계정 ID로 교체하세요
+  imageRegistry: "290008131187.dkr.ecr.ap-northeast-2.amazonaws.com"
 
 # imagePullSecrets
-# - 로컬 빌드: 불필요 (이미지가 Kind에 직접 로드됨)
-# - ECR/ArgoCD: ArgoCD Application에서 설정
-imagePullSecrets: []
+# - Kind + ECR: ecr-secret 필요 (aws ecr get-login-password로 생성)
+# - EKS + ECR: IRSA 사용 시 불필요 (빈 배열로 변경)
+imagePullSecrets:
+  - name: ecr-secret
 
 # -----------------------------------------------------------------------------
 # cert-manager Configuration (Disabled - CloudFront handles SSL termination)
@@ -32,36 +32,15 @@ certManager:
 # -----------------------------------------------------------------------------
 # Deployment Settings
 # -----------------------------------------------------------------------------
-auth-service:
-  replicaCount: 2
-board-service:
-  replicaCount: 2
+# Note: Service-specific settings (replicaCount, resources, healthCheck)
+# are defined in each service chart's values.yaml
+# Do NOT define auth-service/board-service keys here to avoid parsing issues
+# with wealist-infrastructure chart
 
 image:
-  # 로컬 빌드: IfNotPresent (Kind에 로드된 이미지 사용)
-  # ECR/ArgoCD: Always (최신 이미지 pull)
-  pullPolicy: IfNotPresent
-  tag: "latest"
-
-# -----------------------------------------------------------------------------
-# Resources (Development)
-# -----------------------------------------------------------------------------
-resources:
-  requests:
-    memory: "128Mi"
-    cpu: "100m"
-  limits:
-    memory: "512Mi"
-    cpu: "500m"
-
-# -----------------------------------------------------------------------------
-# Health Check
-# -----------------------------------------------------------------------------
-healthCheck:
-  liveness:
-    initialDelaySeconds: 30
-  readiness:
-    initialDelaySeconds: 10
+  # ECR 이미지 사용 - 항상 최신 pull
+  pullPolicy: Always
+  tag: "dev-latest"
 
 # -----------------------------------------------------------------------------
 # Security (Standard)
@@ -172,6 +151,18 @@ istio:
     # Monitoring routes (활성화 - dev.wealist.co.kr/monitoring/*)
     monitoring:
       enabled: true
+      grafana:
+        prefix: /monitoring/grafana
+        host: grafana
+        port: 3000
+      prometheus:
+        prefix: /monitoring/prometheus
+        host: prometheus
+        port: 9090
+      loki:
+        prefix: /monitoring/loki
+        host: loki
+        port: 3100
 
   # mTLS - 서비스 간 암호화
   mtls:
@@ -252,8 +243,8 @@ istio:
 # =============================================================================
 # 모니터링 스택 설정
 # =============================================================================
-# 로컬 빌드 모드: Docker Hub 이미지 직접 사용
-# ECR 모드: ArgoCD가 ECR 이미지로 오버라이드
+# Docker Hub 공식 이미지 사용 (EKS/Kind 모두 호환)
+# ECR 사용 시: ArgoCD Application에서 오버라이드
 
 # Prometheus - 메트릭 수집
 prometheus:
@@ -261,6 +252,8 @@ prometheus:
   image:
     repository: prom/prometheus
     tag: "v2.48.0"
+  config:
+    externalUrl: "https://api.dev.wealist.co.kr/monitoring/prometheus"
 
 # Loki - 로그 수집
 loki:
@@ -282,6 +275,10 @@ grafana:
   image:
     repository: grafana/grafana
     tag: "10.2.2"
+  config:
+    allowSignUp: false
+    rootUrl: "https://api.dev.wealist.co.kr/monitoring/grafana"
+    serveFromSubPath: "true"
 
 # 모니터링 Ingress (Istio HTTPRoute로 처리)
 monitoringIngress:
@@ -293,13 +290,14 @@ monitoringIngress:
 # DB 호스트 설정:
 #   - Mac/WSL (Docker Desktop): host.docker.internal
 #   - Native Linux: 172.18.0.1 (Kind bridge gateway)
+#   - EKS: RDS/ElastiCache 엔드포인트 (secrets.yaml에서 설정)
 postgresExporter:
   enabled: true
   image:
     repository: prometheuscommunity/postgres-exporter
     tag: "v0.15.0"
   config:
-    host: "172.18.0.1"  # Native Linux (Kind bridge)
+    host: "host.docker.internal"  # Docker Desktop (Mac/WSL), Linux: 172.18.0.1
     port: 5432
 
 redisExporter:
@@ -308,5 +306,5 @@ redisExporter:
     repository: oliver006/redis_exporter
     tag: "v1.55.0"
   config:
-    host: "172.18.0.1"  # Native Linux (Kind bridge)
+    host: "host.docker.internal"  # Docker Desktop (Mac/WSL), Linux: 172.18.0.1
     port: 6379
