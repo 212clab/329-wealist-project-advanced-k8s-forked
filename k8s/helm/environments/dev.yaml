@@ -215,6 +215,7 @@ istio:
   authorizationPolicy:
     enabled: true
     denyAll: true  # dev: 기본 거부 (Zero Trust)
+    allowSameNamespace: false  # dev: 같은 네임스페이스 내 자동 허용 비활성화
 
   # 서비스별 호출 권한 (L7 정책)
   serviceAuthorization:
