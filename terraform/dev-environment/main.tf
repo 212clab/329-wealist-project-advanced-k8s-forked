@@ -22,10 +22,10 @@ terraform {
   }
 
   backend "s3" {
-    bucket         = "wealist-tfstate-bucket"
-    key            = "advanced/dev/terraform.tfstate"
+    bucket         = "wealist-tf-state-advanced-k8s"
+    key            = "dev-enviorment/terraform.tfstate" # 폴더마다 달라야합니다.
     region         = "ap-northeast-2"
-    dynamodb_table = "wealist-terraform-locks"
+    dynamodb_table = "terraform-lock"
     encrypt        = true
   }
 }
