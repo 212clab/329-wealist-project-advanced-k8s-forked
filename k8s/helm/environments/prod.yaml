@@ -28,19 +28,37 @@ externalSecrets:
 # Deployment Settings (Production)
 # -----------------------------------------------------------------------------
 auth-service:
-  replicaCount: 3
+  replicaCount: 2  # Redis only, no DB
+
 board-service:
-  replicaCount: 3
+  replicaCount: 2
+  config:
+    DB_NAME: "board_db"
+
 user-service:
-  replicaCount: 3
+  replicaCount: 2
+  config:
+    DB_NAME: "user_db"
+
 chat-service:
-  replicaCount: 3
+  replicaCount: 2
+  config:
+    DB_NAME: "chat_db"
+
 noti-service:
-  replicaCount: 2
+  replicaCount: 1
+  config:
+    DB_NAME: "noti_db"
+
 storage-service:
-  replicaCount: 2
+  replicaCount: 1
+  config:
+    DB_NAME: "storage_db"
+
 video-service:
-  replicaCount: 2
+  replicaCount: 1
+  config:
+    DB_NAME: "video_db"
 
 image:
   pullPolicy: IfNotPresent
@@ -108,13 +126,14 @@ shared:
   config:
     ENV: "production"
     LOG_LEVEL: "info"
-    # Database ports only - hosts come from ExternalSecret
+    # Database - RDS PostgreSQL (hosts from ExternalSecret)
     POSTGRES_PORT: "5432"
     DB_PORT: "5432"
+    DB_USER: "wealist_admin"
     DB_AUTO_MIGRATE: "false"  # Production: No auto migration
     DB_SSL_MODE: "require"    # RDS는 SSL 연결 필요
     DB_SSLMODE: "require"
-    # Redis port only - host comes from ExternalSecret
+    # Redis (hosts from ExternalSecret)
     REDIS_PORT: "6379"
     CORS_ORIGINS: "https://wealist.co.kr,https://api.wealist.co.kr"
     # Rate Limiting (Application Level - Redis 기반)
