@@ -33,10 +33,10 @@ variable "policy_arns" {
   default     = []
 }
 
-variable "inline_policy" {
-  description = "Inline IAM policy JSON to attach to the role"
-  type        = string
-  default     = null
+variable "inline_policies" {
+  description = "Map of inline IAM policies to attach to the role (name => policy JSON)"
+  type        = map(string)
+  default     = {}
 }
 
 variable "tags" {

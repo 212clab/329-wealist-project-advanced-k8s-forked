@@ -1,31 +1,32 @@
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
-  name: video-service
+  name: chat-service-prod
   namespace: argocd
   annotations:
-    argocd.argoproj.io/sync-wave: "1"
+    argocd.argoproj.io/sync-wave: "2"
 spec:
-  project: wealist
+  project: wealist-prod
   source:
     repoURL: https://github.com/OrangesCloud/wealist-project-advanced-k8s.git
-    targetRevision: k8s-deploy-dev
-    path: k8s/helm/charts/video-service
+    targetRevision: main
+    path: k8s/helm/charts/chat-service
     helm:
       valueFiles:
         - values.yaml
         - ../../environments/base.yaml
-        - ../../environments/dev.yaml
+        - ../../environments/prod.yaml
+        - ../../environments/prod-registry.yaml
       parameters:
-        - name: global.imageRegistry
-          value: "<AWS_ACCOUNT_ID>.dkr.ecr.ap-northeast-2.amazonaws.com"  # ← CI가 여기 업데이트
         - name: image.repository
-          value: "video-service"
+          value: "chat-service"
         - name: image.tag
-          value: "dev-latest"  # ← CI가 여기 업데이트
+          value: "prod-latest"
+        - name: externalSecrets.enabled
+          value: "true"
   destination:
     server: https://kubernetes.default.svc
-    namespace: wealist-dev 
+    namespace: wealist-prod
   syncPolicy:
     automated:
       prune: true

@@ -1,14 +1,14 @@
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
-  name: wealist-apps
+  name: wealist-apps-prod
   namespace: argocd
 spec:
-  project: wealist
+  project: wealist-prod
   source:
     repoURL: https://github.com/OrangesCloud/wealist-project-advanced-k8s.git
-    targetRevision: k8s-deploy-dev
-    path: k8s/argocd/apps
+    targetRevision: main
+    path: k8s/argocd/apps/prod
   destination:
     server: https://kubernetes.default.svc
     namespace: argocd

@@ -81,6 +81,10 @@ output "pod_identity_roles" {
     external_dns       = module.pod_identity_external_dns.role_arn
     cert_manager       = module.pod_identity_cert_manager.role_arn
     storage_service    = module.pod_identity_storage_service.role_arn
+    board_service      = module.pod_identity_board_service.role_arn
+    user_service       = module.pod_identity_user_service.role_arn
+    chat_service       = module.pod_identity_chat_service.role_arn
+    video_service      = module.pod_identity_video_service.role_arn
     cluster_autoscaler = module.pod_identity_cluster_autoscaler.role_arn
   }
 }
@@ -125,7 +129,11 @@ output "summary" {
       - External Secrets Operator (external-secrets)
       - External DNS (external-dns)
       - cert-manager (cert-manager)
-      - storage-service (wealist-prod)
+      - storage-service (wealist-prod) - S3 파일 스토리지
+      - board-service (wealist-prod) - S3 첨부파일
+      - user-service (wealist-prod) - S3 프로필 이미지
+      - chat-service (wealist-prod) - S3 채팅 첨부파일
+      - video-service (wealist-prod) - S3 녹화 파일
       - Cluster Autoscaler (kube-system)
 
     # kubectl 설정:
