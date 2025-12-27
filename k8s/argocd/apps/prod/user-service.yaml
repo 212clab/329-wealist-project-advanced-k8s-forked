@@ -16,9 +16,8 @@ spec:
         - values.yaml
         - ../../environments/base.yaml
         - ../../environments/prod.yaml
+        - ../../environments/prod-registry.yaml
       parameters:
-        - name: global.imageRegistry
-          value: "<AWS_ACCOUNT_ID>.dkr.ecr.ap-northeast-2.amazonaws.com"
         - name: image.repository
           value: "user-service"
         - name: image.tag

@@ -53,6 +53,8 @@ sealed-secrets-*.key
 # ============================================
 k8s/helm/environments/*-secrets.yaml
 k8s/helm/environments/secrets-*.yaml
+k8s/helm/environments/prod-registry.yaml
+!k8s/helm/environments/prod-registry.example.yaml
 k8s/helm/charts/**/values-prod.yaml
 k8s/helm/charts/**/values-production.yaml
 k8s/helm/charts/**/secrets.yaml

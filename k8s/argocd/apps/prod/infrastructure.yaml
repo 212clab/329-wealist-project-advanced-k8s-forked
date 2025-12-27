@@ -16,6 +16,7 @@ spec:
         - values.yaml
         - ../../environments/base.yaml
         - ../../environments/prod.yaml
+        - ../../environments/prod-registry.yaml
   destination:
     server: https://kubernetes.default.svc
     namespace: wealist-prod

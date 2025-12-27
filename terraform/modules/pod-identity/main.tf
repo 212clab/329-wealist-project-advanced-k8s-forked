@@ -56,14 +56,14 @@ resource "aws_iam_role_policy_attachment" "managed" {
 }
 
 # -----------------------------------------------------------------------------
-# Inline Policy (optional)
+# Inline Policies (optional, multiple)
 # -----------------------------------------------------------------------------
 resource "aws_iam_role_policy" "inline" {
-  count = var.inline_policy != null ? 1 : 0
+  for_each = var.inline_policies
 
-  name   = "inline-policy"
+  name   = each.key
   role   = aws_iam_role.this.id
-  policy = var.inline_policy
+  policy = each.value
 }
 
 # -----------------------------------------------------------------------------

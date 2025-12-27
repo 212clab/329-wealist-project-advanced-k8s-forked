@@ -39,16 +39,28 @@ auth-service:
   replicaCount: 3
 board-service:
   replicaCount: 3
+  config:
+    DATABASE_URL: "postgresql://board_service:postgres@postgres:5432/wealist_board_service_db?sslmode=require"
 user-service:
   replicaCount: 3
+  config:
+    DATABASE_URL: "postgresql://user_service:postgres@postgres:5432/wealist_user_service_db?sslmode=require"
 chat-service:
   replicaCount: 3
+  config:
+    DATABASE_URL: "postgresql://chat_service:postgres@postgres:5432/wealist_chat_service_db?sslmode=require"
 noti-service:
   replicaCount: 2
+  config:
+    DATABASE_URL: "postgresql://noti_service:postgres@postgres:5432/wealist_noti_service_db?sslmode=require"
 storage-service:
   replicaCount: 2
+  config:
+    DATABASE_URL: "postgresql://storage_service:postgres@postgres:5432/wealist_storage_service_db?sslmode=require"
 video-service:
   replicaCount: 2
+  config:
+    DATABASE_URL: "postgresql://video_service:postgres@postgres:5432/wealist_video_service_db?sslmode=require"
 
 image:
   pullPolicy: IfNotPresent
@@ -119,6 +131,12 @@ shared:
     DB_AUTO_MIGRATE: "false"  # Production: No auto migration
     DB_SSL_MODE: "require"    # RDS는 SSL 연결 필요
     CORS_ORIGINS: "https://wealist.co.kr,https://api.wealist.co.kr"
+    # Rate Limiting (Application Level - Redis 기반)
+    RATE_LIMIT_ENABLED: "true"
+    RATE_LIMIT_PER_MINUTE: "60"
+    RATE_LIMIT_BURST: "10"
+    # Istio JWT Mode (Istio가 JWT 검증, Go 서비스는 파싱만)
+    ISTIO_JWT_MODE: "true"
     # S3 Configuration (AWS S3 - Terraform: wealist-prod-storage)
     S3_ENDPOINT: ""  # AWS S3 기본 엔드포인트 사용 (비워두면 AWS SDK 기본값)
     S3_PUBLIC_ENDPOINT: "https://cdn.wealist.co.kr"
