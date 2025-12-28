@@ -18,7 +18,7 @@ spec:
         - ../../environments/prod.yaml
       parameters:
         - name: image.repository
-          value: "frontend"
+          value: "prod/frontend"
         - name: image.tag
           value: "prod-latest"
   destination:
