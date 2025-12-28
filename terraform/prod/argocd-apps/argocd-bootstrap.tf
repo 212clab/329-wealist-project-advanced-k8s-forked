@@ -34,7 +34,13 @@ resource "kubernetes_manifest" "argocd_project_prod" {
     spec = {
       description = "Wealist Production Environment"
       sourceRepos = [
-        var.git_repo_url
+        var.git_repo_url,
+        # Helm Chart Repositories for cluster addons
+        "https://aws.github.io/eks-charts",
+        "https://charts.external-secrets.io",
+        "https://charts.jetstack.io",
+        "https://kubernetes.github.io/autoscaler",
+        "https://istio-release.storage.googleapis.com/charts"
       ]
       destinations = [
         {
@@ -46,7 +52,15 @@ resource "kubernetes_manifest" "argocd_project_prod" {
           server    = "https://kubernetes.default.svc"
         },
         {
+          namespace = "kube-system"
+          server    = "https://kubernetes.default.svc"
+        },
+        {
           namespace = "external-secrets"
+          server    = "https://kubernetes.default.svc"
+        },
+        {
+          namespace = "cert-manager"
           server    = "https://kubernetes.default.svc"
         },
         {
@@ -60,8 +74,28 @@ resource "kubernetes_manifest" "argocd_project_prod" {
           kind  = "Namespace"
         },
         {
+          group = "*"
+          kind  = "CustomResourceDefinition"
+        },
+        {
+          group = "*"
+          kind  = "ClusterRole"
+        },
+        {
+          group = "*"
+          kind  = "ClusterRoleBinding"
+        },
+        {
+          group = "admissionregistration.k8s.io"
+          kind  = "*"
+        },
+        {
           group = "external-secrets.io"
           kind  = "ClusterSecretStore"
+        },
+        {
+          group = "cert-manager.io"
+          kind  = "*"
         }
       ]
       namespaceResourceWhitelist = [

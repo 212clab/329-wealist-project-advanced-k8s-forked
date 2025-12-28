@@ -42,6 +42,16 @@ provider "aws" {
 # Data Sources - Remote State
 # -----------------------------------------------------------------------------
 
+data "terraform_remote_state" "foundation" {
+  backend = "s3"
+
+  config = {
+    bucket = "wealist-tf-state-advanced-k8s"
+    key    = "prod/foundation/terraform.tfstate"
+    region = "ap-northeast-2"
+  }
+}
+
 data "terraform_remote_state" "compute" {
   backend = "s3"
 
@@ -78,6 +88,10 @@ provider "kubernetes" {
 locals {
   name_prefix = "wealist-prod"
   environment = "prod"
+
+  # Cluster info from remote state
+  cluster_name = data.terraform_remote_state.compute.outputs.cluster_name
+  vpc_id       = data.terraform_remote_state.foundation.outputs.vpc_id
 
   common_tags = {
     Project     = "wealist"
