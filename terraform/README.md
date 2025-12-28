@@ -17,8 +17,9 @@ terraform/
 │   └── foundation/             # ECR 저장소
 ├── prod/                       # 프로덕션 환경
 │   ├── foundation/             # VPC, RDS, Redis, ECR, S3, KMS
-│   └── compute/                # EKS, Node Groups, Pod Identity, IAM Access
-├── web-infra/                  # 정적 웹사이트 인프라 (CloudFront + S3)
+│   ├── compute/                # EKS, Node Groups, Pod Identity, IAM Access
+│   └── network/                # ALB, CloudFront, Route53 DNS
+├── web-infra/                  # (DEPRECATED) → prod/network로 이전
 │
 └── dev-environment/            # 현재 사용 중 (state: dev-enviorment/)
 ```
@@ -29,8 +30,9 @@ terraform/
 |------|------|-------------|
 | global | 환경 간 공유 리소스 | GitHub OIDC IAM |
 | dev | 개발 환경 | ECR 저장소, IAM User |
-| prod | 프로덕션 환경 | VPC, EKS, RDS, Redis, S3, IAM Groups |
-| web-infra | 정적 웹 호스팅 | CloudFront, S3 |
+| prod/foundation | 프로덕션 인프라 | VPC, RDS, Redis, ECR, S3, KMS |
+| prod/compute | 프로덕션 컴퓨팅 | EKS, Node Groups, Pod Identity |
+| prod/network | 프로덕션 네트워크 | ALB, CloudFront, Route53 DNS |
 
 ## 배포 순서
 
@@ -61,7 +63,19 @@ terraform plan
 terraform apply
 ```
 
-### 4. Post-Terraform 설정
+### 4. 프로덕션 Network 배포
+
+```bash
+cd terraform/prod/network
+terraform init
+terraform plan
+terraform apply
+
+# DNS 활성화 (수동 레코드 삭제 후)
+terraform apply -var="enable_dns=true"
+```
+
+### 5. Post-Terraform 설정
 
 EKS 클러스터 생성 후 추가 설정:
 
@@ -153,7 +167,8 @@ terraform output eks_access_setup_guide
 | dev-environment | `dev-enviorment/terraform.tfstate` | 사용 중 |
 | prod/foundation | `prod/foundation/terraform.tfstate` | 사용 중 |
 | prod/compute | `prod/compute/terraform.tfstate` | 사용 중 |
-| web-infra | `web-infra/terraform.tfstate` | 사용 중 |
+| prod/network | `prod/network/terraform.tfstate` | 신규 |
+| web-infra | `web-infra/terraform.tfstate` | DEPRECATED (→ prod/network) |
 
 ### 초기 설정 (One-time Setup)
 
@@ -185,7 +200,7 @@ aws s3 cp s3://wealist-tf-state-advanced-k8s/ ./terraform-state-backup/ --recurs
 
 ## 예상 비용 (월간)
 
-### 프로덕션 환경 (~$193/월)
+### 프로덕션 환경 (~$210/월)
 
 | 리소스 | 스펙 | 예상 비용 |
 |--------|------|----------|
@@ -195,6 +210,8 @@ aws s3 cp s3://wealist-tf-state-advanced-k8s/ ./terraform-state-backup/ --recurs
 | ElastiCache Redis | cache.t4g.small (1노드) | ~$20 |
 | EC2 Spot | 3 x t3.medium | ~$30 |
 | EBS 스토리지 | 50GB x 3 노드 | ~$15 |
+| ALB | 기본 + LCU | ~$16 |
+| Route53 | 레코드 | ~$0.50 |
 
 ### 비용 최적화 결정 사항
 
@@ -242,6 +259,7 @@ kubectl get pods -n istio-system
 | [dev/foundation/README.md](dev/foundation/README.md) | 개발 환경 리소스 |
 | [prod/foundation/README.md](prod/foundation/README.md) | 프로덕션 인프라 |
 | [prod/compute/README.md](prod/compute/README.md) | EKS 클러스터 설정 |
+| [prod/network/README.md](prod/network/README.md) | ALB, CloudFront, DNS |
 
 ## 보안 가이드라인
 
@@ -299,23 +317,49 @@ aws eks update-addon --cluster-name wealist-prod-eks --addon-name vpc-cni --reso
 ## 리소스 삭제
 
 과금이 걱정되거나 프로젝트를 종료할 때 사용합니다.
-**순서 주의**: compute → foundation → global 순으로 삭제해야 합니다.
+**순서 주의**: network → compute → foundation → global 순으로 삭제해야 합니다.
 
 ```bash
-# 1. Compute 삭제 (EKS)
+# 1. Network 삭제 (ALB, CloudFront)
+cd terraform/prod/network
+terraform destroy
+
+# 2. Compute 삭제 (EKS)
 cd terraform/prod/compute
 terraform destroy
 
-# 2. Foundation 삭제 (VPC, RDS, Redis)
+# 3. Foundation 삭제 (VPC, RDS, Redis)
 cd terraform/prod/foundation
 terraform destroy
 
-# 3. Global 삭제 (OIDC IAM)
+# 4. Global 삭제 (OIDC IAM)
 cd terraform/global/oidc-iam
 terraform destroy
 ```
 
 ## 디렉토리 정리
+
+### terraform/web-infra/ → prod/network/ 마이그레이션
+
+`web-infra/`는 `prod/network/`로 이전되었습니다. State 마이그레이션:
+
+```bash
+# 1. 백업
+aws s3 cp s3://wealist-tf-state-advanced-k8s/web-infra/terraform.tfstate \
+          s3://wealist-tf-state-advanced-k8s/web-infra/terraform.tfstate.backup
+
+# 2. State 복사
+aws s3 cp s3://wealist-tf-state-advanced-k8s/web-infra/terraform.tfstate \
+          s3://wealist-tf-state-advanced-k8s/prod/network/terraform.tfstate
+
+# 3. 새 디렉토리에서 init 및 확인
+cd terraform/prod/network
+terraform init
+terraform plan  # 변경사항 최소화 확인
+
+# 4. 기존 디렉토리 삭제
+rm -rf terraform/web-infra/
+```
 
 ### terraform/dev/foundation/ (새 구조, 미적용)
 
