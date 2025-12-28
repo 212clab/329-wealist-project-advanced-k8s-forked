@@ -179,21 +179,9 @@ resource "kubernetes_config_map" "cluster_info" {
 }
 
 # =============================================================================
-# Namespaces for ArgoCD-managed addons
+# Namespaces - ArgoCD에서 자동 생성 (CreateNamespace=true)
 # =============================================================================
-resource "kubernetes_namespace" "external_secrets" {
-  metadata {
-    name = "external-secrets"
-  }
-  depends_on = [module.eks]
-}
-
-resource "kubernetes_namespace" "cert_manager" {
-  metadata {
-    name = "cert-manager"
-  }
-  depends_on = [module.eks]
-}
+# external-secrets, cert-manager 네임스페이스는 ArgoCD가 생성/관리
 
 # =============================================================================
 # 4. ArgoCD Bootstrap - MOVED TO argocd-apps layer

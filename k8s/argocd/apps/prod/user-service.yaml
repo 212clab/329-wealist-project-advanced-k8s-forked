@@ -18,7 +18,7 @@ spec:
         - ../../environments/prod.yaml
       parameters:
         - name: image.repository
-          value: "prod/user-service"
+          value: "user-service"
         - name: image.tag
           value: "prod-latest"
         - name: externalSecrets.enabled

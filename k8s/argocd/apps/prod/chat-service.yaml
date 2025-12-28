@@ -18,7 +18,7 @@ spec:
         - ../../environments/prod.yaml
       parameters:
         - name: image.repository
-          value: "prod/chat-service"
+          value: "chat-service"
         - name: image.tag
           value: "prod-latest"
         - name: externalSecrets.enabled
