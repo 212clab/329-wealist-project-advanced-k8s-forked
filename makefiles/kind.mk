@@ -944,6 +944,10 @@ kind-dev-setup: ## 🔧 개발 환경: 클러스터 생성 → ECR 이미지 사
 		echo "✅ 모든 서비스 이미지가 ECR에 존재합니다!"; \
 	fi
 	@echo ""
+	@echo ""
+	@$(MAKE) helm-install-infra ENV=dev
+	@echo ""
+	@echo ""
 	@echo "----------------------------------------------"
 	@echo "  [8/8] ArgoCD 설치 (GitOps)"
 	@echo "----------------------------------------------"
