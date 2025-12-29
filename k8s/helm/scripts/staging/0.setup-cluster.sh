@@ -326,11 +326,15 @@ if [[ "$OSTYPE" == "darwin"* ]]; then
     sed -i '' "s/POSTGRES_HOST: .*/POSTGRES_HOST: \"${DB_HOST}\"/" "${STAGING_YAML}"
     sed -i '' "s/REDIS_HOST: .*/REDIS_HOST: \"${DB_HOST}\"/" "${STAGING_YAML}"
     sed -i '' "s/SPRING_REDIS_HOST: .*/SPRING_REDIS_HOST: \"${DB_HOST}\"/" "${STAGING_YAML}"
+    # postgres/redis external host 업데이트
+    sed -i '' "s/^    host: .*/    host: \"${DB_HOST}\"/" "${STAGING_YAML}"
 else
     sed -i "s/DB_HOST: .*/DB_HOST: \"${DB_HOST}\"/" "${STAGING_YAML}"
     sed -i "s/POSTGRES_HOST: .*/POSTGRES_HOST: \"${DB_HOST}\"/" "${STAGING_YAML}"
     sed -i "s/REDIS_HOST: .*/REDIS_HOST: \"${DB_HOST}\"/" "${STAGING_YAML}"
     sed -i "s/SPRING_REDIS_HOST: .*/SPRING_REDIS_HOST: \"${DB_HOST}\"/" "${STAGING_YAML}"
+    # postgres/redis external host 업데이트
+    sed -i "s/^    host: .*/    host: \"${DB_HOST}\"/" "${STAGING_YAML}"
 fi
 echo "✅ DB_HOST 설정 완료"
 

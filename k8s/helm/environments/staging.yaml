@@ -95,11 +95,15 @@ postgres:
   enabled: false
   external:
     enabled: true
+    host: "172.17.0.1"
+    port: 5432
 
 redis:
   enabled: false
   external:
     enabled: true
+    host: "172.17.0.1"
+    port: 6379
 
 # -----------------------------------------------------------------------------
 # MinIO (S3 Compatible Object Storage)

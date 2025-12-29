@@ -227,7 +227,14 @@ argo-deploy-staging: ## [ArgoCD] Staging 환경 Applications 배포 (Root App �
 	@echo "2. Root Application 생성..."
 	@kubectl apply -f k8s/argocd/apps/staging/root-app.yaml || true
 	@echo ""
-	@echo "3. ArgoCD Sync 대기 중..."
+	@echo "3. 모든 Staging Apps 적용 중..."
+	@for file in k8s/argocd/apps/staging/*.yaml; do \
+		if [ -f "$$file" ]; then \
+			kubectl apply -f $$file 2>/dev/null || true; \
+		fi; \
+	done
+	@echo ""
+	@echo "4. ArgoCD Sync 대기 중..."
 	@sleep 5
 	@echo ""
 	@echo -e "$(GREEN)✅ Staging 배포 완료$(NC)"
