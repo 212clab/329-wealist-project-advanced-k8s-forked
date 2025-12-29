@@ -24,6 +24,11 @@ spec:
         checksum/config: {{ include (print $.Template.BasePath "/prometheus/configmap.yaml") . | sha256sum }}
     spec:
       serviceAccountName: prometheus
+      securityContext:
+        runAsUser: 65534
+        runAsGroup: 65534
+        fsGroup: 65534
+        runAsNonRoot: true
       containers:
         - name: prometheus
           image: "{{ .Values.prometheus.image.repository }}:{{ .Values.prometheus.image.tag }}"
