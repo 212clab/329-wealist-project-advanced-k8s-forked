@@ -81,3 +81,48 @@ variable "addon_versions" {
     pod_identity_agent = "v1.3.10-eksbuild.2"
   }
 }
+
+# =============================================================================
+# Scheduled Scaling Configuration
+# =============================================================================
+variable "scheduled_scaling_enabled" {
+  description = "Enable scheduled scaling for cost optimization (노드 자동 on/off)"
+  type        = bool
+  default     = true
+}
+
+# -----------------------------------------------------------------------------
+# 평일 스케줄 (월-금)
+# -----------------------------------------------------------------------------
+variable "weekday_scale_down_schedule" {
+  description = "Cron for weekday scale down (UTC). 16:00 UTC Sun-Thu = 01:00 KST Mon-Fri"
+  type        = string
+  default     = "0 16 * * 0-4"  # 평일 새벽 1시 KST
+}
+
+variable "weekday_scale_up_schedule" {
+  description = "Cron for weekday scale up (UTC). 23:00 UTC Sun-Thu = 08:00 KST Mon-Fri"
+  type        = string
+  default     = "0 23 * * 0-4"  # 평일 오전 8시 KST
+}
+
+# -----------------------------------------------------------------------------
+# 주말 스케줄 (토-일)
+# -----------------------------------------------------------------------------
+variable "weekend_enabled" {
+  description = "Enable weekend scheduled scaling (주말 스케줄 적용 여부)"
+  type        = bool
+  default     = true
+}
+
+variable "weekend_scale_down_schedule" {
+  description = "Cron for weekend scale down (UTC). 18:00 UTC Fri-Sat = 03:00 KST Sat-Sun"
+  type        = string
+  default     = "0 18 * * 5,6"  # 주말 새벽 3시 KST
+}
+
+variable "weekend_scale_up_schedule" {
+  description = "Cron for weekend scale up (UTC). 00:00 UTC Sat-Sun = 09:00 KST Sat-Sun"
+  type        = string
+  default     = "0 0 * * 6,0"  # 주말 오전 9시 KST
+}
