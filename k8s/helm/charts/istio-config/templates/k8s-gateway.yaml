@@ -2,6 +2,7 @@
 # =============================================================================
 # Kubernetes Gateway API - Ingress Gateway
 # Istio automatically provisions Deployment and Service for this Gateway
+# The infrastructure.annotations are applied to the auto-generated Service
 # =============================================================================
 apiVersion: gateway.networking.k8s.io/v1
 kind: Gateway
@@ -16,6 +17,17 @@ metadata:
   {{- end }}
 spec:
   gatewayClassName: {{ .Values.istio.k8sGateway.gatewayClassName | default "istio" }}
+  {{- if .Values.istio.k8sGateway.infrastructure }}
+  infrastructure:
+    {{- if .Values.istio.k8sGateway.infrastructure.annotations }}
+    annotations:
+      {{- toYaml .Values.istio.k8sGateway.infrastructure.annotations | nindent 6 }}
+    {{- end }}
+    {{- if .Values.istio.k8sGateway.infrastructure.labels }}
+    labels:
+      {{- toYaml .Values.istio.k8sGateway.infrastructure.labels | nindent 6 }}
+    {{- end }}
+  {{- end }}
   listeners:
     - name: http
       port: {{ .Values.istio.k8sGateway.listeners.http.port | default 80 }}
@@ -34,6 +46,11 @@ spec:
     {{- if .Values.istio.k8sGateway.listeners.https.enabled }}
     - name: https
       port: {{ .Values.istio.k8sGateway.listeners.https.port | default 443 }}
+      {{- if .Values.istio.k8sGateway.listeners.https.nlbTermination }}
+      # NLB TLS termination: NLB handles TLS, Gateway receives HTTP
+      protocol: HTTP
+      {{- else }}
+      # Gateway TLS termination: Gateway handles TLS with certificate
       protocol: HTTPS
       {{- if .Values.istio.k8sGateway.listeners.https.hostname }}
       hostname: {{ .Values.istio.k8sGateway.listeners.https.hostname | quote }}
@@ -43,6 +60,7 @@ spec:
         certificateRefs:
           - kind: Secret
             name: {{ .Values.istio.k8sGateway.listeners.https.certificateRef }}
+      {{- end }}
       allowedRoutes:
         namespaces:
           from: {{ .Values.istio.k8sGateway.listeners.https.allowedRoutes.from | default "All" }}

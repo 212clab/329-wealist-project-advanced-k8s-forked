@@ -139,7 +139,7 @@ shared:
     POSTGRES_PORT: "5432"
     DB_PORT: "5432"
     DB_USER: "wealist_admin"
-    DB_AUTO_MIGRATE: "false"  # Production: No auto migration
+    DB_AUTO_MIGRATE: "true"  # TEMPORARY: Enable for initial table creation
     DB_SSL_MODE: "require"    # RDS는 SSL 연결 필요
     DB_SSLMODE: "require"
     # Redis (hosts from ExternalSecret)
@@ -159,7 +159,7 @@ shared:
     # LiveKit (Video Service)
     LIVEKIT_WS_URL: "wss://wealist.co.kr/svc/livekit"
     # OAuth2 Redirect URLs
-    OAUTH2_CLIENT_REDIRECT_URI: "https://api.wealist.co.kr/oauth2/callback/google"
+    OAUTH2_CLIENT_REDIRECT_URI: "https://api.wealist.co.kr/api/oauth2/callback/google"
     OAUTH2_REDIRECT_URL_ENV: "https://wealist.co.kr/oauth/callback"
 
 # -----------------------------------------------------------------------------
@@ -213,18 +213,39 @@ istio:
 
   # Kubernetes Gateway API - Ingress Gateway (Ambient 모드 권장)
   # Istio가 자동으로 Deployment/Service 생성
+  # infrastructure.annotations는 자동 생성되는 Service에 적용됨
   k8sGateway:
     enabled: true
     name: istio-ingressgateway
     namespace: istio-system
     gatewayClassName: istio
+    # ExternalDNS annotation - Route53 자동 업데이트
+    annotations:
+      external-dns.alpha.kubernetes.io/hostname: "api.wealist.co.kr"
+    # AWS NLB 설정 - 자동 생성되는 Service에 적용
+    infrastructure:
+      annotations:
+        service.beta.kubernetes.io/aws-load-balancer-type: "external"
+        service.beta.kubernetes.io/aws-load-balancer-nlb-target-type: "ip"
+        service.beta.kubernetes.io/aws-load-balancer-scheme: "internet-facing"
+        # Health check 설정 (Istio Gateway status port)
+        service.beta.kubernetes.io/aws-load-balancer-healthcheck-port: "15021"
+        service.beta.kubernetes.io/aws-load-balancer-healthcheck-path: "/healthz/ready"
+        # TLS 설정 - ACM 인증서 사용
+        service.beta.kubernetes.io/aws-load-balancer-ssl-cert: "arn:aws:acm:ap-northeast-2:290008131187:certificate/193d87ce-e04a-469d-9196-7624ed113bcc"
+        service.beta.kubernetes.io/aws-load-balancer-ssl-ports: "443"
+        service.beta.kubernetes.io/aws-load-balancer-ssl-negotiation-policy: "ELBSecurityPolicy-TLS13-1-2-2021-06"
     listeners:
       http:
         port: 80
         allowedRoutes:
           from: All
       https:
-        enabled: false  # ALB에서 SSL 종료
+        enabled: true
+        port: 443
+        nlbTermination: true  # NLB에서 TLS termination, Gateway는 HTTP로 수신
+        allowedRoutes:
+          from: All
 
   # HTTPRoute 설정 (Kubernetes Gateway API)
   httpRoute:

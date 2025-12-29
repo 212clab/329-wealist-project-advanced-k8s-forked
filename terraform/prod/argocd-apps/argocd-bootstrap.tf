@@ -40,6 +40,7 @@ resource "kubernetes_manifest" "argocd_project_prod" {
         "https://charts.external-secrets.io",
         "https://charts.jetstack.io",
         "https://kubernetes.github.io/autoscaler",
+        "https://kubernetes-sigs.github.io/external-dns",
         "https://istio-release.storage.googleapis.com/charts"
       ]
       destinations = [
@@ -61,6 +62,10 @@ resource "kubernetes_manifest" "argocd_project_prod" {
         },
         {
           namespace = "cert-manager"
+          server    = "https://kubernetes.default.svc"
+        },
+        {
+          namespace = "external-dns"
           server    = "https://kubernetes.default.svc"
         },
         {
@@ -95,6 +100,16 @@ resource "kubernetes_manifest" "argocd_project_prod" {
         },
         {
           group = "cert-manager.io"
+          kind  = "*"
+        },
+        # AWS Load Balancer Controller requires IngressClass
+        {
+          group = "networking.k8s.io"
+          kind  = "IngressClass"
+        },
+        # Kubernetes Gateway API (for Istio Ambient mode)
+        {
+          group = "gateway.networking.k8s.io"
           kind  = "*"
         }
       ]
