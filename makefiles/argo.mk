@@ -432,7 +432,7 @@ setup-local-argocd: ## [ArgoCD] 로컬 개발 환경 전체 설정 (ECR + Bootst
 	$(MAKE) bootstrap
 	$(MAKE) deploy
 
-kind-setup-ecr: ## [ArgoCD] Kind 클러스터 + ECR 직접 연결
+kind-setup-ecr: ## [ArgoCD] Kind 클러스터 + ECR 직접 연결 (dev)
 	@echo -e "$(YELLOW)🏗️  Kind 클러스터 + ECR 설정...$(NC)"
 	@if [ -f "k8s/helm/scripts/dev/0.setup-cluster.sh" ]; then \
 		chmod +x k8s/helm/scripts/dev/0.setup-cluster.sh; \
@@ -442,6 +442,21 @@ kind-setup-ecr: ## [ArgoCD] Kind 클러스터 + ECR 직접 연결
 		exit 1; \
 	fi
 	@echo -e "$(GREEN)✅ Kind 클러스터 + ECR 준비 완료$(NC)"
+
+kind-staging-setup: ## [ArgoCD] Kind 클러스터 + ECR (staging 환경)
+	@echo -e "$(YELLOW)🏗️  Kind 클러스터 + ECR 설정 (staging)...$(NC)"
+	@if [ -f "k8s/helm/scripts/staging/0.setup-cluster.sh" ]; then \
+		chmod +x k8s/helm/scripts/staging/0.setup-cluster.sh; \
+		./k8s/helm/scripts/staging/0.setup-cluster.sh; \
+	else \
+		echo -e "$(RED)❌ staging/0.setup-cluster.sh not found$(NC)"; \
+		exit 1; \
+	fi
+	@echo -e "$(GREEN)✅ Kind 클러스터 (staging) 준비 완료$(NC)"
+	@echo ""
+	@echo "다음 단계:"
+	@echo "  1. make argo-install-simple"
+	@echo "  2. make argo-deploy-staging"
 
 load-infra-images-ecr: ## [ArgoCD] 인프라 이미지 로드
 	@echo -e "$(YELLOW)📦 인프라 이미지 로드 중...$(NC)"
