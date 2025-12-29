@@ -46,10 +46,42 @@ argo-help: ## [ArgoCD] 도움말 표시
 	@echo "  SEALED_SECRETS_KEY=$(SEALED_SECRETS_KEY)"
 	@echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 
-argo-setup:  bootstrap ## argocd만 설치
+argo-setup: ## ArgoCD 설치 (인터랙티브)
+	@echo ""
+	@echo -e "$(YELLOW)━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━$(NC)"
+	@echo -e "$(YELLOW)  ArgoCD 설치 옵션 선택$(NC)"
+	@echo -e "$(YELLOW)━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━$(NC)"
+	@echo ""
+	@if [ -f "$(SEALED_SECRETS_KEY)" ]; then \
+		echo -e "$(GREEN)✅ Sealed Secrets 키 발견: $(SEALED_SECRETS_KEY)$(NC)"; \
+		echo ""; \
+		echo "1) 키 사용해서 설치 (Sealed Secrets 포함)"; \
+		echo "2) ArgoCD만 설치 (Sealed Secrets 없이) - 권장"; \
+		echo "3) 새 키 생성해서 설치"; \
+		echo ""; \
+		read -p "선택 [1/2/3] (기본: 2): " choice; \
+		case $$choice in \
+			1) $(MAKE) bootstrap ;; \
+			3) $(MAKE) bootstrap-without-key ;; \
+			*) $(MAKE) argo-install-simple ;; \
+		esac; \
+	else \
+		echo -e "$(YELLOW)⚠️  Sealed Secrets 키 없음$(NC)"; \
+		echo ""; \
+		echo "1) ArgoCD만 설치 (Sealed Secrets 없이) - 권장"; \
+		echo "2) 새 키 생성해서 설치 (Sealed Secrets 포함)"; \
+		echo "3) 키 파일 경로 직접 입력"; \
+		echo ""; \
+		read -p "선택 [1/2/3] (기본: 1): " choice; \
+		case $$choice in \
+			2) $(MAKE) bootstrap-without-key ;; \
+			3) read -p "키 파일 경로: " keypath; $(MAKE) bootstrap SEALED_SECRETS_KEY=$$keypath ;; \
+			*) $(MAKE) argo-install-simple ;; \
+		esac; \
+	fi
 	@echo ""
 	@echo -e "$(GREEN)━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━$(NC)"
-	@echo -e "$(GREEN)✅ 전체 배포 완료!$(NC)"
+	@echo -e "$(GREEN)✅ ArgoCD 설치 완료!$(NC)"
 	@echo -e "$(GREEN)━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━$(NC)"
 	@echo ""
 	@echo "ArgoCD UI: https://localhost:8079"
