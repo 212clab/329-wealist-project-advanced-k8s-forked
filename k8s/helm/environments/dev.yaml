@@ -191,6 +191,9 @@ istio:
         host: tracing
         namespace: istio-system
         port: 80
+    # ArgoCD UI (/api/argo)
+    argocd:
+      enabled: true
 
   # mTLS - 서비스 간 암호화
   mtls:
