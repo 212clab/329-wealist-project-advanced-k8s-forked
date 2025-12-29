@@ -216,6 +216,20 @@ spec:
     {{- end }}
 
     # ==========================================================================
+    # ArgoCD (/api/argo/* → argocd-server in argocd namespace)
+    # ==========================================================================
+    {{- if and .Values.istio.httpRoute.argocd .Values.istio.httpRoute.argocd.enabled }}
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /api/argo
+      backendRefs:
+        - name: argocd-server
+          namespace: argocd
+          port: 80
+    {{- end }}
+
+    # ==========================================================================
     # Frontend (루트 경로 - 반드시 마지막에 정의!)
     # PathPrefix "/" 는 모든 경로와 매칭되므로 가장 마지막에 있어야 함
     # ==========================================================================

@@ -167,6 +167,9 @@ istio:
         host: tracing
         namespace: istio-system
         port: 80
+    # ArgoCD UI (/api/argo)
+    argocd:
+      enabled: true
 
   mtls:
     enabled: true
