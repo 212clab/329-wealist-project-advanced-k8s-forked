@@ -225,14 +225,38 @@ echo "🔐 호스트 PostgreSQL 설정 중 (Kind 네트워크 허용)..."
 # pg_hba.conf 찾기
 PG_HBA=$(sudo find /etc/postgresql -name pg_hba.conf 2>/dev/null | head -1)
 if [ -n "${PG_HBA}" ]; then
-    # Kind 네트워크 허용 규칙이 없으면 추가
-    if ! sudo grep -q "192.168.0.0/16" "${PG_HBA}" 2>/dev/null; then
-        echo "  → pg_hba.conf에 Kind 네트워크 허용 추가..."
-        echo "# Kind cluster network access" | sudo tee -a "${PG_HBA}" > /dev/null
-        echo "host    all    all    192.168.0.0/16    md5" | sudo tee -a "${PG_HBA}" > /dev/null
+    PG_CHANGED=false
+
+    # Kind Pod 네트워크 (10.244.0.0/16) - 필수!
+    if ! sudo grep -q "10.244.0.0/16" "${PG_HBA}" 2>/dev/null; then
+        echo "  → pg_hba.conf: Kind Pod 네트워크 (10.244.0.0/16) 허용 추가..."
+        echo "# Kind cluster Pod network" | sudo tee -a "${PG_HBA}" > /dev/null
+        echo "host    all    all    10.244.0.0/16     md5" | sudo tee -a "${PG_HBA}" > /dev/null
+        PG_CHANGED=true
+    fi
+
+    # Docker bridge 네트워크 (172.17.0.0/16, 172.18.0.0/16)
+    if ! sudo grep -q "172.16.0.0/12" "${PG_HBA}" 2>/dev/null; then
+        echo "  → pg_hba.conf: Docker 네트워크 (172.16.0.0/12) 허용 추가..."
         echo "host    all    all    172.16.0.0/12     md5" | sudo tee -a "${PG_HBA}" > /dev/null
+        PG_CHANGED=true
+    fi
+
+    # WSL/Host 네트워크 (192.168.x.x)
+    if ! sudo grep -q "192.168.0.0/16" "${PG_HBA}" 2>/dev/null; then
+        echo "  → pg_hba.conf: WSL/Host 네트워크 (192.168.0.0/16) 허용 추가..."
+        echo "host    all    all    192.168.0.0/16    md5" | sudo tee -a "${PG_HBA}" > /dev/null
+        PG_CHANGED=true
+    fi
+
+    # 넓은 범위 (fallback)
+    if ! sudo grep -q "10.0.0.0/8" "${PG_HBA}" 2>/dev/null; then
+        echo "  → pg_hba.conf: 10.0.0.0/8 네트워크 허용 추가..."
         echo "host    all    all    10.0.0.0/8        md5" | sudo tee -a "${PG_HBA}" > /dev/null
-    else
+        PG_CHANGED=true
+    fi
+
+    if [ "$PG_CHANGED" = false ]; then
         echo "  → pg_hba.conf: Kind 네트워크 이미 허용됨"
     fi
 
@@ -243,12 +267,15 @@ if [ -n "${PG_HBA}" ]; then
             echo "  → postgresql.conf: listen_addresses = '*' 설정..."
             sudo sed -i "s/#listen_addresses = 'localhost'/listen_addresses = '*'/" "${PG_CONF}"
             sudo sed -i "s/listen_addresses = 'localhost'/listen_addresses = '*'/" "${PG_CONF}"
+            PG_CHANGED=true
         fi
     fi
 
-    # PostgreSQL 재시작
-    echo "  → PostgreSQL 재시작..."
-    sudo systemctl restart postgresql 2>/dev/null || sudo service postgresql restart 2>/dev/null || true
+    # PostgreSQL 재시작 (변경사항 있으면)
+    if [ "$PG_CHANGED" = true ]; then
+        echo "  → PostgreSQL 재시작..."
+        sudo systemctl restart postgresql 2>/dev/null || sudo service postgresql restart 2>/dev/null || true
+    fi
     echo "✅ PostgreSQL 설정 완료"
 else
     echo "⚠️  PostgreSQL 설정 파일을 찾을 수 없습니다. 수동 설정 필요."
