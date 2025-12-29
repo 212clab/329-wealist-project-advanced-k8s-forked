@@ -476,7 +476,7 @@ kind-staging-setup: ## [ArgoCD] Kind 클러스터 + ECR + ArgoCD + 앱 배포 (s
 # GitHub 토큰: 환경변수 또는 CLI 입력
 argo-add-repo-auto: ## Git 레포 자동 등록 (CLI 입력 또는 환경변수 GITHUB_TOKEN)
 	@GITHUB_USER=$${GITHUB_USER:-212clab}; \
-	REPO_URL="https://github.com/OrangesCloud/wealist-project-advanced-k8s.git"; \
+	REPO_URL="https://github.com/212clab/wealist-project-advanced-k8s-forked.git"; \
 	if [ -z "$$GITHUB_TOKEN" ]; then \
 		echo ""; \
 		echo "GitHub Personal Access Token이 필요합니다."; \
