@@ -89,10 +89,16 @@ elif [ -f "./istio-${ISTIO_VERSION}/bin/istioctl" ]; then
     ISTIOCTL="./istio-${ISTIO_VERSION}/bin/istioctl"
     echo "✅ 로컬 istioctl 사용: ${ISTIOCTL}"
 else
-    echo "⚠️  istioctl이 설치되어 있지 않습니다."
-    echo "   다음 명령어로 설치하세요:"
-    echo "   curl -L https://istio.io/downloadIstio | ISTIO_VERSION=${ISTIO_VERSION} sh -"
-    exit 1
+    echo "⚠️  istioctl이 설치되어 있지 않습니다. 자동 설치 중..."
+    echo ""
+    curl -L https://istio.io/downloadIstio | ISTIO_VERSION=${ISTIO_VERSION} sh -
+    ISTIOCTL="./istio-${ISTIO_VERSION}/bin/istioctl"
+    if [ -f "${ISTIOCTL}" ]; then
+        echo "✅ istioctl 설치 완료: ${ISTIOCTL}"
+    else
+        echo "❌ istioctl 설치 실패"
+        exit 1
+    fi
 fi
 
 # Istio Ambient 프로필 설치
