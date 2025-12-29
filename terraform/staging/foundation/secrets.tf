@@ -58,7 +58,7 @@ resource "aws_secretsmanager_secret" "redis_auth" {
 
 resource "aws_secretsmanager_secret_version" "redis_auth" {
   secret_id     = aws_secretsmanager_secret.redis_auth.id
-  secret_string = var.redis_password
+  secret_string = var.redis_password != "" ? var.redis_password : "no-auth"
 }
 
 # -----------------------------------------------------------------------------
