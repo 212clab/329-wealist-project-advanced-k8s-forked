@@ -26,11 +26,11 @@ spec:
         - name: imagePullSecrets[0].name
           value: "ecr-secret"
         - name: shared.config.DB_HOST
-          value: "172.17.0.1"
+          value: "host.docker.internal"
         - name: shared.config.POSTGRES_HOST
-          value: "172.17.0.1"
+          value: "host.docker.internal"
         - name: shared.config.REDIS_HOST
-          value: "172.17.0.1"
+          value: "host.docker.internal"
   destination:
     server: https://kubernetes.default.svc
     namespace: wealist-staging
