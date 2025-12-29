@@ -10,6 +10,14 @@ global:
   namespace: wealist
 
 # =============================================================================
+# External Secrets (ESO) Configuration
+# =============================================================================
+# enabled: true → ExternalSecret에서 시크릿 가져옴 (staging/prod)
+# enabled: false → values 또는 로컬 Secret 사용 (dev/localhost)
+externalSecrets:
+  enabled: false
+
+# =============================================================================
 # Prometheus - Metrics Collection
 # =============================================================================
 prometheus:
