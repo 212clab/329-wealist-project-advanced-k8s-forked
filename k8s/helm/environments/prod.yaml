@@ -203,13 +203,28 @@ istio:
   namespace: wealist-prod
 
   gateway:
-    enabled: false  # EKS ALB Ingress 또는 별도 Gateway 사용
+    enabled: false  # 기존 Istio Gateway API (사용 안 함)
     name: wealist-gateway
     hosts:
       - "wealist.co.kr"
       - "api.wealist.co.kr"
     tls:
-      enabled: false  # CloudFront에서 SSL 처리
+      enabled: false
+
+  # Kubernetes Gateway API - Ingress Gateway (Ambient 모드 권장)
+  # Istio가 자동으로 Deployment/Service 생성
+  k8sGateway:
+    enabled: true
+    name: istio-ingressgateway
+    namespace: istio-system
+    gatewayClassName: istio
+    listeners:
+      http:
+        port: 80
+        allowedRoutes:
+          from: All
+      https:
+        enabled: false  # ALB에서 SSL 종료
 
   # HTTPRoute 설정 (Kubernetes Gateway API)
   httpRoute:
