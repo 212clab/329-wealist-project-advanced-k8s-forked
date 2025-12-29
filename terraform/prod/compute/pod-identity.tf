@@ -276,6 +276,16 @@ module "pod_identity_storage_service" {
             data.terraform_remote_state.foundation.outputs.s3_bucket_arn,
             "${data.terraform_remote_state.foundation.outputs.s3_bucket_arn}/*"
           ]
+        },
+        {
+          Sid    = "KMSAccess"
+          Effect = "Allow"
+          Action = [
+            "kms:GenerateDataKey",
+            "kms:Decrypt",
+            "kms:DescribeKey"
+          ]
+          Resource = local.kms_key_arn
         }
       ]
     })
@@ -312,6 +322,16 @@ module "pod_identity_board_service" {
             data.terraform_remote_state.foundation.outputs.s3_bucket_arn,
             "${data.terraform_remote_state.foundation.outputs.s3_bucket_arn}/*"
           ]
+        },
+        {
+          Sid    = "KMSAccess"
+          Effect = "Allow"
+          Action = [
+            "kms:GenerateDataKey",
+            "kms:Decrypt",
+            "kms:DescribeKey"
+          ]
+          Resource = local.kms_key_arn
         }
       ]
     })
@@ -348,6 +368,16 @@ module "pod_identity_user_service" {
             data.terraform_remote_state.foundation.outputs.s3_bucket_arn,
             "${data.terraform_remote_state.foundation.outputs.s3_bucket_arn}/*"
           ]
+        },
+        {
+          Sid    = "KMSAccess"
+          Effect = "Allow"
+          Action = [
+            "kms:GenerateDataKey",
+            "kms:Decrypt",
+            "kms:DescribeKey"
+          ]
+          Resource = local.kms_key_arn
         }
       ]
     })
@@ -384,6 +414,16 @@ module "pod_identity_chat_service" {
             data.terraform_remote_state.foundation.outputs.s3_bucket_arn,
             "${data.terraform_remote_state.foundation.outputs.s3_bucket_arn}/*"
           ]
+        },
+        {
+          Sid    = "KMSAccess"
+          Effect = "Allow"
+          Action = [
+            "kms:GenerateDataKey",
+            "kms:Decrypt",
+            "kms:DescribeKey"
+          ]
+          Resource = local.kms_key_arn
         }
       ]
     })
@@ -420,6 +460,16 @@ module "pod_identity_video_service" {
             data.terraform_remote_state.foundation.outputs.s3_bucket_arn,
             "${data.terraform_remote_state.foundation.outputs.s3_bucket_arn}/*"
           ]
+        },
+        {
+          Sid    = "KMSAccess"
+          Effect = "Allow"
+          Action = [
+            "kms:GenerateDataKey",
+            "kms:Decrypt",
+            "kms:DescribeKey"
+          ]
+          Resource = local.kms_key_arn
         }
       ]
     })
