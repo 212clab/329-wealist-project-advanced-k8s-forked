@@ -473,16 +473,17 @@ kind-staging-setup: ## [ArgoCD] Kind 클러스터 + ECR + ArgoCD + 앱 배포 (s
 	@echo ""
 	@echo "상태 확인: make argo-status"
 
-# GitHub 토큰 환경변수: GITHUB_TOKEN, GITHUB_USER
-argo-add-repo-auto: ## Git 레포 자동 등록 (환경변수 GITHUB_TOKEN, GITHUB_USER 필요)
-	@if [ -z "$$GITHUB_TOKEN" ]; then \
-		echo -e "$(RED)❌ GITHUB_TOKEN 환경변수가 설정되지 않았습니다.$(NC)"; \
-		echo "   export GITHUB_TOKEN=ghp_xxxxx"; \
-		echo "   또는: make argo-add-repo (인터랙티브)"; \
-		exit 1; \
-	fi
+# GitHub 토큰: 환경변수 또는 CLI 입력
+argo-add-repo-auto: ## Git 레포 자동 등록 (CLI 입력 또는 환경변수 GITHUB_TOKEN)
 	@GITHUB_USER=$${GITHUB_USER:-212clab}; \
 	REPO_URL="https://github.com/OrangesCloud/wealist-project-advanced-k8s.git"; \
+	if [ -z "$$GITHUB_TOKEN" ]; then \
+		echo ""; \
+		echo "GitHub Personal Access Token이 필요합니다."; \
+		echo "Token 생성: https://github.com/settings/tokens (repo 권한)"; \
+		echo ""; \
+		read -p "GitHub Token: " GITHUB_TOKEN; \
+	fi; \
 	echo "Git 레포 등록: $$REPO_URL (User: $$GITHUB_USER)"; \
 	kubectl -n argocd create secret generic repo-creds \
 		--from-literal=url=$$REPO_URL \
