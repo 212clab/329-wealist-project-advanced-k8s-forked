@@ -432,7 +432,7 @@ setup-local-argocd: ## [ArgoCD] 로컬 개발 환경 전체 설정 (ECR + Bootst
 	$(MAKE) bootstrap
 	$(MAKE) deploy
 
-kind-setup-ecr: ## [ArgoCD] Kind 클러스터 + ECR 직접 연결
+kind-setup-ecr: ## [ArgoCD] Kind 클러스터 + ECR 직접 연결 (dev)
 	@echo -e "$(YELLOW)🏗️  Kind 클러스터 + ECR 설정...$(NC)"
 	@if [ -f "k8s/helm/scripts/dev/0.setup-cluster.sh" ]; then \
 		chmod +x k8s/helm/scripts/dev/0.setup-cluster.sh; \
@@ -442,6 +442,33 @@ kind-setup-ecr: ## [ArgoCD] Kind 클러스터 + ECR 직접 연결
 		exit 1; \
 	fi
 	@echo -e "$(GREEN)✅ Kind 클러스터 + ECR 준비 완료$(NC)"
+
+kind-staging-setup: ## [ArgoCD] Kind 클러스터 + ECR + ArgoCD + 앱 배포 (staging 환경)
+	@echo -e "$(YELLOW)🏗️  Kind 클러스터 + ECR 설정 (staging)...$(NC)"
+	@if [ -f "k8s/helm/scripts/staging/0.setup-cluster.sh" ]; then \
+		chmod +x k8s/helm/scripts/staging/0.setup-cluster.sh; \
+		./k8s/helm/scripts/staging/0.setup-cluster.sh; \
+	else \
+		echo -e "$(RED)❌ staging/0.setup-cluster.sh not found$(NC)"; \
+		exit 1; \
+	fi
+	@echo -e "$(GREEN)✅ Kind 클러스터 (staging) 준비 완료$(NC)"
+	@echo ""
+	@echo -e "$(YELLOW)🚀 ArgoCD 설치 중...$(NC)"
+	$(MAKE) argo-install-simple
+	@echo ""
+	@echo -e "$(YELLOW)🎯 Staging Applications 배포 중...$(NC)"
+	$(MAKE) argo-deploy-staging
+	@echo ""
+	@echo -e "$(GREEN)━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━$(NC)"
+	@echo -e "$(GREEN)✅ Staging 환경 전체 설정 완료!$(NC)"
+	@echo -e "$(GREEN)━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━$(NC)"
+	@echo ""
+	@echo "ArgoCD UI: https://dev.wealist.co.kr/api/argo"
+	@echo "Username: admin"
+	@echo "Password: $$(kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath='{.data.password}' 2>/dev/null | base64 -d || echo '(생성 중...)')"
+	@echo ""
+	@echo "상태 확인: make argo-status"
 
 load-infra-images-ecr: ## [ArgoCD] 인프라 이미지 로드
 	@echo -e "$(YELLOW)📦 인프라 이미지 로드 중...$(NC)"
