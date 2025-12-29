@@ -159,7 +159,7 @@ shared:
     # LiveKit (Video Service)
     LIVEKIT_WS_URL: "wss://wealist.co.kr/svc/livekit"
     # OAuth2 Redirect URLs
-    OAUTH2_CLIENT_REDIRECT_URI: "https://api.wealist.co.kr/oauth2/callback/google"
+    OAUTH2_CLIENT_REDIRECT_URI: "https://api.wealist.co.kr/api/oauth2/callback/google"
     OAUTH2_REDIRECT_URL_ENV: "https://wealist.co.kr/oauth/callback"
 
 # -----------------------------------------------------------------------------
@@ -203,13 +203,49 @@ istio:
   namespace: wealist-prod
 
   gateway:
-    enabled: false  # EKS ALB Ingress 또는 별도 Gateway 사용
+    enabled: false  # 기존 Istio Gateway API (사용 안 함)
     name: wealist-gateway
     hosts:
       - "wealist.co.kr"
       - "api.wealist.co.kr"
     tls:
-      enabled: false  # CloudFront에서 SSL 처리
+      enabled: false
+
+  # Kubernetes Gateway API - Ingress Gateway (Ambient 모드 권장)
+  # Istio가 자동으로 Deployment/Service 생성
+  # infrastructure.annotations는 자동 생성되는 Service에 적용됨
+  k8sGateway:
+    enabled: true
+    name: istio-ingressgateway
+    namespace: istio-system
+    gatewayClassName: istio
+    # ExternalDNS annotation - Route53 자동 업데이트
+    annotations:
+      external-dns.alpha.kubernetes.io/hostname: "api.wealist.co.kr"
+    # AWS NLB 설정 - 자동 생성되는 Service에 적용
+    infrastructure:
+      annotations:
+        service.beta.kubernetes.io/aws-load-balancer-type: "external"
+        service.beta.kubernetes.io/aws-load-balancer-nlb-target-type: "ip"
+        service.beta.kubernetes.io/aws-load-balancer-scheme: "internet-facing"
+        # Health check 설정 (Istio Gateway status port)
+        service.beta.kubernetes.io/aws-load-balancer-healthcheck-port: "15021"
+        service.beta.kubernetes.io/aws-load-balancer-healthcheck-path: "/healthz/ready"
+        # TLS 설정 - ACM 인증서 사용
+        service.beta.kubernetes.io/aws-load-balancer-ssl-cert: "arn:aws:acm:ap-northeast-2:290008131187:certificate/193d87ce-e04a-469d-9196-7624ed113bcc"
+        service.beta.kubernetes.io/aws-load-balancer-ssl-ports: "443"
+        service.beta.kubernetes.io/aws-load-balancer-ssl-negotiation-policy: "ELBSecurityPolicy-TLS13-1-2-2021-06"
+    listeners:
+      http:
+        port: 80
+        allowedRoutes:
+          from: All
+      https:
+        enabled: true
+        port: 443
+        nlbTermination: true  # NLB에서 TLS termination, Gateway는 HTTP로 수신
+        allowedRoutes:
+          from: All
 
   # HTTPRoute 설정 (Kubernetes Gateway API)
   httpRoute:
@@ -320,7 +356,7 @@ istio:
 prometheus:
   enabled: true
   image:
-    repository: public.ecr.aws/prometheus/prometheus
+    repository: prom/prometheus
     tag: "v2.48.0"
   config:
     externalUrl: "https://api.wealist.co.kr/api/monitoring/prometheus"
@@ -335,21 +371,21 @@ prometheus:
 loki:
   enabled: true
   image:
-    repository: public.ecr.aws/grafana/loki
+    repository: grafana/loki
     tag: "2.9.2"
 
 # Promtail - 로그 수집 에이전트
 promtail:
   enabled: true
   image:
-    repository: public.ecr.aws/grafana/promtail
+    repository: grafana/promtail
     tag: "2.9.2"
 
 # Grafana - 시각화 대시보드
 grafana:
   enabled: true
   image:
-    repository: public.ecr.aws/grafana/grafana
+    repository: grafana/grafana
     tag: "10.2.2"
   config:
     allowSignUp: false
@@ -372,8 +408,8 @@ argocd:
 postgresExporter:
   enabled: true
   image:
-    repository: public.ecr.aws/bitnami/postgres-exporter
-    tag: "0.15.0"
+    repository: prometheuscommunity/postgres-exporter
+    tag: "v0.18.1"
   config:
     # host/password: ExternalSecret (wealist-shared-secret)에서 가져옴
     port: 5432
@@ -384,8 +420,8 @@ postgresExporter:
 redisExporter:
   enabled: true
   image:
-    repository: public.ecr.aws/bitnami/redis-exporter
-    tag: "1.55.0"
+    repository: oliver006/redis_exporter
+    tag: "v1.80.1"
   config:
     # host/password: ExternalSecret (wealist-shared-secret)에서 가져옴
     port: 6379

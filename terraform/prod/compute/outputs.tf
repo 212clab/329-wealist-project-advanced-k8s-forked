@@ -116,6 +116,14 @@ output "summary" {
       - spot: ${var.spot_desired_size} nodes (min: ${var.spot_min_size}, max: ${var.spot_max_size})
         Instance Types: ${join(", ", var.spot_instance_types)}
 
+    Scheduled Scaling: ${var.scheduled_scaling_enabled ? "ENABLED" : "DISABLED"}
+      평일 (월-금):
+        - Scale Down: ${var.weekday_scale_down_schedule} (UTC) → 새벽 01:00 KST
+        - Scale Up:   ${var.weekday_scale_up_schedule} (UTC) → 오전 08:00 KST
+      주말 (토-일): ${var.weekend_enabled ? "ENABLED" : "DISABLED"}
+        - Scale Down: ${var.weekend_scale_down_schedule} (UTC) → 새벽 03:00 KST
+        - Scale Up:   ${var.weekend_scale_up_schedule} (UTC) → 오전 09:00 KST
+
     Add-ons:
       - vpc-cni (Istio Ambient 지원)
       - coredns
@@ -215,4 +223,24 @@ output "eks_access_setup_guide" {
     ${aws_iam_role.eks_readonly.arn}
 
   EOT
+}
+
+# =============================================================================
+# Scheduled Scaling Outputs
+# =============================================================================
+output "scheduled_scaling" {
+  description = "Scheduled scaling configuration for cost optimization"
+  value = {
+    enabled = var.scheduled_scaling_enabled
+    weekday = {
+      scale_down = var.weekday_scale_down_schedule  # 01:00 KST
+      scale_up   = var.weekday_scale_up_schedule    # 08:00 KST
+    }
+    weekend = {
+      enabled    = var.weekend_enabled
+      scale_down = var.weekend_scale_down_schedule  # 03:00 KST
+      scale_up   = var.weekend_scale_up_schedule    # 09:00 KST
+    }
+    info = var.scheduled_scaling_enabled ? "평일: 01:00-08:00 OFF, 주말: 03:00-09:00 OFF" : "24시간 운영 중"
+  }
 }

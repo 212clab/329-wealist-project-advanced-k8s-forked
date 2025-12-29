@@ -3,6 +3,7 @@
 # ============================================
 .PHONY: argo-help cluster-up cluster-down bootstrap deploy argo-clean argo-status helm-install-infra all
 .PHONY: setup-local-argocd kind-setup-ecr load-infra-images-ecr
+.PHONY: argo-deploy-staging argo-deploy-dev argo-deploy-prod
 
 # 색상
 GREEN  := \033[0;32m
@@ -45,10 +46,42 @@ argo-help: ## [ArgoCD] 도움말 표시
 	@echo "  SEALED_SECRETS_KEY=$(SEALED_SECRETS_KEY)"
 	@echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 
-argo-setup:  bootstrap ## argocd만 설치
+argo-setup: ## ArgoCD 설치 (인터랙티브)
+	@echo ""
+	@echo -e "$(YELLOW)━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━$(NC)"
+	@echo -e "$(YELLOW)  ArgoCD 설치 옵션 선택$(NC)"
+	@echo -e "$(YELLOW)━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━$(NC)"
+	@echo ""
+	@if [ -f "$(SEALED_SECRETS_KEY)" ]; then \
+		echo -e "$(GREEN)✅ Sealed Secrets 키 발견: $(SEALED_SECRETS_KEY)$(NC)"; \
+		echo ""; \
+		echo "1) 키 사용해서 설치 (Sealed Secrets 포함)"; \
+		echo "2) ArgoCD만 설치 (Sealed Secrets 없이) - 권장"; \
+		echo "3) 새 키 생성해서 설치"; \
+		echo ""; \
+		read -p "선택 [1/2/3] (기본: 2): " choice; \
+		case $$choice in \
+			1) $(MAKE) bootstrap ;; \
+			3) $(MAKE) bootstrap-without-key ;; \
+			*) $(MAKE) argo-install-simple ;; \
+		esac; \
+	else \
+		echo -e "$(YELLOW)⚠️  Sealed Secrets 키 없음$(NC)"; \
+		echo ""; \
+		echo "1) ArgoCD만 설치 (Sealed Secrets 없이) - 권장"; \
+		echo "2) 새 키 생성해서 설치 (Sealed Secrets 포함)"; \
+		echo "3) 키 파일 경로 직접 입력"; \
+		echo ""; \
+		read -p "선택 [1/2/3] (기본: 1): " choice; \
+		case $$choice in \
+			2) $(MAKE) bootstrap-without-key ;; \
+			3) read -p "키 파일 경로: " keypath; $(MAKE) bootstrap SEALED_SECRETS_KEY=$$keypath ;; \
+			*) $(MAKE) argo-install-simple ;; \
+		esac; \
+	fi
 	@echo ""
 	@echo -e "$(GREEN)━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━$(NC)"
-	@echo -e "$(GREEN)✅ 전체 배포 완료!$(NC)"
+	@echo -e "$(GREEN)✅ ArgoCD 설치 완료!$(NC)"
 	@echo -e "$(GREEN)━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━$(NC)"
 	@echo ""
 	@echo "ArgoCD UI: https://localhost:8079"
@@ -133,15 +166,24 @@ argo-install-simple: ## ArgoCD만 간단 설치 (Sealed Secrets 없이)
 	@echo "ArgoCD 설치 완료, Pod 준비 대기 중..."
 	@kubectl wait --for=condition=available --timeout=300s deployment/argocd-server -n argocd || echo "WARNING: ArgoCD server not ready yet"
 	@echo ""
+	@echo "ArgoCD sub-path 설정 중 (/api/argo)..."
+	@kubectl patch configmap argocd-cm -n argocd --type merge -p '{"data":{"server.rootpath":"/api/argo","server.insecure":"true"}}' 2>/dev/null || \
+		kubectl create configmap argocd-cm -n argocd --from-literal=server.rootpath=/api/argo --from-literal=server.insecure=true 2>/dev/null || true
+	@kubectl rollout restart deployment argocd-server -n argocd 2>/dev/null || true
+	@echo ""
 	@echo "=============================================="
 	@echo "  ✅ ArgoCD 설치 완료!"
 	@echo "=============================================="
 	@echo ""
-	@echo "  포트 포워딩:"
+	@echo "  웹 접속 (Istio Gateway 통해):"
+	@echo "    http://localhost:8080/api/argo"
+	@echo "    https://dev.wealist.co.kr/api/argo"
+	@echo ""
+	@echo "  포트 포워딩 (직접 접속):"
 	@echo "    kubectl port-forward svc/argocd-server -n argocd 8079:443"
+	@echo "    https://localhost:8079"
 	@echo ""
 	@echo "  로그인 정보:"
-	@echo "    URL: https://localhost:8079"
 	@echo "    User: admin"
 	@echo "    Password: $$(kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath='{.data.password}' 2>/dev/null | base64 -d || echo '(아직 생성 안됨)')"
 	@echo ""
@@ -175,14 +217,39 @@ argo-ui: ## ArgoCD UI 포트 포워딩
 # 배포
 # ============================================
 
-# deploy: ## Applications 배포 (Root App 생성)
-# 	@echo -e "$(YELLOW)🎯 Applications 배포 중...$(NC)"
-# 	@kubectl apply -f k8s/argocd/apps/project.yaml || true
-# 	@kubectl apply -f k8s/argocd/apps/root-app.yaml || true
-# 	@echo -e "$(GREEN)✅ 배포 완료$(NC)"
-# 	@echo ""
-# 	@echo "Applications 확인:"
-# 	@kubectl get applications -n argocd
+argo-deploy-staging: ## [ArgoCD] Staging 환경 Applications 배포 (Root App 생성)
+	@echo -e "$(YELLOW)🎯 Staging Applications 배포 중...$(NC)"
+	@echo ""
+	@echo "1. AppProject 생성..."
+	@kubectl apply -f k8s/argocd/apps/staging/project.yaml || true
+	@kubectl apply -f k8s/argocd/projects/wealist-staging.yaml || true
+	@echo ""
+	@echo "2. Root Application 생성..."
+	@kubectl apply -f k8s/argocd/apps/staging/root-app.yaml || true
+	@echo ""
+	@echo "3. ArgoCD Sync 대기 중..."
+	@sleep 5
+	@echo ""
+	@echo -e "$(GREEN)✅ Staging 배포 완료$(NC)"
+	@echo ""
+	@echo "Applications 확인:"
+	@kubectl get applications -n argocd
+	@echo ""
+	@echo -e "$(YELLOW)📝 ArgoCD가 자동으로 모든 앱을 Sync합니다.$(NC)"
+	@echo "   상태 확인: make argo-status"
+
+argo-deploy-dev: ## [ArgoCD] Dev 환경 Applications 배포
+	@echo -e "$(YELLOW)🎯 Dev Applications 배포 중...$(NC)"
+	@kubectl apply -f k8s/argocd/apps/dev/project.yaml || true
+	@kubectl apply -f k8s/argocd/projects/wealist-dev.yaml || true
+	@kubectl apply -f k8s/argocd/apps/dev/root-app.yaml || true
+	@echo -e "$(GREEN)✅ Dev 배포 완료$(NC)"
+
+argo-deploy-prod: ## [ArgoCD] Prod 환경 Applications 배포
+	@echo -e "$(YELLOW)🎯 Prod Applications 배포 중...$(NC)"
+	@kubectl apply -f k8s/argocd/projects/wealist-prod.yaml || true
+	@kubectl apply -f k8s/argocd/apps/prod/root-app.yaml || true
+	@echo -e "$(GREEN)✅ Prod 배포 완료$(NC)"
 
 # ============================================
 # 상태 확인
@@ -365,7 +432,7 @@ setup-local-argocd: ## [ArgoCD] 로컬 개발 환경 전체 설정 (ECR + Bootst
 	$(MAKE) bootstrap
 	$(MAKE) deploy
 
-kind-setup-ecr: ## [ArgoCD] Kind 클러스터 + ECR 직접 연결
+kind-setup-ecr: ## [ArgoCD] Kind 클러스터 + ECR 직접 연결 (dev)
 	@echo -e "$(YELLOW)🏗️  Kind 클러스터 + ECR 설정...$(NC)"
 	@if [ -f "k8s/helm/scripts/dev/0.setup-cluster.sh" ]; then \
 		chmod +x k8s/helm/scripts/dev/0.setup-cluster.sh; \
@@ -375,6 +442,55 @@ kind-setup-ecr: ## [ArgoCD] Kind 클러스터 + ECR 직접 연결
 		exit 1; \
 	fi
 	@echo -e "$(GREEN)✅ Kind 클러스터 + ECR 준비 완료$(NC)"
+
+kind-staging-setup: ## [ArgoCD] Kind 클러스터 + ECR + ArgoCD + 앱 배포 (staging 환경)
+	@echo -e "$(YELLOW)🏗️  Kind 클러스터 + ECR 설정 (staging)...$(NC)"
+	@if [ -f "k8s/helm/scripts/staging/0.setup-cluster.sh" ]; then \
+		chmod +x k8s/helm/scripts/staging/0.setup-cluster.sh; \
+		./k8s/helm/scripts/staging/0.setup-cluster.sh; \
+	else \
+		echo -e "$(RED)❌ staging/0.setup-cluster.sh not found$(NC)"; \
+		exit 1; \
+	fi
+	@echo -e "$(GREEN)✅ Kind 클러스터 (staging) 준비 완료$(NC)"
+	@echo ""
+	@echo -e "$(YELLOW)🚀 ArgoCD 설치 중...$(NC)"
+	$(MAKE) argo-install-simple
+	@echo ""
+	@echo -e "$(YELLOW)🔐 Git 레포지토리 등록 중...$(NC)"
+	$(MAKE) argo-add-repo-auto
+	@echo ""
+	@echo -e "$(YELLOW)🎯 Staging Applications 배포 중...$(NC)"
+	$(MAKE) argo-deploy-staging
+	@echo ""
+	@echo -e "$(GREEN)━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━$(NC)"
+	@echo -e "$(GREEN)✅ Staging 환경 전체 설정 완료!$(NC)"
+	@echo -e "$(GREEN)━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━$(NC)"
+	@echo ""
+	@echo "ArgoCD UI: https://dev.wealist.co.kr/api/argo"
+	@echo "Username: admin"
+	@echo "Password: $$(kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath='{.data.password}' 2>/dev/null | base64 -d || echo '(생성 중...)')"
+	@echo ""
+	@echo "상태 확인: make argo-status"
+
+# GitHub 토큰: 환경변수 또는 CLI 입력
+argo-add-repo-auto: ## Git 레포 자동 등록 (CLI 입력 또는 환경변수 GITHUB_TOKEN)
+	@GITHUB_USER=$${GITHUB_USER:-212clab}; \
+	REPO_URL="https://github.com/OrangesCloud/wealist-project-advanced-k8s.git"; \
+	if [ -z "$$GITHUB_TOKEN" ]; then \
+		echo ""; \
+		echo "GitHub Personal Access Token이 필요합니다."; \
+		echo "Token 생성: https://github.com/settings/tokens (repo 권한)"; \
+		echo ""; \
+		read -p "GitHub Token: " GITHUB_TOKEN; \
+	fi; \
+	echo "Git 레포 등록: $$REPO_URL (User: $$GITHUB_USER)"; \
+	kubectl -n argocd create secret generic repo-creds \
+		--from-literal=url=$$REPO_URL \
+		--from-literal=username=$$GITHUB_USER \
+		--from-literal=password=$$GITHUB_TOKEN \
+		--dry-run=client -o yaml | kubectl apply -f -; \
+	echo -e "$(GREEN)✅ Git 레포 등록 완료$(NC)"
 
 load-infra-images-ecr: ## [ArgoCD] 인프라 이미지 로드
 	@echo -e "$(YELLOW)📦 인프라 이미지 로드 중...$(NC)"

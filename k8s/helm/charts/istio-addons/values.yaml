@@ -9,11 +9,11 @@ namespace: istio-system
 imageRegistry: ""  # "" = Docker Hub 직접 사용
 
 # =============================================================================
-# 모니터링 네임스페이스 (wealist-monitoring이 설치된 곳)
+# 모니터링 네임스페이스 (Prometheus/Grafana가 설치된 곳)
 # =============================================================================
-# 환경별로 다름: wealist-dev, wealist-localhost 등
-# 환경 파일(dev.yaml, localhost.yaml)에서 global.namespace로 오버라이드됨
-monitoringNamespace: wealist-dev
+# 빈 문자열 → global.namespace 사용 (환경 파일에서 설정)
+# 환경별: wealist-kind-local, wealist-dev, wealist-prod
+monitoringNamespace: ""
 
 # Kiali - Service Mesh Dashboard
 kiali:
