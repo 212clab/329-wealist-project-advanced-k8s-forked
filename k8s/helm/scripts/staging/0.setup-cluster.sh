@@ -304,12 +304,12 @@ if [ "$(uname)" = "Darwin" ]; then
     DB_HOST="host.docker.internal"
     echo "  🖥️  macOS 감지 → DB_HOST: host.docker.internal"
 elif grep -qi microsoft /proc/version 2>/dev/null; then
-    DB_HOST=$(hostname -I | awk '{print $1}')
-    echo "  🖥️  WSL 감지 → DB_HOST: ${DB_HOST} (WSL IP)"
-    echo "  ⚠️  WSL IP는 재부팅 시 변경될 수 있습니다."
+    # WSL2: Docker bridge gateway IP 사용 (Kind 노드에서 호스트 접근용)
+    DB_HOST=$(docker network inspect bridge -f '{{range .IPAM.Config}}{{.Gateway}}{{end}}' 2>/dev/null || echo "172.17.0.1")
+    echo "  🖥️  WSL 감지 → DB_HOST: ${DB_HOST} (Docker bridge gateway)"
 else
-    DB_HOST="172.18.0.1"
-    echo "  🖥️  Linux 감지 → DB_HOST: 172.18.0.1"
+    DB_HOST="172.17.0.1"
+    echo "  🖥️  Linux 감지 → DB_HOST: 172.17.0.1 (Docker bridge gateway)"
 fi
 
 # staging.yaml에 DB_HOST 동적 업데이트
