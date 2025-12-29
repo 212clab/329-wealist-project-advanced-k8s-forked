@@ -18,7 +18,7 @@ spec:
         - ../../environments/prod.yaml
       parameters:
         - name: image.repository
-          value: "video-service"
+          value: "prod/video-service"
         - name: image.tag
           value: "prod-latest"
         - name: externalSecrets.enabled
