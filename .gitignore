@@ -24,6 +24,11 @@ configs/config.yaml
 !configs/config.yaml.example
 
 # ============================================
+# Local Documentation (Issue Tracking)
+# ============================================
+PROD_DEPLOYMENT_ISSUES.md
+
+# ============================================
 # Kubernetes Secrets
 # ============================================
 # Plain text secrets (NEVER commit)
@@ -33,16 +38,20 @@ secret.yaml
 secrets.yaml
 k8s/base/shared/secret-shared.yaml
 services/auth-service/k8s/base/secret.yaml
-
+# Helm 환경별 시크릿 파일 (절대 커밋 금지)
+k8s/helm/environments/*-secrets.yaml
 # Private keys (NEVER commit)
 *.key
 sealed-secrets-*.key
 
 # Allow SealedSecrets (encrypted - safe to commit)
-!main/argocd/sealed-secrets/
-!main/argocd/sealed-secrets/*.yaml
-!main/argocd/sealed-secrets/**/*.yaml
-!main/helm/charts/wealist-infrastructure/templates/shared-secret.yaml
+!k8s/argocd/sealed-secrets/
+!k8s/argocd/sealed-secrets/*.yaml
+!k8s/argocd/sealed-secrets/**/*.yaml
+!k8s/argocd/apps/*/external-secrets.yaml
+!k8s/argocd/base/external-secrets/
+!k8s/argocd/base/external-secrets/*.yaml
+!k8s/helm/charts/wealist-infrastructure/templates/shared-secret.yaml
 !**/sealed-secret-*.yaml
 !**/sealed-secret.yaml
 !**/*.example
@@ -50,14 +59,19 @@ sealed-secrets-*.key
 # ============================================
 # Helm
 # ============================================
-helm/environments/*-secrets.yaml
-helm/environments/secrets-*.yaml
-helm/charts/**/values-prod.yaml
-helm/charts/**/values-production.yaml
-helm/charts/**/secrets.yaml
-!helm/**/*.example
-helm/charts/**/charts/*.tgz
-helm/charts/**/*.lock
+k8s/helm/environments/*-secrets.yaml
+k8s/helm/environments/secrets-*.yaml
+k8s/helm/environments/prod-registry.yaml
+!k8s/helm/environments/prod-registry.example.yaml
+k8s/helm/charts/**/values-prod.yaml
+k8s/helm/charts/**/values-production.yaml
+k8s/helm/charts/**/secrets.yaml
+# Allow example/template files (safe to commit)
+!k8s/helm/**/*.example
+!k8s/helm/environments/secrets.example.yaml
+!k8s/helm/environments/*-secrets.example.yaml
+k8s/helm/charts/**/charts/*.tgz
+k8s/helm/charts/**/*.lock
 
 # ============================================
 # Docker & Local Data
@@ -69,6 +83,7 @@ minio-data/
 # ============================================
 # File Uploads (Local Development)
 # ============================================
+# 루트 레벨 업로드 폴더만 무시 (components/storage 제외)
 /uploads/
 /storage/
 /files/
@@ -145,6 +160,11 @@ grafana/volume/**
 prometheus/volume/
 prometheus/data/
 
+# ============================================
+# Downloaded CLI Tools (자동 설치됨)
+# ============================================
+/istio-*/
+
 # SonarQube
 .scannerwork/
 
@@ -171,4 +191,30 @@ CLAUDE.md
 # ============================================
 # Terraform
 # ============================================
-terraform/dev/*
+# Local .terraform directories
+**/.terraform/
+
+# Terraform state files (contain secrets!)
+*.tfstate
+*.tfstate.*
+
+# Terraform variables files (contain secrets!)
+*.tfvars
+!*.tfvars.example
+
+# Crash log files
+crash.log
+crash.*.log
+
+# Terraform plan files
+*.tfplan
+
+# Override files
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+
+# Terraform sensitive files (tfvars may contain secrets)
+terraform/**/terraform.tfvars
+terraform/**/.terraform/

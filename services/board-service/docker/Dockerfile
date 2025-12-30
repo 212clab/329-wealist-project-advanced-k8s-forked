@@ -1,7 +1,6 @@
 # syntax=docker/dockerfile:1.4
 # Builder stage - optimized layer caching (2025-12-18)
-FROM golang:1.24-bookworm AS builder
-
+FROM public.ecr.aws/docker/library/golang:1.24-bookworm AS builder
 # Install build dependencies (cached layer)
 RUN apt-get update && apt-get install -y --no-install-recommends git ca-certificates tzdata && rm -rf /var/lib/apt/lists/*
 
@@ -19,11 +18,11 @@ COPY services/board-service/go.mod services/board-service/go.sum ./
 
 # Add replace directive for local package
 RUN echo 'replace github.com/OrangesCloud/wealist-advanced-go-pkg => ../../packages/wealist-advanced-go-pkg' >> go.mod
-
+    
 # Download dependencies (cached if go.mod/go.sum unchanged)
 RUN --mount=type=cache,target=/go/pkg/mod \
     GOWORK=off go mod download -x
-
+   
 # Copy source code (changes here don't invalidate dependency cache)
 COPY services/board-service/ ./
 
@@ -37,7 +36,7 @@ RUN --mount=type=cache,target=/go/pkg/mod \
     CGO_ENABLED=0 GOOS=linux GOARCH=amd64 GOWORK=off go build -ldflags="-w -s" -o board-api ./cmd/api
 
 # Runtime stage
-FROM alpine:latest
+FROM public.ecr.aws/docker/library/alpine:latest
 
 # Install runtime dependencies
 RUN apk --no-cache add ca-certificates tzdata wget

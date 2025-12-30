@@ -1,0 +1,192 @@
+# =============================================================================
+# user-service Helm Chart - Default Values
+# =============================================================================
+# Service-specific configuration only.
+# Global settings (namespace, environment, imageRegistry, domain) are defined
+# in helm/environments/*.yaml files.
+
+# -----------------------------------------------------------------------------
+# Image Configuration
+# -----------------------------------------------------------------------------
+image:
+  repository: user-service
+  # pullPolicy and tag are set in helm/environments/*.yaml
+
+imagePullSecrets: []
+# - name: registry-secret
+
+# -----------------------------------------------------------------------------
+# Deployment Configuration
+# -----------------------------------------------------------------------------
+replicaCount: 1  # 기본값 1개 (환경별로 오버라이드 가능)
+
+# Deployment strategy
+strategy:
+  type: RollingUpdate
+  rollingUpdate:
+    maxSurge: 1
+    maxUnavailable: 0
+
+# -----------------------------------------------------------------------------
+# Service Configuration
+# -----------------------------------------------------------------------------
+service:
+  type: ClusterIP
+  port: 8081
+  targetPort: 8081
+  annotations: {}
+  # cloud.google.com/load-balancer-type: "Internal"
+
+# -----------------------------------------------------------------------------
+# Application Configuration (Service-Specific Only)
+# -----------------------------------------------------------------------------
+# Note: Common config (ENV, LOG_LEVEL, S3_*, CORS_ORIGINS, etc.) comes from
+# helm/environments/*.yaml via shared.config section.
+# Only service-specific values should be defined here.
+config:
+  # Server (service-specific port)
+  PORT: "8081"
+  SERVER_PORT: "8081"
+  SERVER_BASE_PATH: "/api"
+
+  # Database (service-specific)
+  DB_NAME: "wealist_user_service_db"
+  # DATABASE_URL is built from individual components (DB_HOST, DB_USER, DB_PASSWORD, DB_NAME, DB_SSLMODE)
+
+  # Service-specific URLs (if any)
+
+# -----------------------------------------------------------------------------
+# Secrets (DO NOT COMMIT ACTUAL VALUES)
+# For production, use External Secrets Operator or similar
+# -----------------------------------------------------------------------------
+secrets: {}
+  # DATABASE_URL: ""  # Will be base64 encoded automatically
+  # SECRET_KEY: ""
+
+# -----------------------------------------------------------------------------
+# Health Checks
+# -----------------------------------------------------------------------------
+healthCheck:
+  liveness:
+    enabled: true
+    path: /health/live
+    port: 8081
+    initialDelaySeconds: 30
+    periodSeconds: 10
+    timeoutSeconds: 5
+    successThreshold: 1
+    failureThreshold: 3
+
+  readiness:
+    enabled: true
+    path: /health/ready
+    port: 8081
+    initialDelaySeconds: 10
+    periodSeconds: 5
+    timeoutSeconds: 3
+    successThreshold: 1
+    failureThreshold: 3
+
+# -----------------------------------------------------------------------------
+# Resource Limits (Production-grade)
+# -----------------------------------------------------------------------------
+resources:
+  requests:
+    memory: "256Mi"
+    cpu: "100m"
+  limits:
+    memory: "512Mi"
+    cpu: "500m"
+
+# -----------------------------------------------------------------------------
+# Autoscaling (HPA)
+# -----------------------------------------------------------------------------
+autoscaling:
+  enabled: true
+  minReplicas: 2
+  maxReplicas: 10
+  targetCPUUtilizationPercentage: 70
+  targetMemoryUtilizationPercentage: 80
+  behavior:
+    scaleDown:
+      stabilizationWindowSeconds: 300
+      policies:
+        - type: Percent
+          value: 50
+          periodSeconds: 60
+    scaleUp:
+      stabilizationWindowSeconds: 0
+      policies:
+        - type: Percent
+          value: 100
+          periodSeconds: 15
+        - type: Pods
+          value: 2
+          periodSeconds: 15
+      selectPolicy: Max
+
+# -----------------------------------------------------------------------------
+# Security Configuration
+# -----------------------------------------------------------------------------
+# Pod Security Context
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 1000
+  fsGroup: 1000
+  seccompProfile:
+    type: RuntimeDefault
+
+# Container Security Context
+securityContext:
+  allowPrivilegeEscalation: false
+  capabilities:
+    drop:
+      - ALL
+  readOnlyRootFilesystem: false  # Set true if app doesn't need write access
+  runAsNonRoot: true
+  runAsUser: 1000
+
+# Service Account
+serviceAccount:
+  create: true
+  annotations: {}
+  # iam.gke.io/gcp-service-account: user-service@project-id.iam.gserviceaccount.com
+  name: ""  # Defaults to chart fullname
+
+# -----------------------------------------------------------------------------
+# Monitoring & Observability
+# -----------------------------------------------------------------------------
+metrics:
+  enabled: true
+  path: /metrics
+  # Prometheus annotations are auto-added when enabled
+
+# Pod annotations (merged with auto-generated annotations)
+podAnnotations: {}
+  # Custom annotations here
+
+# -----------------------------------------------------------------------------
+# Pod Disruption Budget (for high availability)
+# -----------------------------------------------------------------------------
+podDisruptionBudget:
+  enabled: true
+  minAvailable: 1
+  # maxUnavailable: 1
+
+# -----------------------------------------------------------------------------
+# Advanced Configuration
+# -----------------------------------------------------------------------------
+# Node selector
+nodeSelector: {}
+  # kubernetes.io/arch: amd64
+  # workload-type: services
+
+# Tolerations
+tolerations: []
+  # - key: "dedicated"
+  #   operator: "Equal"
+  #   value: "services"
+  #   effect: "NoSchedule"
+
+# Affinity
+affinity: {}
