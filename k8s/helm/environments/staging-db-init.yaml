@@ -50,3 +50,10 @@ secretRef:
   passwordKey: DB_PASSWORD
   hostKey: DB_HOST
   usernameKey: DB_USERNAME
+
+# PostgreSQL 15+ schema 권한 설정 (staging용)
+# postgres superuser로 연결해서 wealist 유저에게 public schema 권한 부여
+schemaGrant:
+  enabled: true
+  superuser: postgres
+  superuserPassword: postgres  # init-local-postgres.sh에서 설정한 비밀번호
