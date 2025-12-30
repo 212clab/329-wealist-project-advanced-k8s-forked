@@ -32,7 +32,8 @@ auth-service:
   replicaCount: 2
   autoscaling:
     minReplicas: 2
-  resources:
+  # Spring Boot용 리소스 (javaResources 키 사용 - Go 서비스의 resources와 분리)
+  javaResources:
     requests:
       memory: "384Mi"   # 실제 사용량 ~300Mi
       cpu: "100m"       # 실제 사용량 ~50m
