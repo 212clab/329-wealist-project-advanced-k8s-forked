@@ -58,7 +58,7 @@ spec:
               name: {{ .Values.secretRef.name }}
               key: {{ .Values.secretRef.passwordKey }}
         - name: PGSSLMODE
-          value: "require"
+          value: {{ .Values.database.sslMode | default "require" | quote }}
         command:
         - /bin/sh
         - -c

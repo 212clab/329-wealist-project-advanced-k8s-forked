@@ -1,0 +1,31 @@
+# =============================================================================
+# DB Init - ArgoCD Application (Staging)
+# =============================================================================
+# Host PostgreSQL 초기화 (데이터베이스 생성)
+# sync-wave: 2 (External Secrets 이후, 서비스 배포 전)
+
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: db-init-staging
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "2"
+spec:
+  project: wealist-staging
+  source:
+    repoURL: https://github.com/212clab/wealist-project-advanced-k8s-forked.git
+    targetRevision: argo-develop
+    path: k8s/helm/charts/db-init
+    helm:
+      valueFiles:
+        - ../../../helm/environments/staging-db-init.yaml
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: wealist-staging
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
