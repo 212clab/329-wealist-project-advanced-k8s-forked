@@ -25,7 +25,9 @@ import (
 	"project-board-api/internal/repository"
 	"project-board-api/internal/router"
 
-	_ "project-board-api/docs" // Swagger docs
+	// Swagger docs - temporarily disabled for CI compatibility
+	// TODO: Re-enable after resolving genproto conflict
+	// _ "project-board-api/docs"
 )
 
 // @title           Project Board Management API
