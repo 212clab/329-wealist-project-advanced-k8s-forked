@@ -7,12 +7,12 @@ data:
   # ArgoCD URL 설정
   context: |
     argocdUrl: https://argocd.wealist.co.kr
-
+  
   # Discord 서비스 설정
   service.discord: |
     token: $discord-webhook-url
   
-  # 배포 성공 템플릿 (message 형식만 지원)
+  # 배포 성공 템플릿
   template.app-deployed: |
     message: |
       🚀 **배포 완료**
@@ -23,7 +23,7 @@ data:
       **동기화**: {{.app.status.sync.status}}
       **리비전**: {{.app.status.sync.revision}}
       **시간**: {{.app.status.operationState.finishedAt}}
-
+  
   # 배포 실패 템플릿
   template.app-sync-failed: |
     message: |
@@ -33,7 +33,7 @@ data:
       **환경**: {{.app.metadata.namespace}}
       **오류**: {{.app.status.operationState.message}}
       **시간**: {{.app.status.operationState.finishedAt}}
-
+  
   # 배포 시작 템플릿
   template.app-sync-running: |
     message: |
@@ -42,7 +42,7 @@ data:
       **애플리케이션**: {{.app.metadata.name}}
       **환경**: {{.app.metadata.namespace}}
       **시작 시간**: {{.app.status.operationState.startedAt}}
-
+  
   # 트리거 설정
   trigger.on-deployed: |
     - description: 배포 완료 시 알림
@@ -61,23 +61,25 @@ data:
       send:
       - app-sync-running
       when: app.status.operationState.phase in ['Running']
-
-  # 구독 설정 (Production 앱에만 적용)
-  subscriptions: |
-    - recipients:
-      - discord:prod-deployment-alerts
-      triggers:
-      - on-deployed
-      - on-sync-failed
-      - on-sync-running
-      selector: metadata.labels.environment == production
 ---
-apiVersion: v1
-kind: Secret
+# ExternalSecret으로 AWS Secrets Manager에서 가져오기
+apiVersion: external-secrets.io/v1beta1
+kind: ExternalSecret
 metadata:
   name: argocd-notifications-secret
   namespace: argocd
-type: Opaque
-stringData:
-  # Discord Webhook URL (Bot Token 아님!)
-  discord-webhook-url: "https://discord.com/api/webhooks/YOUR_ID/YOUR_TOKEN"
+spec:
+  refreshInterval: 1h
+  secretStoreRef:
+    name: aws-secrets-manager
+    kind: ClusterSecretStore
+
+  target:
+    name: argocd-notifications-secret
+    creationPolicy: Owner
+
+  data:
+    - secretKey: discord-webhook-url
+      remoteRef:
+        key: "wealist/prod/notifications/discord"
+        property: webhook_url
