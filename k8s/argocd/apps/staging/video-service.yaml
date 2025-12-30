@@ -33,6 +33,8 @@ spec:
           value: "172.17.0.1"
         - name: config.DB_NAME
           value: "wealist"
+        - name: config.DB_USER
+          value: "wealist"
   destination:
     server: https://kubernetes.default.svc
     namespace: wealist-staging
