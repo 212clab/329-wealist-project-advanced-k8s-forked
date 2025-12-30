@@ -278,6 +278,11 @@ loki:
   image:
     repository: grafana/loki
     tag: "2.9.2"
+  persistence:
+    enabled: true
+    hostPath:
+      enabled: true
+      path: /data/loki
 
 promtail:
   enabled: true
@@ -290,6 +295,11 @@ grafana:
   image:
     repository: grafana/grafana
     tag: "10.2.2"
+  persistence:
+    enabled: true
+    hostPath:
+      enabled: true
+      path: /data/grafana
   config:
     allowSignUp: false
     rootUrl: "https://dev.wealist.co.kr/api/monitoring/grafana"
