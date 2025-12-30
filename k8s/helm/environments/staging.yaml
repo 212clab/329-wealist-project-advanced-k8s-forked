@@ -315,3 +315,32 @@ redisExporter:
   config:
     host: "172.17.0.1"
     port: 6379
+
+# =============================================================================
+# Service-specific Database Configuration
+# =============================================================================
+# Staging: 모든 서비스가 공통 DB 사용 (wealist)
+# 호스트 PostgreSQL에 wealist DB가 있어야 함
+board-service:
+  config:
+    DB_NAME: "wealist"
+
+user-service:
+  config:
+    DB_NAME: "wealist"
+
+chat-service:
+  config:
+    DB_NAME: "wealist"
+
+noti-service:
+  config:
+    DB_NAME: "wealist"
+
+storage-service:
+  config:
+    DB_NAME: "wealist"
+
+video-service:
+  config:
+    DB_NAME: "wealist"
