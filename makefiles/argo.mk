@@ -262,6 +262,14 @@ argo-deploy-prod: ## [ArgoCD] Prod 환경 Applications 배포
 # 상태 확인
 # ============================================
 
+# argo-status 각 항목 설명:
+# - ArgoCD Pods: ArgoCD 시스템 컴포넌트 (server, repo-server, redis, controller 등)
+# - Sealed Secrets Controller: Git에 암호화된 Secret 저장 가능하게 해주는 Bitnami 프로젝트 컨트롤러
+# - Applications: ArgoCD Application CRD 개수 (Git에서 읽어 배포할 앱 정의)
+#   - Synced = Git과 클러스터 상태 일치
+#   - OutOfSync = Git과 클러스터 상태 불일치 (sync 필요)
+# - SealedSecrets: 암호화된 Secret CRD (kubeseal로 암호화 → Git 커밋 가능)
+# - Secrets: 일반 K8s Secret (base64 인코딩만, 암호화 X, Git 저장 비권장)
 argo-status: ## [ArgoCD] 전체 상태 확인
 	@echo -e "$(YELLOW)━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━$(NC)"
 	@echo -e "$(YELLOW)📊 시스템 상태$(NC)"
@@ -270,20 +278,20 @@ argo-status: ## [ArgoCD] 전체 상태 확인
 	@echo "🏗️  클러스터:"
 	@kubectl cluster-info | head -1 || echo "클러스터 없음"
 	@echo ""
-	@echo "📦 ArgoCD Pods:"
+	@echo "📦 ArgoCD Pods: (ArgoCD 시스템 컴포넌트)"
 	@kubectl get pods -n argocd --no-headers 2>/dev/null | grep -E "Running|Ready" | wc -l | xargs -I {} echo "  Running: {} pods"
 	@echo ""
-	@echo "🔐 Sealed Secrets:"
+	@echo "🔐 Sealed Secrets: (암호화 Secret용 컨트롤러)"
 	@kubectl get pods -n kube-system -l app.kubernetes.io/name=sealed-secrets --no-headers 2>/dev/null | wc -l | xargs -I {} echo "  Controller: {} pod(s)"
 	@echo ""
-	@echo "🎯 Applications:"
+	@echo "🎯 Applications: (ArgoCD가 관리하는 앱)"
 	@kubectl get applications -n argocd --no-headers 2>/dev/null | wc -l | xargs -I {} echo "  Total: {}"
-	@kubectl get applications -n argocd --no-headers 2>/dev/null | grep Synced | wc -l | xargs -I {} echo "  Synced: {}"
+	@kubectl get applications -n argocd --no-headers 2>/dev/null | grep Synced | wc -l | xargs -I {} echo "  Synced: {} (Git 동기화 완료)"
 	@echo ""
-	@echo "🔒 SealedSecrets:"
+	@echo "🔒 SealedSecrets: (암호화된 Secret, Git 저장 가능)"
 	@kubectl get sealedsecrets -n wealist-$(ENVIRONMENT) --no-headers 2>/dev/null | wc -l | xargs -I {} echo "  Total: {}"
 	@echo ""
-	@echo "🗝️  Secrets:"
+	@echo "🗝️  Secrets: (일반 Secret, 암호화 안됨)"
 	@kubectl get secrets -n wealist-$(ENVIRONMENT) --no-headers 2>/dev/null | wc -l | xargs -I {} echo "  Total: {}"
 	@echo ""
 	@echo -e "$(YELLOW)━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━$(NC)"

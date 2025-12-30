@@ -150,6 +150,8 @@ istio:
     hosts:
       - "dev.wealist.co.kr"
       - "api.dev.wealist.co.kr"
+      - "localhost"
+      - "*"  # Kind 로컬 접근용
     frontend:
       enabled: false
     minio:
