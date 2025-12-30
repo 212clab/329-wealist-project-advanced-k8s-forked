@@ -171,6 +171,9 @@ argo-install-simple: ## ArgoCD만 간단 설치 (Sealed Secrets 없이)
 		kubectl create configmap argocd-cm -n argocd --from-literal=server.rootpath=/api/argo --from-literal=server.insecure=true 2>/dev/null || true
 	@kubectl rollout restart deployment argocd-server -n argocd 2>/dev/null || true
 	@echo ""
+	@echo "ReferenceGrant 적용 중 (cross-namespace routing)..."
+	@kubectl apply -f k8s/argocd/base/referencegrant-argocd.yaml 2>/dev/null || true
+	@echo ""
 	@echo "=============================================="
 	@echo "  ✅ ArgoCD 설치 완료!"
 	@echo "=============================================="
