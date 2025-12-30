@@ -296,7 +296,7 @@ postgresExporter:
     repository: prometheuscommunity/postgres-exporter
     tag: "v0.15.0"
   config:
-    host: "host.docker.internal"
+    host: "172.17.0.1"
     port: 5432
 
 redisExporter:
@@ -305,5 +305,5 @@ redisExporter:
     repository: oliver006/redis_exporter
     tag: "v1.55.0"
   config:
-    host: "host.docker.internal"
+    host: "172.17.0.1"
     port: 6379
