@@ -146,6 +146,38 @@ resource "aws_secretsmanager_secret_version" "livekit" {
 }
 
 # -----------------------------------------------------------------------------
+# Discord Webhook URL (수동 입력 - placeholder)
+# -----------------------------------------------------------------------------
+# Discord 서버 설정에서 생성한 Webhook URL
+# ArgoCD Notifications에서 배포 알림 전송에 사용
+# Terraform apply 후 수동으로 실제 값 입력 필요:
+# aws secretsmanager put-secret-value \
+#   --secret-id wealist/prod/notifications/discord \
+#   --secret-string '{"webhook_url":"https://discord.com/api/webhooks/..."}'
+resource "aws_secretsmanager_secret" "discord_webhook" {
+  name       = "wealist/prod/notifications/discord"
+  kms_key_id = module.kms.key_arn
+
+  tags = merge(
+    local.common_tags,
+    {
+      Purpose = "ArgoCD Notifications"
+    }
+  )
+}
+
+resource "aws_secretsmanager_secret_version" "discord_webhook" {
+  secret_id = aws_secretsmanager_secret.discord_webhook.id
+  secret_string = jsonencode({
+    webhook_url = "https://discord.com/api/webhooks/PLACEHOLDER/PLACEHOLDER-UPDATE-ME"
+  })
+
+  lifecycle {
+    ignore_changes = [secret_string] # 수동 업데이트 후 덮어쓰지 않음
+  }
+}
+
+# -----------------------------------------------------------------------------
 # Grafana Admin Password (자동 생성)
 # -----------------------------------------------------------------------------
 # Grafana 대시보드 관리자 비밀번호
