@@ -458,6 +458,50 @@ else
 fi
 
 # =============================================================================
+# 12-1. ReferenceGrant + HTTPRoute 즉시 적용 (ArgoCD 접근용)
+# =============================================================================
+# ArgoCD 동기화 전에 ReferenceGrant와 HTTPRoute를 미리 적용하여
+# 즉시 /api/argo 로 ArgoCD UI에 접근할 수 있도록 함
+echo ""
+echo "🔐 ReferenceGrant 적용 중 (ArgoCD HTTPRoute 접근용)..."
+REFERENCEGRANT="${SCRIPT_DIR}/../../../argocd/referencegrants/referencegrant-argocd.yaml"
+if [ -f "${REFERENCEGRANT}" ]; then
+    kubectl apply -f "${REFERENCEGRANT}"
+    echo "✅ ReferenceGrant 적용 완료"
+else
+    echo "⚠️  ReferenceGrant 파일을 찾을 수 없습니다: ${REFERENCEGRANT}"
+fi
+
+# ArgoCD HTTPRoute 부트스트랩 (ArgoCD sync 전에 접근 가능하도록)
+echo "🔐 ArgoCD HTTPRoute 부트스트랩 적용 중..."
+kubectl apply -f - <<EOF
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: argocd-bootstrap-route
+  namespace: ${NAMESPACE}
+  labels:
+    app: argocd-bootstrap
+    managed-by: setup-script
+spec:
+  parentRefs:
+    - name: istio-ingressgateway
+      namespace: istio-system
+  hostnames:
+    - "dev.wealist.co.kr"
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /api/argo
+      backendRefs:
+        - name: argocd-server
+          namespace: argocd
+          port: 80
+EOF
+echo "✅ ArgoCD HTTPRoute 적용 완료 - /api/argo 라우팅 활성화"
+
+# =============================================================================
 # 13. ArgoCD Root App 배포
 # =============================================================================
 echo ""
