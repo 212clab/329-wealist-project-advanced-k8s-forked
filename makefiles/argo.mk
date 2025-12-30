@@ -488,6 +488,47 @@ kind-staging-setup: ## [ArgoCD] Kind 클러스터 + ECR + ArgoCD + 앱 배포 (s
 	@echo ""
 	@echo "상태 확인: make argo-status"
 
+# ============================================
+# 리셋 명령어
+# ============================================
+
+# kind-staging-reset: 클러스터 완전 리셋 (삭제 + 재생성)
+# - Kind 클러스터 삭제 (ArgoCD, Helm, Pod 전부 삭제)
+# - 로컬 변경사항 제거 (git checkout)
+# - 클러스터 + ArgoCD + 앱 전부 새로 생성
+kind-staging-reset: ## [Reset] Staging 클러스터 완전 리셋 (삭제 후 재생성)
+	@echo -e "$(RED)⚠️  Staging 클러스터를 완전히 리셋합니다...$(NC)"
+	@echo ""
+	@read -p "정말 리셋하시겠습니까? (y/N): " confirm; \
+	if [ "$$confirm" = "y" ] || [ "$$confirm" = "Y" ]; then \
+		echo ""; \
+		echo -e "$(YELLOW)1. Kind 클러스터 삭제 중...$(NC)"; \
+		kind delete cluster --name wealist 2>/dev/null || true; \
+		echo ""; \
+		echo -e "$(YELLOW)2. 로컬 변경사항 정리 중...$(NC)"; \
+		git checkout -- . 2>/dev/null || true; \
+		echo ""; \
+		echo -e "$(YELLOW)3. Staging 클러스터 재생성 중...$(NC)"; \
+		$(MAKE) kind-staging-setup; \
+	else \
+		echo "리셋 취소됨"; \
+	fi
+
+kind-staging-clean: ## [Reset] Staging 클러스터만 삭제 (재생성 없음)
+	@echo -e "$(RED)🗑️  Staging 클러스터 삭제 중...$(NC)"
+	kind delete cluster --name wealist 2>/dev/null || echo "클러스터 없음"
+	@echo -e "$(GREEN)✅ 클러스터 삭제 완료$(NC)"
+	@echo ""
+	@echo "재생성: make kind-staging-setup"
+
+argo-reset-apps: ## [Reset] ArgoCD 앱만 리셋 (클러스터 유지)
+	@echo -e "$(YELLOW)🔄 ArgoCD 앱 리셋 중...$(NC)"
+	kubectl delete applications --all -n argocd 2>/dev/null || true
+	@echo ""
+	@echo -e "$(YELLOW)📦 앱 재생성 중...$(NC)"
+	$(MAKE) argo-deploy-staging
+	@echo -e "$(GREEN)✅ ArgoCD 앱 리셋 완료$(NC)"
+
 # GitHub 토큰: 환경변수 또는 CLI 입력
 argo-add-repo-auto: ## Git 레포 자동 등록 (CLI 입력 또는 환경변수 GITHUB_TOKEN)
 	@GITHUB_USER=$${GITHUB_USER:-212clab}; \
