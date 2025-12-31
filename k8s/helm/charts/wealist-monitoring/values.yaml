@@ -574,7 +574,9 @@ tempo:
   # Prometheus로 전송하여 별도 instrumentation 없이 메트릭 수집
   metricsGenerator:
     enabled: false  # prod에서 true로 활성화
-    # Prometheus remote write URL
+    # Prometheus remote write URL (routePrefix 포함 필요)
+    # 예: prometheus.config.routePrefix가 /api/monitoring/prometheus인 경우:
+    # http://prometheus:9090/api/monitoring/prometheus/api/v1/write
     remoteWriteUrl: "http://prometheus:9090/api/v1/write"
     # Span Metrics: Rate, Error, Duration 메트릭 생성
     spanMetrics:

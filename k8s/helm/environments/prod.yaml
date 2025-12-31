@@ -591,7 +591,8 @@ tempo:
   # V3: Tempo Metrics Generator (RED 메트릭 자동 생성)
   metricsGenerator:
     enabled: true
-    remoteWriteUrl: "http://prometheus:9090/api/v1/write"
+    # routePrefix 포함 필수 (/api/monitoring/prometheus)
+    remoteWriteUrl: "http://prometheus:9090/api/monitoring/prometheus/api/v1/write"
     spanMetrics:
       enabled: true
       dimensions:
