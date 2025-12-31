@@ -48,9 +48,8 @@ data:
         s3:
           bucket: {{ .Values.tempo.config.s3.bucket }}
           region: {{ .Values.tempo.config.s3.region }}
-          {{- if .Values.tempo.config.s3.endpoint }}
-          endpoint: {{ .Values.tempo.config.s3.endpoint }}
-          {{- end }}
+          endpoint: s3.{{ .Values.tempo.config.s3.region }}.amazonaws.com
+          insecure: false
         {{- end }}
         wal:
           path: /var/tempo/wal

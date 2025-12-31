@@ -12,9 +12,15 @@ data:
     common:
       path_prefix: /loki
       storage:
+        {{- if .Values.loki.config.s3.enabled }}
+        s3:
+          s3: s3://{{ .Values.loki.config.s3.region }}/{{ .Values.loki.config.s3.bucket }}
+          s3forcepathstyle: false
+        {{- else }}
         filesystem:
           chunks_directory: /loki/chunks
           rules_directory: /loki/rules
+        {{- end }}
       replication_factor: 1
       ring:
         kvstore:
@@ -22,14 +28,41 @@ data:
     schema_config:
       configs:
         - from: 2020-10-24
-          store: boltdb-shipper
-          object_store: filesystem
-          schema: v11
+          store: tsdb
+          object_store: {{ if .Values.loki.config.s3.enabled }}s3{{ else }}filesystem{{ end }}
+          schema: v13
           index:
             prefix: index_
             period: 24h
+    storage_config:
+      {{- if .Values.loki.config.s3.enabled }}
+      aws:
+        region: {{ .Values.loki.config.s3.region }}
+        bucketnames: {{ .Values.loki.config.s3.bucket }}
+        s3forcepathstyle: false
+      tsdb_shipper:
+        active_index_directory: /loki/tsdb-index
+        cache_location: /loki/tsdb-cache
+      {{- else }}
+      filesystem:
+        directory: /loki/chunks
+      boltdb_shipper:
+        active_index_directory: /loki/index
+        cache_location: /loki/cache
+        shared_store: filesystem
+      {{- end }}
     limits_config:
       enforce_metric_name: false
       reject_old_samples: true
       reject_old_samples_max_age: 168h
+      max_cache_freshness_per_query: 10m
+      split_queries_by_interval: 15m
+    {{- if .Values.loki.config.s3.enabled }}
+    compactor:
+      working_directory: /loki/compactor
+      compaction_interval: 10m
+      retention_enabled: true
+      retention_delete_delay: 2h
+      retention_delete_worker_count: 150
+    {{- end }}
 {{- end }}
