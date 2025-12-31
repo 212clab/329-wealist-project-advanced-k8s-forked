@@ -297,6 +297,130 @@ jobs:
           echo "**Tag:** ${{ steps.tags.outputs.tag }}" >> $GITHUB_STEP_SUMMARY
           echo "**Platforms:** linux/amd64, linux/arm64" >> $GITHUB_STEP_SUMMARY
 
+  # -------------------------------------------------------------------------
+  # 빌드 완료 Discord 알림
+  # -------------------------------------------------------------------------
+  notify-build-complete:
+    needs: [detect-changes, build-and-push]
+    if: always() && needs.detect-changes.outputs.services != '[]' && needs.detect-changes.outputs.services != ''
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Set notification variables
+        id: vars
+        run: |
+          SHORT_SHA="${{ github.sha }}"
+          SHORT_SHA=${SHORT_SHA:0:7}
+          BUILD_NUMBER="${{ github.run_number }}"
+          TAG="${BUILD_NUMBER}-${SHORT_SHA}"
+
+          echo "tag=${TAG}" >> $GITHUB_OUTPUT
+          echo "short_sha=${SHORT_SHA}" >> $GITHUB_OUTPUT
+
+      - name: Send Discord notification on success
+        if: needs.build-and-push.result == 'success'
+        env:
+          DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK_URL }}
+        run: |
+          if [ -n "$DISCORD_WEBHOOK" ]; then
+            SERVICES='${{ needs.detect-changes.outputs.services }}'
+            SERVICES_LIST=$(echo "$SERVICES" | jq -r 'join(", ")')
+
+            curl -H "Content-Type: application/json" \
+                 -X POST \
+                 -d '{
+                   "embeds": [{
+                     "title": "✅ Image Build Complete",
+                     "description": "Docker images built and pushed to ECR",
+                     "color": 3066993,
+                     "fields": [
+                       {
+                         "name": "🔧 Services",
+                         "value": "'"${SERVICES_LIST}"'",
+                         "inline": false
+                       },
+                       {
+                         "name": "🏷️ Image Tag",
+                         "value": "`${{ steps.vars.outputs.tag }}`",
+                         "inline": true
+                       },
+                       {
+                         "name": "🌍 Environment",
+                         "value": "'"${{ needs.detect-changes.outputs.environment }}"'",
+                         "inline": true
+                       },
+                       {
+                         "name": "📦 Registry",
+                         "value": "ECR",
+                         "inline": true
+                       },
+                       {
+                         "name": "🔗 Commit",
+                         "value": "[`${{ steps.vars.outputs.short_sha }}`](${{ github.server_url }}/${{ github.repository }}/commit/${{ github.sha }})",
+                         "inline": true
+                       },
+                       {
+                         "name": "👤 Triggered by",
+                         "value": "'"${{ github.actor }}"'",
+                         "inline": true
+                       }
+                     ],
+                     "footer": {
+                       "text": "GitHub Actions • Build #${{ github.run_number }}"
+                     },
+                     "timestamp": "'"$(date -u +%Y-%m-%dT%H:%M:%S.000Z)"'"
+                   }]
+                 }' \
+                 "$DISCORD_WEBHOOK"
+          fi
+
+      - name: Send Discord notification on failure
+        if: needs.build-and-push.result == 'failure'
+        env:
+          DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK_URL }}
+        run: |
+          if [ -n "$DISCORD_WEBHOOK" ]; then
+            SERVICES='${{ needs.detect-changes.outputs.services }}'
+            SERVICES_LIST=$(echo "$SERVICES" | jq -r 'join(", ")')
+
+            curl -H "Content-Type: application/json" \
+                 -X POST \
+                 -d '{
+                   "embeds": [{
+                     "title": "❌ Image Build Failed",
+                     "description": "Docker image build failed!",
+                     "color": 15158332,
+                     "fields": [
+                       {
+                         "name": "🔧 Services",
+                         "value": "'"${SERVICES_LIST}"'",
+                         "inline": false
+                       },
+                       {
+                         "name": "🌍 Environment",
+                         "value": "'"${{ needs.detect-changes.outputs.environment }}"'",
+                         "inline": true
+                       },
+                       {
+                         "name": "🔗 Workflow",
+                         "value": "[View Logs](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})",
+                         "inline": true
+                       },
+                       {
+                         "name": "👤 Triggered by",
+                         "value": "'"${{ github.actor }}"'",
+                         "inline": true
+                       }
+                     ],
+                     "footer": {
+                       "text": "GitHub Actions • Build #${{ github.run_number }}"
+                     },
+                     "timestamp": "'"$(date -u +%Y-%m-%dT%H:%M:%S.000Z)"'"
+                   }]
+                 }' \
+                 "$DISCORD_WEBHOOK"
+          fi
+
   update-gitops-manifests:
     needs: [detect-changes, build-and-push]
     if: |
@@ -454,3 +578,59 @@ jobs:
           echo "**Image Tag:** ${NEW_TAG}" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "**ArgoCD will automatically sync these changes.**" >> $GITHUB_STEP_SUMMARY
+
+      - name: Send Discord notification for GitOps update
+        env:
+          DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK_URL }}
+        run: |
+          if [ -n "$DISCORD_WEBHOOK" ]; then
+            SERVICES='${{ needs.detect-changes.outputs.services }}'
+            SERVICES_LIST=$(echo "$SERVICES" | jq -r 'join(", ")')
+
+            curl -H "Content-Type: application/json" \
+                 -X POST \
+                 -d '{
+                   "embeds": [{
+                     "title": "🚀 GitOps Manifest Updated",
+                     "description": "ArgoCD will auto-sync the deployment",
+                     "color": 3447003,
+                     "fields": [
+                       {
+                         "name": "🔧 Services",
+                         "value": "'"${SERVICES_LIST}"'",
+                         "inline": false
+                       },
+                       {
+                         "name": "🏷️ Image Tag",
+                         "value": "`'"${NEW_TAG}"'`",
+                         "inline": true
+                       },
+                       {
+                         "name": "🌍 Environment",
+                         "value": "'"${{ needs.detect-changes.outputs.environment }}"'",
+                         "inline": true
+                       },
+                       {
+                         "name": "📋 Namespace",
+                         "value": "`'"${NAMESPACE}"'`",
+                         "inline": true
+                       },
+                       {
+                         "name": "🔀 Target Branch",
+                         "value": "`'"${K8S_BRANCH}"'`",
+                         "inline": true
+                       },
+                       {
+                         "name": "👤 Triggered by",
+                         "value": "'"${{ github.actor }}"'",
+                         "inline": true
+                       }
+                     ],
+                     "footer": {
+                       "text": "GitHub Actions • Build #'"${BUILD_NUMBER}"'"
+                     },
+                     "timestamp": "'"$(date -u +%Y-%m-%dT%H:%M:%S.000Z)"'"
+                   }]
+                 }' \
+                 "$DISCORD_WEBHOOK"
+          fi

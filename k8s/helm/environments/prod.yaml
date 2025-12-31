@@ -400,7 +400,26 @@ prometheus:
   alerting:
     enabled: true
     alertmanager:
-      enabled: false  # Alertmanager 별도 구축 시 true로 변경
+      enabled: true  # AlertManager 연동 활성화
+      host: alertmanager
+      port: 9093
+
+# AlertManager - 알림 전달 (Prometheus → Discord/Slack)
+alertmanager:
+  enabled: true
+  image:
+    repository: prom/alertmanager
+    tag: "v0.27.0"
+  config:
+    receivers:
+      # Discord 웹훅 알림 (DISCORD_WEBHOOK_URL secret 필요)
+      discord:
+        enabled: true
+      # Slack 웹훅 알림 (선택적)
+      slack:
+        enabled: false
+        channel: "#wealist-alerts"
+        username: "wealist-alertmanager"
 
 # Loki - 로그 수집
 loki:
