@@ -18,6 +18,17 @@ global:
 imagePullSecrets: []
 
 # -----------------------------------------------------------------------------
+# Init Container - Secret 대기 설정
+# -----------------------------------------------------------------------------
+# ESO가 Secret을 생성할 때까지 서비스 Pod가 대기
+# sync-wave로 순서를 보장하지만, 추가 안전장치로 init container 사용
+waitForSecrets:
+  enabled: true
+  secretName: wealist-shared-secret
+  timeout: 300  # 5분 대기
+  image: bitnami/kubectl:1.30
+
+# -----------------------------------------------------------------------------
 # External Secrets Operator (AWS Secrets Manager 연동)
 # -----------------------------------------------------------------------------
 # Production 환경에서는 ESO를 통해 AWS Secrets Manager에서 시크릿 가져옴

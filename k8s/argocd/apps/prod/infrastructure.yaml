@@ -1,25 +1,29 @@
 # =============================================================================
-# DB Init - ArgoCD Application
+# Wealist Infrastructure - ConfigMaps, SharedConfig
 # =============================================================================
-# RDS PostgreSQL 초기화 (데이터베이스 생성)
-# sync-wave: 2 (External Secrets 이후, 서비스 배포 전)
-
+# 서비스들이 공유하는 ConfigMap 등 인프라 설정
+# sync-wave: 2 (ExternalSecret 이후, db-init 이전)
+# =============================================================================
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
-  name: db-init-prod
+  name: wealist-infrastructure-prod
   namespace: argocd
   annotations:
-    argocd.argoproj.io/sync-wave: "3"  # ExternalSecret(1) 이후, 서비스(5) 전
+    argocd.argoproj.io/sync-wave: "2"
+  labels:
+    environment: production
 spec:
   project: wealist-prod
   source:
     repoURL: https://github.com/OrangesCloud/wealist-project-advanced-k8s.git
     targetRevision: k8s-deploy-prod
-    path: k8s/helm/charts/db-init
+    path: k8s/helm/charts/wealist-infrastructure
     helm:
       valueFiles:
-        - ../../../helm/environments/prod-db-init.yaml
+        - values.yaml
+        - ../../environments/base.yaml
+        - ../../environments/prod.yaml
   destination:
     server: https://kubernetes.default.svc
     namespace: wealist-prod
