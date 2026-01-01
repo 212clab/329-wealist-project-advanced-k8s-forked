@@ -21,11 +21,12 @@ spec:
     targetRevision: "1.17.0"
     helm:
       valuesObject:
-        # GitOps Bridge Pattern: Terraform에서 ConfigMap으로 주입받을 예정
-        # 현재는 하드코딩 (EKS 클러스터 정보 고정)
-        clusterName: "wealist-prod"
+        clusterName: "wealist-prod-eks"
         region: "ap-northeast-2"
-        vpcId: "${VPC_ID}"  # Terraform argocd-cluster-metadata에서 주입
+        vpcId: "vpc-093f3aade1e124d11"
+        # CRD 설치는 Helm에서 수행 (crds.enabled: false로 중복 방지 안됨, Replace 사용)
+        crds:
+          keep: true
         serviceAccount:
           create: true
           name: aws-load-balancer-controller
@@ -43,6 +44,7 @@ spec:
     syncOptions:
       - CreateNamespace=true
       - ServerSideApply=true
+      - Replace=true
     retry:
       limit: 5
       backoff:
