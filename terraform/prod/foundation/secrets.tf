@@ -119,6 +119,39 @@ resource "aws_secretsmanager_secret_version" "oauth_google" {
 }
 
 # -----------------------------------------------------------------------------
+# OAuth2 ArgoCD (수동 입력 - placeholder)
+# -----------------------------------------------------------------------------
+# ArgoCD SSO를 위한 Google OAuth2 자격 증명 (앱용 oauth/google과 별도)
+# Google Cloud Console에서 ArgoCD 전용 OAuth 클라이언트 생성 후 입력:
+# - Redirect URI: https://argocd.wealist.co.kr/api/dex/callback
+# aws secretsmanager put-secret-value \
+#   --secret-id wealist/prod/oauth/argocd \
+#   --secret-string '{"client_id":"...","client_secret":"..."}'
+resource "aws_secretsmanager_secret" "oauth_argocd" {
+  name       = "wealist/prod/oauth/argocd"
+  kms_key_id = module.kms.key_arn
+
+  tags = merge(
+    local.common_tags,
+    {
+      Purpose = "ArgoCD SSO"
+    }
+  )
+}
+
+resource "aws_secretsmanager_secret_version" "oauth_argocd" {
+  secret_id = aws_secretsmanager_secret.oauth_argocd.id
+  secret_string = jsonencode({
+    client_id     = "PLACEHOLDER-UPDATE-ME"
+    client_secret = "PLACEHOLDER-UPDATE-ME"
+  })
+
+  lifecycle {
+    ignore_changes = [secret_string] # 수동 업데이트 후 덮어쓰지 않음
+  }
+}
+
+# -----------------------------------------------------------------------------
 # LiveKit Credentials (수동 입력 - placeholder)
 # -----------------------------------------------------------------------------
 # LiveKit Cloud 또는 Self-hosted LiveKit 서버 자격 증명
