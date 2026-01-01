@@ -81,24 +81,24 @@ jobs:
               continue
             fi
             
-            # 파일 구조 확인 (디버깅용)
-            echo "📄 Checking manifest structure..."
-            grep -E "(repository|tag):" "$MANIFEST" | head -5
+            # 현재 태그 확인
+            echo "📄 Current image.tag:"
+            grep -A 1 "name: image.tag" "$MANIFEST" || echo "Not found"
             
             # 백업 생성
             cp "$MANIFEST" "${MANIFEST}.bak"
             
-            # ArgoCD Application with Helm values 구조에 맞게 수정
-            # repository: 852771532871.dkr.ecr.ap-northeast-2.amazonaws.com/prod/auth-service
-            # tag: "latest" 또는 tag: "64-4f64d5b"
-            
-            if grep -q "repository:.*prod/${SERVICE}" "$MANIFEST"; then
-              echo "🔍 Found repository field, updating tag..."
-              # tag 필드만 업데이트
-              sed -i "s/tag: .*/tag: \"${TAG}\"/" "$MANIFEST"
+            # ArgoCD Application의 helm.parameters에서 image.tag 값 업데이트
+            # 패턴: - name: image.tag 다음 줄의 value: "기존값"을 찾아서 변경
+            if grep -q "name: image.tag" "$MANIFEST"; then
+              echo "🔍 Found image.tag parameter, updating..."
+              
+              # image.tag 다음 줄의 value를 업데이트
+              sed -i '/name: image\.tag/,/value:/ s/value: .*/value: "'"${TAG}"'"/' "$MANIFEST"
+              
               UPDATED=true
             else
-              echo "⚠️  Warning: Could not find repository pattern in $MANIFEST"
+              echo "⚠️  Warning: Could not find image.tag parameter in $MANIFEST"
               rm "${MANIFEST}.bak"
               FAILED_SERVICES+=("$SERVICE (pattern not found)")
               continue
@@ -109,10 +109,13 @@ jobs:
               echo "✅ Updated $SERVICE to $TAG"
               echo "📝 Changes:"
               diff "${MANIFEST}.bak" "$MANIFEST" || true
+              echo ""
+              echo "📄 New image.tag:"
+              grep -A 1 "name: image.tag" "$MANIFEST"
               UPDATED_SERVICES+=("$SERVICE")
               rm "${MANIFEST}.bak"
             else
-              echo "⚠️  No changes made to $SERVICE"
+              echo "⚠️  No changes made to $SERVICE (tag might already be ${TAG})"
               mv "${MANIFEST}.bak" "$MANIFEST"
               FAILED_SERVICES+=("$SERVICE (no changes)")
             fi
