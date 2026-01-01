@@ -298,6 +298,7 @@ istio:
     hosts:
       - "wealist.co.kr"
       - "api.wealist.co.kr"
+      - "argocd.wealist.co.kr"
     frontend:
       enabled: false
     # Monitoring routes (VPN/Bastion 통해 접근)
