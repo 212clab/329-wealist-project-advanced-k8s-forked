@@ -32,9 +32,11 @@ spec:
       selfHeal: true
     syncOptions:
       - ServerSideApply=true
-  # APIService는 Kubernetes가 status를 자동 업데이트하므로 무시
+  # APIService는 Kubernetes가 status와 metadata를 자동 업데이트하므로 무시
   ignoreDifferences:
     - group: apiregistration.k8s.io
       kind: APIService
-      jsonPointers:
-        - /status
+      jqPathExpressions:
+        - .status
+        - .metadata.annotations
+        - .metadata.managedFields

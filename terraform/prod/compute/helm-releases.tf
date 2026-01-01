@@ -151,8 +151,15 @@ resource "helm_release" "argocd" {
   }
 
   # Insecure mode (TLS termination at NLB)
+  # server.insecure: deployment command line flag
+  # configs.params: argocd-cmd-params-cm ConfigMap (이게 우선)
   set {
     name  = "server.insecure"
+    value = "true"
+  }
+
+  set {
+    name  = "configs.params.server\\.insecure"
     value = "true"
   }
 
