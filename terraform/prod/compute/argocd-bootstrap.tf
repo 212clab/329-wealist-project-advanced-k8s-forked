@@ -39,19 +39,21 @@ resource "null_resource" "argocd_project" {
 # -----------------------------------------------------------------------------
 # 2. ArgoCD Root Application (App of Apps)
 # -----------------------------------------------------------------------------
+# root-app.yaml은 k8s/argocd/root-apps/로 이동됨 (순환 참조 방지)
+# apps/prod/ 디렉토리에 있으면 자기 자신을 sync 대상으로 포함하여 deadlock 발생
 resource "null_resource" "argocd_root_app" {
   triggers = {
     cluster_name = module.eks.cluster_name
     # 변경 시 재적용을 위한 해시
-    root_app_hash = filemd5("${path.module}/../../../k8s/argocd/apps/prod/root-app.yaml")
+    root_app_hash = filemd5("${path.module}/../../../k8s/argocd/root-apps/prod.yaml")
   }
 
   provisioner "local-exec" {
     command = <<-EOT
       aws eks update-kubeconfig --name ${module.eks.cluster_name} --region ${var.aws_region}
 
-      # Root Application 적용
-      kubectl apply -f ${path.module}/../../../k8s/argocd/apps/prod/root-app.yaml
+      # Root Application 적용 (root-apps/ 디렉토리에서)
+      kubectl apply -f ${path.module}/../../../k8s/argocd/root-apps/prod.yaml
 
       echo "ArgoCD Root Application deployed!"
       echo "ArgoCD will now sync all applications from k8s/argocd/apps/prod/"
