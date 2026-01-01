@@ -221,16 +221,12 @@ ingress:
 postgres:
   enabled: false   # 내부 PostgreSQL 비활성화
   external:
-    enabled: true  # AWS RDS 사용
-    port: 5432
-    # host: ExternalSecret (wealist-shared-secret.DB_HOST)
+    enabled: false  # ExternalName Service 불필요 (서비스가 DB_HOST 환경변수로 직접 연결)
 
 redis:
   enabled: false   # 내부 Redis 비활성화
   external:
-    enabled: true  # AWS ElastiCache 사용
-    port: 6379
-    # host: ExternalSecret (wealist-shared-secret.REDIS_HOST)
+    enabled: false  # ExternalName Service 불필요 (서비스가 REDIS_HOST 환경변수로 직접 연결)
 
 minio:
   enabled: false   # S3 사용 (AWS)
