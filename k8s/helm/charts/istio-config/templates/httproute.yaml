@@ -197,8 +197,53 @@ spec:
     {{- end }}
 
     # ==========================================================================
+    # Frontend (루트 경로 - 반드시 마지막에 정의!)
+    # PathPrefix "/" 는 모든 경로와 매칭되므로 가장 마지막에 있어야 함
+    # ==========================================================================
+    {{- if .Values.istio.httpRoute.frontend.enabled }}
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /
+      backendRefs:
+        - name: frontend
+          port: 80
+    {{- end }}
+{{- end }}
+---
+# =============================================================================
+# HTTPRoute: Monitoring & Admin Routes (분리된 HTTPRoute - 16개 제한 회피)
+# =============================================================================
+# Gateway API HTTPRoute는 최대 16개 rules만 허용
+# 모니터링, ArgoCD 등 관리 도구 routes를 별도 HTTPRoute로 분리
+{{- if and .Values.istio.enabled .Values.istio.httpRoute.enabled }}
+{{- if or .Values.istio.httpRoute.monitoring.enabled (and .Values.istio.httpRoute.argocd .Values.istio.httpRoute.argocd.enabled) }}
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: wealist-monitoring-routes
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    {{- include "istio-config.labels" . | nindent 4 }}
+spec:
+  parentRefs:
+    - name: {{ .Values.istio.httpRoute.gatewayRef.name }}
+      namespace: {{ .Values.istio.httpRoute.gatewayRef.namespace }}
+  {{- $validHosts := list }}
+  {{- range .Values.istio.httpRoute.hosts }}
+  {{- if and (ne . "*") (ne . "") }}
+  {{- $validHosts = append $validHosts . }}
+  {{- end }}
+  {{- end }}
+  {{- if $validHosts }}
+  hostnames:
+    {{- range $validHosts }}
+    - {{ . | quote }}
+    {{- end }}
+  {{- end }}
+  rules:
+    # ==========================================================================
     # Monitoring routes (/api/monitoring/* → pass through, no rewrite)
-    # 각 서비스가 /api/monitoring/* 경로를 직접 처리하도록 설정
     # ==========================================================================
     {{- if .Values.istio.httpRoute.monitoring.enabled }}
     - matches:
@@ -263,18 +308,5 @@ spec:
           namespace: argocd
           port: 80
     {{- end }}
-
-    # ==========================================================================
-    # Frontend (루트 경로 - 반드시 마지막에 정의!)
-    # PathPrefix "/" 는 모든 경로와 매칭되므로 가장 마지막에 있어야 함
-    # ==========================================================================
-    {{- if .Values.istio.httpRoute.frontend.enabled }}
-    - matches:
-        - path:
-            type: PathPrefix
-            value: /
-      backendRefs:
-        - name: frontend
-          port: 80
-    {{- end }}
+{{- end }}
 {{- end }}
