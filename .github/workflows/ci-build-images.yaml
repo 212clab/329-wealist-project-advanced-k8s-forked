@@ -195,6 +195,9 @@ jobs:
 
           echo "services=${SERVICES}" >> $GITHUB_OUTPUT
 
+  # -------------------------------------------------------------------------
+  # 이미지 빌드 및 ECR 푸시 (amd64 only)
+  # -------------------------------------------------------------------------
   build-and-push:
     needs: [validate-branch, detect-changes]
     if: ${{ needs.validate-branch.outputs.should_run == 'true' && needs.detect-changes.outputs.services != '[]' && needs.detect-changes.outputs.services != '' }}
@@ -207,9 +210,8 @@ jobs:
       fail-fast: false
 
     permissions:
-      id-token: write # OIDC 인증용
+      id-token: write
       contents: read
-      security-events: write # Trivy 결과를 Security 탭에 올리기 위해 필요
 
     steps:
       - uses: actions/checkout@v4
@@ -217,35 +219,28 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      # AWS 자격 증명 설정 (Backend 전용 Role)
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ secrets.AWS_ROLE_ARN_BACKEND }}
           aws-region: ${{ env.AWS_REGION }}
 
-      # ECR 로그인
       - name: Login to Amazon ECR
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v2
 
-      # ECR 리포지토리 이름 설정 (prod는 prod/ prefix)
       - name: Set ECR repository name
         id: ecr-repo
         run: |
           ENV="${{ needs.detect-changes.outputs.environment }}"
           SERVICE="${{ matrix.service }}"
-
           if [ "${ENV}" = "prod" ]; then
             REPO_NAME="prod/${SERVICE}"
           else
             REPO_NAME="${SERVICE}"
           fi
-
           echo "name=${REPO_NAME}" >> $GITHUB_OUTPUT
-          echo "ECR Repository: ${REPO_NAME}"
 
-      # ECR 리포지토리 생성 (없으면)
       - name: Create ECR repository if not exists
         run: |
           aws ecr describe-repositories --repository-names ${{ steps.ecr-repo.outputs.name }} 2>/dev/null || \
@@ -254,25 +249,20 @@ jobs:
             --image-scanning-configuration scanOnPush=true \
             --encryption-configuration encryptionType=AES256
 
-      # 서비스별 Dockerfile 경로 및 빌드 컨텍스트 설정
       - name: Set build configuration
         id: build-config
         run: |
           SERVICE="${{ matrix.service }}"
-
           case "${SERVICE}" in
             "auth-service")
-              # Java/Gradle 서비스
               DOCKERFILE="services/${SERVICE}/Dockerfile"
               CONTEXT="services/${SERVICE}"
               ;;
             "board-service"|"chat-service"|"noti-service"|"storage-service"|"user-service"|"video-service"|"ops-service")
-              # Go 서비스들 (공통 패키지 사용, 루트 컨텍스트 필요)
               DOCKERFILE="services/${SERVICE}/docker/Dockerfile"
               CONTEXT="."
               ;;
             "ops-portal")
-              # ops-portal (React frontend, 독립 빌드)
               DOCKERFILE="services/${SERVICE}/docker/Dockerfile"
               CONTEXT="services/${SERVICE}"
               ;;
@@ -281,12 +271,8 @@ jobs:
               exit 1
               ;;
           esac
-
           echo "dockerfile=${DOCKERFILE}" >> $GITHUB_OUTPUT
           echo "context=${CONTEXT}" >> $GITHUB_OUTPUT
-          echo "Service: ${SERVICE}"
-          echo "Dockerfile: ${DOCKERFILE}"
-          echo "Context: ${CONTEXT}"
 
       - name: Generate image tags
         id: tags
@@ -295,11 +281,8 @@ jobs:
           SHORT_SHA=${SHORT_SHA:0:7}
           ENV="${{ needs.detect-changes.outputs.environment }}"
           BUILD_NUMBER="${{ github.run_number }}"
-          # ECR registry를 직접 구성 (outputs으로 전달 시 secret 마스킹 문제 회피)
           ECR_REGISTRY="${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com"
           REPO_NAME="${{ steps.ecr-repo.outputs.name }}"
-
-          # 태그 생성: Build Number + SHA (예: 42-abc1234)
           TAG="${BUILD_NUMBER}-${SHORT_SHA}"
 
           echo "tag=${TAG}" >> $GITHUB_OUTPUT
@@ -307,32 +290,18 @@ jobs:
 
           # prod는 IMMUTABLE이므로 latest 태그 불가
           if [ "${ENV}" = "prod" ]; then
-            echo "is_immutable=true" >> $GITHUB_OUTPUT
             TAGS="${ECR_REGISTRY}/${REPO_NAME}:${TAG}"
           else
-            echo "is_immutable=false" >> $GITHUB_OUTPUT
             TAGS="${ECR_REGISTRY}/${REPO_NAME}:${TAG},${ECR_REGISTRY}/${REPO_NAME}:latest"
           fi
-
           echo "all_tags=${TAGS}" >> $GITHUB_OUTPUT
 
-          echo "=== Image Tags ==="
-          echo "Environment: ${ENV}"
-          echo "Build Number: ${BUILD_NUMBER}"
-          echo "Tag: ${TAG}"
-          echo "Image URI: ${ECR_REGISTRY}/${REPO_NAME}"
-          echo "All Tags: ${TAGS}"
-
-      # -------------------------------------------------------------------------
-      # 멀티 아키텍처 빌드 및 ECR 푸시
-      # (Trivy 스캔은 PR Validation에서 완료됨)
-      # -------------------------------------------------------------------------
       - name: Build and push ${{ matrix.service }}
         uses: docker/build-push-action@v5
         with:
           context: ${{ steps.build-config.outputs.context }}
           file: ${{ steps.build-config.outputs.dockerfile }}
-          platforms: linux/amd64,linux/arm64
+          platforms: linux/amd64
           push: true
           tags: ${{ steps.tags.outputs.all_tags }}
           cache-from: type=gha,scope=${{ matrix.service }}-${{ needs.detect-changes.outputs.environment }}
@@ -347,7 +316,7 @@ jobs:
           echo "**ECR Repository:** ${{ steps.ecr-repo.outputs.name }}" >> $GITHUB_STEP_SUMMARY
           echo "**Image URI:** ${{ steps.tags.outputs.image_uri }}" >> $GITHUB_STEP_SUMMARY
           echo "**Tag:** ${{ steps.tags.outputs.tag }}" >> $GITHUB_STEP_SUMMARY
-          echo "**Platforms:** linux/amd64, linux/arm64" >> $GITHUB_STEP_SUMMARY
+          echo "**Platform:** linux/amd64" >> $GITHUB_STEP_SUMMARY
 
   # -------------------------------------------------------------------------
   # 빌드 완료 Discord 알림

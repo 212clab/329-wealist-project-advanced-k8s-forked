@@ -1,5 +1,5 @@
 // @title           Ops Service API
-// @version         1.0
+// @version         1.0.0
 // @description     Admin Portal and Operations Management API
 // @termsOfService  http://swagger.io/terms/
 

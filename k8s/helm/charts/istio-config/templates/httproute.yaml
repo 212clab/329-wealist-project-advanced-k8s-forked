@@ -163,6 +163,20 @@ spec:
         - name: video-service
           port: 8004
 
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /api/svc/ops
+      filters:
+        - type: URLRewrite
+          urlRewrite:
+            path:
+              type: ReplacePrefixMatch
+              replacePrefixMatch: /
+      backendRefs:
+        - name: ops-service
+          port: 8005
+
     # ==========================================================================
     # MinIO Storage (/api/minio/* → rewrite to /minio/* → minio)
     # ==========================================================================
