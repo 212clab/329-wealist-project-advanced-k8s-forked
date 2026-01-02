@@ -208,7 +208,12 @@ const performLogout = () => {
   window.location.href = '/';
 };
 
-const refreshAccessToken = async (): Promise<string> => {
+/**
+ * 토큰 갱신 함수 (WebSocket 재연결 등에서 사용)
+ * @returns 새로운 accessToken
+ * @throws 갱신 실패 시 에러 (로그아웃 처리됨)
+ */
+export const refreshAccessToken = async (): Promise<string> => {
   const refreshToken = localStorage.getItem('refreshToken');
   if (!refreshToken) {
     console.warn('⚠️ Refresh token not found. Logging out...');
