@@ -121,11 +121,10 @@ securityContext:
 # Features (Production)
 # -----------------------------------------------------------------------------
 # 기본 HPA 설정 (모든 서비스 공통)
-# 주의: 서비스별 autoscaling override는 Helm 구조상 불가능
-#       (auth-service.autoscaling.minReplicas는 .Values.autoscaling.minReplicas와 다른 경로)
+# auth-service, user-service는 ArgoCD parameters에서 minReplicas: 2로 오버라이드
 autoscaling:
   enabled: true
-  minReplicas: 2  # 핵심 서비스 가용성 보장 (board, user 등)
+  minReplicas: 1  # 기본값 1, 핵심 서비스만 2로 오버라이드
   maxReplicas: 10
   targetCPUUtilizationPercentage: 70
   targetMemoryUtilizationPercentage: 90
