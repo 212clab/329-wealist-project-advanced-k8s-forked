@@ -10,9 +10,10 @@ export default function Login() {
 
   useEffect(() => {
     // Check for token in URL (from OAuth callback)
-    const token = searchParams.get('token')
-    if (token) {
-      login(token)
+    // auth-service returns accessToken, refreshToken, userId
+    const accessToken = searchParams.get('accessToken')
+    if (accessToken) {
+      login(accessToken)
     }
   }, [searchParams, login])
 
@@ -24,8 +25,16 @@ export default function Login() {
 
   const handleGoogleLogin = () => {
     // Redirect to auth service for Google OAuth
-    const authUrl = import.meta.env.VITE_AUTH_URL || 'http://localhost:8080'
-    window.location.href = `${authUrl}/oauth2/authorization/google?redirect_uri=${encodeURIComponent(window.location.origin + '/login')}`
+    // In production, auth-service is at the same domain (routed via CloudFront/Istio)
+    // In development, use VITE_AUTH_URL or default to localhost
+    const isProduction = window.location.hostname !== 'localhost'
+    const authUrl = isProduction
+      ? window.location.origin
+      : (import.meta.env.VITE_AUTH_URL || 'http://localhost:8080')
+
+    // redirect_uri must include the full path to ops-portal login
+    const redirectUri = `${window.location.origin}/api/ops-portal/login`
+    window.location.href = `${authUrl}/oauth2/authorization/google?redirect_uri=${encodeURIComponent(redirectUri)}`
   }
 
   return (
