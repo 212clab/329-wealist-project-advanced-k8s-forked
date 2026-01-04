@@ -1560,7 +1560,7 @@ kind-dev-env-status: ## 📊 Kind-Dev 환경 상태 확인 (클러스터 + 내�
 	fi
 	@echo ""
 	@echo "🌐 접속 정보:"
-	@echo "   - ArgoCD: http://localhost:9080/api/argo"
-	@echo "   - Grafana: http://localhost:9080/api/monitoring/grafana"
+	@echo "   - ArgoCD: https://dev.wealist.co.kr/api/argo"
+	@echo "   - Grafana: https://dev.wealist.co.kr/api/monitoring/grafana"
 	@echo ""
 	@echo "=============================================="

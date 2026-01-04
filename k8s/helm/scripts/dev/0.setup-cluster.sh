@@ -439,7 +439,7 @@ if [ -n "$OAUTH_CLIENT_ID" ] && [ -n "$OAUTH_CLIENT_SECRET" ]; then
     config:
       clientID: ${OAUTH_CLIENT_ID}
       clientSecret: \$dex.google.clientSecret
-      redirectURI: https://dev.wealist.co.kr/api/argo/api/dex/callback"
+      redirectURI: https://dev.wealist.co.kr/api/argo/dex/callback"
 
     kubectl patch configmap argocd-cm -n argocd --type merge -p "$(cat <<EOF
 {
