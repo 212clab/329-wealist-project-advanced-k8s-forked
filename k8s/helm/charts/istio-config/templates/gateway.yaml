@@ -3,12 +3,16 @@ apiVersion: networking.istio.io/v1
 kind: Gateway
 metadata:
   name: {{ .Values.gateway.name }}
-  namespace: {{ include "istio-config.namespace" . }}
+  namespace: {{ .Values.gateway.namespace | default "istio-system" }}
   labels:
     {{- include "istio-config.labels" . | nindent 4 }}
 spec:
   selector:
+    {{- if .Values.gateway.selector }}
     {{- toYaml .Values.gateway.selector | nindent 4 }}
+    {{- else }}
+    istio: ingressgateway
+    {{- end }}
   servers:
   - port:
       number: 80

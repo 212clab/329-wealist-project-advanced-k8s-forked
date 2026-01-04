@@ -1,6 +1,7 @@
 {{- if and .Values.enabled .Values.istio.virtualService.enabled }}
 {{- $namespace := include "istio-config.namespace" . }}
 {{- $vs := .Values.istio.virtualService }}
+{{- $gw := .Values.istio.gateway }}
 apiVersion: networking.istio.io/v1
 kind: VirtualService
 metadata:
@@ -14,7 +15,11 @@ spec:
   - {{ . | quote }}
   {{- end }}
   gateways:
+  {{- if $gw.enabled }}
+  - {{ $gw.namespace | default "istio-system" }}/{{ $gw.name | default "istio-ingressgateway" }}
+  {{- else }}
   - istio-system/istio-ingressgateway
+  {{- end }}
   http:
   # ==========================================================================
   # OAuth2 Routes (must be first for auth flow)
