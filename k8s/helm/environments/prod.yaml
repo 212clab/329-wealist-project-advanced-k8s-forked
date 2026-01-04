@@ -73,9 +73,6 @@ noti-service:
 storage-service:
   replicaCount: 1
 
-video-service:
-  replicaCount: 1
-
 image:
   pullPolicy: Always
   tag: "latest"

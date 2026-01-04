@@ -235,40 +235,6 @@ spec:
       perTryTimeout: 60s
       retryOn: "5xx,reset,connect-failure"
 
-  # Video Service
-  - match:
-    - uri:
-        prefix: /api/svc/video
-    rewrite:
-      uriRegexRewrite:
-        match: "^/api/svc/video(.*)$"
-        rewrite: '\1'
-    route:
-    {{- if and $vs.canary $vs.canary.enabled }}
-    - destination:
-        host: video-service
-        port:
-          number: 8004
-        subset: stable
-      weight: {{ $vs.canary.stableWeight | default 100 }}
-    - destination:
-        host: video-service
-        port:
-          number: 8004
-        subset: canary
-      weight: {{ $vs.canary.canaryWeight | default 0 }}
-    {{- else }}
-    - destination:
-        host: video-service
-        port:
-          number: 8004
-    {{- end }}
-    timeout: 30s
-    retries:
-      attempts: 3
-      perTryTimeout: 10s
-      retryOn: "5xx,reset,connect-failure"
-
   # LiveKit WebSocket (if available)
   - match:
     - uri:
