@@ -519,7 +519,7 @@ kind-dev-clean: ## [Reset] Dev 클러스터 + DB 컨테이너 삭제 (재생성 
 	@docker rm -f postgres-dev redis-dev 2>/dev/null || true
 	@echo ""
 	@echo -e "$(GREEN)✅ Dev 환경 삭제 완료$(NC)"
-	@echo "   데이터는 /home/wealist-oranges/data/db_data에 보존됩니다."
+	@echo "   데이터는 /home/wealist-oranges/wealist-project-data/db_data에 보존됩니다."
 	@echo ""
 	@echo "재생성: make kind-dev-setup"
 

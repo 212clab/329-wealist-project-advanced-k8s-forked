@@ -1484,7 +1484,7 @@ init-local-db: ## 로컬 PostgreSQL/Redis 초기화 (Ubuntu, ENV=local-ubuntu)
 
 .PHONY: kind-dev-db-up kind-dev-db-down kind-dev-rbac kind-dev-kubeconfig kind-dev-env-status
 
-KIND_DEV_DATA_PATH ?= /home/wealist-oranges/data
+KIND_DEV_DATA_PATH ?= /home/wealist-oranges/wealist-project-data
 DOCKER_COMPOSE_DB := docker/dev/docker-compose.dev-db.yaml
 
 kind-dev-db-up: ## 🐘 DB 컨테이너 시작 (PostgreSQL + Redis)

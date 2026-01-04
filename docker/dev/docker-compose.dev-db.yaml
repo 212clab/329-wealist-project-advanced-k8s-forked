@@ -30,7 +30,7 @@ services:
       # 성능 튜닝
       POSTGRES_INITDB_ARGS: "--encoding=UTF-8 --lc-collate=C --lc-ctype=C"
     volumes:
-      - ${WEALIST_DATA_PATH:-/home/wealist-oranges/data}/db_data/postgres:/var/lib/postgresql/data
+      - ${WEALIST_DATA_PATH:-/home/wealist-oranges/wealist-project-data}/db_data/postgres:/var/lib/postgresql/data
       # 초기화 스크립트 (선택사항)
       - ./init-scripts:/docker-entrypoint-initdb.d:ro
     ports:
@@ -67,7 +67,7 @@ services:
     container_name: redis-dev
     restart: unless-stopped
     volumes:
-      - ${WEALIST_DATA_PATH:-/home/wealist-oranges/data}/db_data/redis:/data
+      - ${WEALIST_DATA_PATH:-/home/wealist-oranges/wealist-project-data}/db_data/redis:/data
     ports:
       # oranges 전용 포트 대역 (9000-9999)
       - "9379:6379"
