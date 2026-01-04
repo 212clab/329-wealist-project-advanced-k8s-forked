@@ -614,10 +614,10 @@ port-forward-monitoring: ## 모든 모니터링 서비스 포트 포워딩 (백�
 .PHONY: istio-install istio-install-ambient istio-install-gateway istio-install-addons istio-install-config
 .PHONY: istio-label-ns istio-label-ns-ambient istio-restart-pods istio-uninstall istio-status
 
-ISTIO_VERSION ?= 1.24.0
+ISTIO_VERSION ?= 1.28.2
 GATEWAY_API_VERSION ?= v1.2.0
 
-istio-install-ambient: ## Istio Ambient 모드 설치 (권장)
+istio-install-ambient: ## Istio Ambient 모드 설치 (레거시, Sidecar 모드 권장)
 	@echo "Istio Ambient $(ISTIO_VERSION) 설치 중..."
 	@echo ""
 	@echo "Ambient 모드 구성요소:"
@@ -678,7 +678,7 @@ istio-install-gateway: ## Istio Ingress Gateway 설치 (선택사항, 레거시 
 	@echo ""
 	@echo "Istio Ingress Gateway 설치 완료!"
 
-# (레거시) istio-install - 사이드카 모드, istio-install-ambient 사용 권장
+# Istio Sidecar 모드 설치 (Helm 차트 방식, 권장: setup 스크립트의 istioctl)
 istio-install:
 	@echo "Istio $(ISTIO_VERSION) 설치 중..."
 	@echo ""
@@ -745,13 +745,13 @@ istio-install-addons: ## Istio 애드온 설치 (Kiali, Jaeger)
 	@echo "Istio 관측성 애드온 설치 중..."
 	@echo ""
 	@echo "Kiali (서비스 그래프) 설치 중..."
-	@kubectl apply -f https://raw.githubusercontent.com/istio/istio/release-1.20/samples/addons/kiali.yaml
+	@kubectl apply -f https://raw.githubusercontent.com/istio/istio/release-1.28/samples/addons/kiali.yaml
 	@echo ""
 	@echo "Jaeger (분산 추적) 설치 중..."
-	@kubectl apply -f https://raw.githubusercontent.com/istio/istio/release-1.20/samples/addons/jaeger.yaml
+	@kubectl apply -f https://raw.githubusercontent.com/istio/istio/release-1.28/samples/addons/jaeger.yaml
 	@echo ""
 	@echo "Prometheus (없으면) 설치 중..."
-	@kubectl apply -f https://raw.githubusercontent.com/istio/istio/release-1.20/samples/addons/prometheus.yaml 2>/dev/null || true
+	@kubectl apply -f https://raw.githubusercontent.com/istio/istio/release-1.28/samples/addons/prometheus.yaml 2>/dev/null || true
 	@echo ""
 	@echo "애드온 설치 완료!"
 	@echo ""

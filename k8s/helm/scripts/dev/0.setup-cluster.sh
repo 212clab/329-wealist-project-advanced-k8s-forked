@@ -1,16 +1,16 @@
 #!/bin/bash
 # =============================================================================
-# Kind 클러스터 + Istio Ambient 설정 (dev 환경)
+# Kind 클러스터 + Istio Sidecar 설정 (dev 환경)
 # =============================================================================
 # - 레지스트리: AWS ECR
-# - Istio Ambient: Service Mesh (sidecar-less)
+# - Istio Sidecar: Service Mesh with Envoy sidecar proxy
 # - Gateway API: Kubernetes 표준 (NodePort 30080 → hostPort 8080)
 # - ArgoCD: GitOps 배포
 
 set -e
 
 CLUSTER_NAME="wealist"
-ISTIO_VERSION="1.24.0"
+ISTIO_VERSION="1.28.2"
 GATEWAY_API_VERSION="v1.2.0"
 AWS_REGION="ap-northeast-2"
 NAMESPACE="wealist-dev"
@@ -20,8 +20,8 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 HELM_DIR="$(cd "${SCRIPT_DIR}/../.." && pwd)"
 KIND_CONFIG="${SCRIPT_DIR}/kind-config.yaml"
 
-echo "🚀 Kind 클러스터 + Istio Ambient 설정 (dev - AWS ECR)"
-echo "   - Istio: ${ISTIO_VERSION}"
+echo "🚀 Kind 클러스터 + Istio Sidecar 설정 (dev - AWS ECR)"
+echo "   - Istio: ${ISTIO_VERSION} (Sidecar mode)"
 echo "   - Gateway API: ${GATEWAY_API_VERSION}"
 echo "   - Registry: AWS ECR (ap-northeast-2)"
 echo "   - Namespace: ${NAMESPACE}"
@@ -74,8 +74,8 @@ echo "⏳ Gateway API CRDs 설치 중..."
 kubectl apply -f https://github.com/kubernetes-sigs/gateway-api/releases/download/${GATEWAY_API_VERSION}/standard-install.yaml
 echo "✅ Gateway API CRDs 설치 완료"
 
-# 4. Istio Ambient 모드 설치
-echo "⏳ Istio Ambient 모드 설치 중..."
+# 4. Istio Sidecar 모드 설치
+echo "⏳ Istio Sidecar 모드 설치 중..."
 
 # istioctl 설치 확인 및 경로 설정
 ISTIOCTL=""
@@ -101,8 +101,8 @@ else
     fi
 fi
 
-# Istio Ambient 프로필 설치
-${ISTIOCTL} install --set profile=ambient --skip-confirmation
+# Istio default 프로필 설치 (Sidecar mode)
+${ISTIOCTL} install --set profile=default --skip-confirmation
 
 echo "⏳ Istio 컴포넌트 준비 대기 중..."
 kubectl wait --namespace istio-system \
@@ -110,12 +110,7 @@ kubectl wait --namespace istio-system \
   --selector=app=istiod \
   --timeout=120s || echo "WARNING: istiod not ready yet"
 
-kubectl wait --namespace istio-system \
-  --for=condition=ready pod \
-  --selector=app=ztunnel \
-  --timeout=120s || echo "WARNING: ztunnel not ready yet"
-
-echo "✅ Istio Ambient 설치 완료"
+echo "✅ Istio Sidecar 설치 완료"
 
 # NOTE: Kiali, Jaeger는 ArgoCD가 istio-addons 차트로 배포합니다.
 # 수동 설치하면 충돌이 발생하므로 여기서는 설치하지 않습니다.
@@ -168,10 +163,24 @@ kubectl get svc -n istio-system istio-ingressgateway-istio -o wide
 
 echo "✅ Istio Gateway 설정 완료"
 
-# 7. 애플리케이션 네임스페이스 생성 (Ambient 모드 라벨 포함)
-echo "📦 ${NAMESPACE} 네임스페이스 생성 (Ambient 모드)..."
+# 7. Argo Rollouts 설치 (Progressive Delivery)
+echo "⏳ Argo Rollouts 설치 중..."
+kubectl create namespace argo-rollouts 2>/dev/null || true
+# Argo Rollouts v1.8.3 (버전 고정 - 재현성 보장)
+ARGO_ROLLOUTS_VERSION="v1.8.3"
+kubectl apply -n argo-rollouts -f https://github.com/argoproj/argo-rollouts/releases/download/${ARGO_ROLLOUTS_VERSION}/install.yaml
+
+echo "⏳ Argo Rollouts 준비 대기 중..."
+kubectl wait --namespace argo-rollouts \
+  --for=condition=available deployment/argo-rollouts \
+  --timeout=120s || echo "WARNING: Argo Rollouts not ready yet"
+
+echo "✅ Argo Rollouts 설치 완료"
+
+# 8. 애플리케이션 네임스페이스 생성 (Sidecar injection 라벨 포함)
+echo "📦 ${NAMESPACE} 네임스페이스 생성 (Sidecar mode)..."
 kubectl create namespace ${NAMESPACE} 2>/dev/null || true
-kubectl label namespace ${NAMESPACE} istio.io/dataplane-mode=ambient --overwrite
+kubectl label namespace ${NAMESPACE} istio-injection=enabled --overwrite
 
 # Git 정보 라벨 추가
 GIT_REPO=$(git config --get remote.origin.url 2>/dev/null | sed 's/.*github.com[:/]\(.*\)\.git/\1/' || echo "unknown")
@@ -190,9 +199,9 @@ kubectl annotate namespace ${NAMESPACE} \
   "wealist.io/deploy-time=${DEPLOY_TIME}" \
   --overwrite
 
-echo "✅ 네임스페이스에 Ambient 모드 + Git 정보 라벨 적용 완료"
+echo "✅ 네임스페이스에 Sidecar injection + Git 정보 라벨 적용 완료"
 
-# 8. ECR 인증 Secret 생성
+# 9. ECR 인증 Secret 생성
 echo "🔐 ECR 인증 Secret 설정 중..."
 ECR_PASSWORD=$(aws ecr get-login-password --region ${AWS_REGION})
 
