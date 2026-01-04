@@ -219,6 +219,71 @@ resource "kubectl_manifest" "cluster_secret_store" {
   depends_on = [time_sleep.wait_for_eso_crds]
 }
 
+# -----------------------------------------------------------------------------
+# ArgoCD Namespace (ExternalSecret보다 먼저 생성)
+# -----------------------------------------------------------------------------
+resource "kubernetes_namespace" "argocd" {
+  metadata {
+    name = "argocd"
+  }
+
+  depends_on = [kubectl_manifest.cluster_secret_store]
+}
+
+# -----------------------------------------------------------------------------
+# ExternalSecret - argocd-secret (ArgoCD 시작 전에 필요)
+# -----------------------------------------------------------------------------
+# ArgoCD는 argocd-secret이 있어야 시작 가능
+# ExternalSecret이 AWS Secrets Manager에서 credentials를 가져와 생성
+resource "kubectl_manifest" "argocd_external_secret" {
+  yaml_body = <<-YAML
+    apiVersion: external-secrets.io/v1
+    kind: ExternalSecret
+    metadata:
+      name: argocd-oauth-secret
+      namespace: argocd
+    spec:
+      refreshInterval: 1h
+      secretStoreRef:
+        name: aws-secrets-manager
+        kind: ClusterSecretStore
+      target:
+        name: argocd-secret
+        creationPolicy: Owner
+        template:
+          metadata:
+            labels:
+              app.kubernetes.io/name: argocd-secret
+              app.kubernetes.io/part-of: argocd
+          data:
+            server.secretkey: "{{ .server_secretkey }}"
+            dex.google.clientID: "{{ .dex_google_clientID }}"
+            dex.google.clientSecret: "{{ .dex_google_clientSecret }}"
+      data:
+        - secretKey: server_secretkey
+          remoteRef:
+            key: "wealist/prod/argocd/server"
+            property: secretkey
+        - secretKey: dex_google_clientID
+          remoteRef:
+            key: "wealist/prod/oauth/argocd"
+            property: client_id
+        - secretKey: dex_google_clientSecret
+          remoteRef:
+            key: "wealist/prod/oauth/argocd"
+            property: client_secret
+  YAML
+
+  depends_on = [kubernetes_namespace.argocd]
+}
+
+# argocd-secret이 생성될 때까지 대기
+resource "time_sleep" "wait_for_argocd_secret" {
+  depends_on = [kubectl_manifest.argocd_external_secret]
+
+  create_duration = "30s"
+}
+
 # =============================================================================
 # 4. ArgoCD
 # =============================================================================
@@ -229,7 +294,8 @@ resource "helm_release" "argocd" {
   version    = "5.55.0"  # 2024-12 stable
   namespace  = "argocd"
 
-  create_namespace = true
+  # Namespace는 Terraform이 먼저 생성 (ExternalSecret용)
+  create_namespace = false
 
   # HA 비활성화 (비용 절감)
   set {
@@ -285,8 +351,8 @@ resource "helm_release" "argocd" {
     value = "false"
   }
 
-  # ESO + ClusterSecretStore가 먼저 설치되어야 argocd-secret 생성 가능
-  depends_on = [kubectl_manifest.cluster_secret_store]
+  # argocd-secret이 먼저 생성되어야 ArgoCD가 시작 가능
+  depends_on = [time_sleep.wait_for_argocd_secret]
 }
 
 # =============================================================================
