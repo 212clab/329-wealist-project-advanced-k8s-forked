@@ -47,10 +47,10 @@ securityContext:
 # -----------------------------------------------------------------------------
 # External Secrets Operator (ESO)
 # -----------------------------------------------------------------------------
-# ESO가 AWS Secrets Manager에서 wealist-shared-secret을 자동 생성
-# Helm chart에서 secret 생성을 건너뜀
+# Dev 환경: ESO 비활성화 (Kind 클러스터 내부 DB 사용)
+# Prod 환경: ESO가 AWS Secrets Manager에서 wealist-shared-secret을 자동 생성
 externalSecrets:
-  enabled: true
+  enabled: false
 
 # -----------------------------------------------------------------------------
 # Features
