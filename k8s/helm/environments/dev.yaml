@@ -275,7 +275,6 @@ istio:
     - name: chat-service
     - name: noti-service
     - name: storage-service
-    - name: video-service
 
   destinationRules:
     enabled: true
@@ -420,9 +419,5 @@ noti-service:
     DB_NAME: "wealist"
 
 storage-service:
-  config:
-    DB_NAME: "wealist"
-
-video-service:
   config:
     DB_NAME: "wealist"
