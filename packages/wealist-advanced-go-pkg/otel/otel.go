@@ -1,16 +1,22 @@
 // Package otel provides OpenTelemetry SDK initialization utilities for wealist services.
 // It sets up traces, logs, and metrics exporters with OTLP protocol support.
+//
+// Protocol: HTTP/protobuf (recommended by OpenTelemetry spec)
+// - Endpoint format: "http://otel-collector:4318" (with scheme)
+// - Compatible with all languages (Go, Java, Python, etc.)
+// - Firewall-friendly and easier to debug
 package otel
 
 import (
 	"context"
 	"errors"
 	"os"
+	"strings"
 	"time"
 
 	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc"
-	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc"
+	"go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp"
+	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp"
 	"go.opentelemetry.io/otel/log/global"
 	"go.opentelemetry.io/otel/propagation"
 	"go.opentelemetry.io/otel/sdk/log"
@@ -25,7 +31,7 @@ type Config struct {
 	ServiceName    string
 	ServiceVersion string
 	Environment    string
-	OTLPEndpoint   string  // e.g., "otel-collector:4317"
+	OTLPEndpoint   string  // e.g., "http://otel-collector:4318" (HTTP/protobuf)
 	SamplingRatio  float64 // 0.0 to 1.0, default 1.0
 	Enabled        bool
 }
@@ -34,7 +40,7 @@ type Config struct {
 func DefaultConfig(serviceName string) *Config {
 	endpoint := os.Getenv("OTEL_EXPORTER_OTLP_ENDPOINT")
 	if endpoint == "" {
-		endpoint = "localhost:4317"
+		endpoint = "http://localhost:4318"
 	}
 
 	enabled := os.Getenv("OTEL_SDK_DISABLED") != "true"
@@ -132,12 +138,15 @@ func newPropagator() propagation.TextMapPropagator {
 	)
 }
 
-// newTraceProvider creates a new trace provider with OTLP exporter.
+// newTraceProvider creates a new trace provider with OTLP HTTP exporter.
 func newTraceProvider(ctx context.Context, cfg *Config, res *resource.Resource) (*sdktrace.TracerProvider, error) {
-	// Create OTLP trace exporter
-	traceExporter, err := otlptracegrpc.New(ctx,
-		otlptracegrpc.WithEndpoint(cfg.OTLPEndpoint),
-		otlptracegrpc.WithInsecure(),
+	// Parse endpoint - otlptracehttp expects endpoint without scheme
+	endpoint := parseEndpoint(cfg.OTLPEndpoint)
+
+	// Create OTLP HTTP trace exporter
+	traceExporter, err := otlptracehttp.New(ctx,
+		otlptracehttp.WithEndpoint(endpoint),
+		otlptracehttp.WithInsecure(),
 	)
 	if err != nil {
 		return nil, err
@@ -164,12 +173,15 @@ func newTraceProvider(ctx context.Context, cfg *Config, res *resource.Resource) 
 	return traceProvider, nil
 }
 
-// newLoggerProvider creates a new logger provider with OTLP exporter.
+// newLoggerProvider creates a new logger provider with OTLP HTTP exporter.
 func newLoggerProvider(ctx context.Context, cfg *Config, res *resource.Resource) (*log.LoggerProvider, error) {
-	// Create OTLP log exporter
-	logExporter, err := otlploggrpc.New(ctx,
-		otlploggrpc.WithEndpoint(cfg.OTLPEndpoint),
-		otlploggrpc.WithInsecure(),
+	// Parse endpoint - otlploghttp expects endpoint without scheme
+	endpoint := parseEndpoint(cfg.OTLPEndpoint)
+
+	// Create OTLP HTTP log exporter
+	logExporter, err := otlploghttp.New(ctx,
+		otlploghttp.WithEndpoint(endpoint),
+		otlploghttp.WithInsecure(),
 	)
 	if err != nil {
 		return nil, err
@@ -181,6 +193,20 @@ func newLoggerProvider(ctx context.Context, cfg *Config, res *resource.Resource)
 	)
 
 	return loggerProvider, nil
+}
+
+// parseEndpoint extracts host:port from a URL.
+// Input: "http://otel-collector:4318" or "otel-collector:4318"
+// Output: "otel-collector:4318"
+func parseEndpoint(endpoint string) string {
+	// Remove http:// or https:// prefix
+	endpoint = strings.TrimPrefix(endpoint, "http://")
+	endpoint = strings.TrimPrefix(endpoint, "https://")
+	// Remove trailing path if any
+	if idx := strings.Index(endpoint, "/"); idx != -1 {
+		endpoint = endpoint[:idx]
+	}
+	return endpoint
 }
 
 // getEnvOrDefault returns the environment variable value or the default value.
