@@ -12,11 +12,10 @@ global:
 # =============================================================================
 # Istio Configuration (for Prometheus scrape jobs)
 # =============================================================================
-# When sidecar.enabled is true, Prometheus will scrape Envoy sidecar metrics
-# When sidecar.enabled is false (Ambient mode), Prometheus will scrape ztunnel/waypoint metrics
+# Prometheus scrapes Envoy sidecar metrics (port 15090)
 istio:
   sidecar:
-    enabled: true  # Default to Sidecar mode
+    enabled: true
 
 # =============================================================================
 # External Secrets (ESO) Configuration

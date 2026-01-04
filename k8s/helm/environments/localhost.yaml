@@ -268,11 +268,18 @@ istio:
       loki:
         host: loki
         port: 3100
-      # Kiali/Jaeger: localhost에서는 비활성화 (볼 트래픽 없음)
+      # Kiali: Istio Service Mesh 대시보드
       kiali:
-        enabled: false
+        enabled: true
+        host: kiali
+        namespace: istio-system
+        port: 20001
+      # Jaeger: 분산 트레이싱 UI
       jaeger:
-        enabled: false
+        enabled: true
+        host: tracing
+        namespace: istio-system
+        port: 80
 
   # mTLS - 서비스 간 암호화
   mtls:
@@ -327,13 +334,6 @@ istio:
   # dev/prod: Istio에서 JWT 검증
   jwtAuth:
     enabled: false
-
-  # Ambient 모드 (Sidecar-less) - Disabled
-  ambient:
-    enabled: false
-    waypoint:
-      enabled: false
-      name: wealist-waypoint
 
   # Sidecar Mode Configuration (2025 Best Practice)
   sidecar:

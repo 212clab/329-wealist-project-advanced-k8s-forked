@@ -202,20 +202,8 @@ data:
       - name: istio.alerts
         rules:
           # ---------------------------------------------------------------------
-          # ztunnel (L4) Alerts
+          # Istio Sidecar Alerts
           # ---------------------------------------------------------------------
-          - alert: IstioZtunnelDown
-            expr: |
-              absent(up{job="ztunnel"} == 1)
-            for: 5m
-            labels:
-              severity: critical
-            annotations:
-              summary: "Istio ztunnel is down"
-              description: |
-                Istio ztunnel (L4 proxy) is not responding.
-                This will affect all L4 mesh traffic.
-
           - alert: IstioHighTcpConnectionRate
             expr: |
               sum(rate(istio_tcp_connections_opened_total[5m])) > 1000

@@ -11,8 +11,8 @@ metadata:
 spec:
   host: {{ .name }}
   trafficPolicy:
-    {{- /* Sidecar 모드에서는 mTLS 명시적 설정 필요, Ambient는 ztunnel이 자동 처리 */}}
-    {{- if and $.Values.istio.mtls.enabled (not $.Values.istio.ambient.enabled) }}
+    {{- /* Sidecar 모드에서는 mTLS 명시적 설정 필요 */}}
+    {{- if $.Values.istio.mtls.enabled }}
     tls:
       mode: ISTIO_MUTUAL
     {{- end }}

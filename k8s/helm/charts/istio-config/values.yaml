@@ -87,12 +87,6 @@ istio:
   serviceAuthorization:
     enabled: false
 
-  ambient:
-    enabled: false
-    waypoint:
-      enabled: false
-      name: wealist-waypoint
-
   # Sidecar Mode Configuration
   sidecar:
     enabled: true

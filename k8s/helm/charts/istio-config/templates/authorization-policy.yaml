@@ -38,25 +38,6 @@ spec:
         principals:
         - "cluster.local/ns/istio-system/sa/istio-ingressgateway-service-account"
 
-{{- if and .Values.ambient .Values.ambient.enabled }}
-# Allow traffic from Waypoint Proxy (L4 - required for mesh traffic flow in Ambient mode)
----
-apiVersion: security.istio.io/v1
-kind: AuthorizationPolicy
-metadata:
-  name: allow-from-waypoint
-  namespace: {{ $namespace }}
-  labels:
-    {{- include "istio-config.labels" . | nindent 4 }}
-spec:
-  action: ALLOW
-  rules:
-  - from:
-    - source:
-        principals:
-        - "cluster.local/ns/{{ $namespace }}/sa/{{ .Values.ambient.waypoint.name }}"
-{{- end }}
-
 # Health check policy - allow Kubernetes probes (kubelet doesn't have SPIFFE identity)
 ---
 apiVersion: security.istio.io/v1
@@ -112,9 +93,8 @@ spec:
 
 {{- if and .Values.serviceAuthorization .Values.serviceAuthorization.enabled }}
 # ============================================================================
-# Service-to-Service Authorization Policies
-# - Sidecar mode: Uses 'selector' to apply policy directly to pod's sidecar
-# - Ambient mode: Uses 'targetRef' to apply policy via Waypoint proxy
+# Service-to-Service Authorization Policies (Sidecar Mode)
+# Uses 'selector' to apply policy directly to pod's sidecar
 # ============================================================================
 {{- range $serviceName, $serviceConfig := .Values.serviceAuthorization.rules }}
 {{- if $serviceConfig.allowedCallers }}
@@ -127,24 +107,11 @@ metadata:
   labels:
     {{- include "istio-config.labels" $ | nindent 4 }}
   annotations:
-    {{- if and $.Values.ambient $.Values.ambient.enabled }}
-    description: "L7 service-to-service access control for {{ $serviceName }} (Waypoint/Ambient)"
-    {{- else }}
     description: "Service-to-service access control for {{ $serviceName }} (Sidecar)"
-    {{- end }}
 spec:
-  {{- if and $.Values.ambient $.Values.ambient.enabled }}
-  # Ambient mode: Target the service via Waypoint
-  targetRef:
-    kind: Service
-    group: ""
-    name: {{ $serviceName }}
-  {{- else }}
-  # Sidecar mode: Select pods directly by label
   selector:
     matchLabels:
       app: {{ $serviceName }}
-  {{- end }}
   action: ALLOW
   rules:
   # Allow from external (Gateway handles external traffic)

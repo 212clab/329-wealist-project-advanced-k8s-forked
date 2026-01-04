@@ -232,9 +232,8 @@ data:
             action: replace
             target_label: pod
 
-      {{- if .Values.istio.sidecar.enabled }}
       # ==========================================================================
-      # Istio Sidecar 모드 메트릭
+      # Istio Sidecar 메트릭
       # ==========================================================================
 
       # Envoy Sidecar 메트릭 (istio-proxy 컨테이너)
@@ -268,53 +267,6 @@ data:
           - source_labels: [__meta_kubernetes_pod_label_app]
             action: replace
             target_label: app
-      {{- else }}
-      # ==========================================================================
-      # Istio Ambient 모드 메트릭
-      # ==========================================================================
-
-      # ztunnel 메트릭 (Ambient 모드 L4 프록시)
-      - job_name: 'ztunnel'
-        kubernetes_sd_configs:
-          - role: pod
-            namespaces:
-              names:
-                - istio-system
-        relabel_configs:
-          - source_labels: [__meta_kubernetes_pod_label_app]
-            action: keep
-            regex: ztunnel
-          - source_labels: [__meta_kubernetes_pod_container_port_number]
-            action: keep
-            regex: "15020"
-          - source_labels: [__meta_kubernetes_namespace]
-            action: replace
-            target_label: namespace
-          - source_labels: [__meta_kubernetes_pod_name]
-            action: replace
-            target_label: pod
-
-      # Waypoint 프록시 메트릭 (Ambient L7 기능)
-      - job_name: 'istio-waypoint'
-        kubernetes_sd_configs:
-          - role: pod
-            namespaces:
-              names:
-                - {{ .Values.global.namespace }}
-        relabel_configs:
-          - source_labels: [__meta_kubernetes_pod_label_gateway_networking_k8s_io_gateway_name]
-            action: keep
-            regex: .+
-          - source_labels: [__meta_kubernetes_pod_container_port_number]
-            action: keep
-            regex: "15020"
-          - source_labels: [__meta_kubernetes_namespace]
-            action: replace
-            target_label: namespace
-          - source_labels: [__meta_kubernetes_pod_name]
-            action: replace
-            target_label: pod
-      {{- end }}
 
       # ==========================================================================
       # Argo Rollouts 메트릭 수집

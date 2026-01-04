@@ -399,13 +399,6 @@ istio:
   jwtAuth:
     enabled: false
 
-  # Ambient 모드 (Sidecar-less) - Disabled
-  ambient:
-    enabled: false
-    waypoint:
-      enabled: false
-      name: wealist-waypoint
-
   # Sidecar Mode Configuration (2025 Best Practice)
   sidecar:
     enabled: true

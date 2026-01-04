@@ -110,23 +110,62 @@ kubectl apply -f https://raw.githubusercontent.com/istio/istio/release-1.28/samp
 kubectl apply -f https://raw.githubusercontent.com/istio/istio/release-1.28/samples/addons/jaeger.yaml 2>/dev/null || \
     kubectl apply -f https://raw.githubusercontent.com/istio/istio/release-1.24/samples/addons/jaeger.yaml
 
-# 7-2. Kiali/Jaeger subpath 설정 (HTTPRoute /monitoring/* 경로용)
-echo "⏳ Kiali/Jaeger subpath 설정 중..."
+# 7-2. Kiali 설정 패치 (Prometheus/Grafana 연결 + subpath)
+echo "⏳ Kiali 설정 중 (Prometheus, Grafana, Jaeger 연결)..."
 
-# Kiali ConfigMap 패치 - web_root를 /monitoring/kiali로 변경
-# 기본 Istio addon은 web_root: /kiali로 설정됨 → /monitoring/kiali로 변경 필요
-kubectl get configmap kiali -n istio-system -o yaml | \
-    sed 's|web_root: /kiali|web_root: /monitoring/kiali|g' | \
-    kubectl apply -f - 2>/dev/null || true
+# Kiali ConfigMap 전체 교체 - Prometheus/Grafana/Jaeger URL 설정
+kubectl apply -f - <<'KIALI_CONFIG'
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: kiali
+  namespace: istio-system
+  labels:
+    app: kiali
+data:
+  config.yaml: |
+    auth:
+      strategy: anonymous
+    external_services:
+      custom_dashboards:
+        enabled: true
+      istio:
+        root_namespace: istio-system
+      prometheus:
+        url: http://prometheus.wealist-localhost.svc.cluster.local:9090/api/monitoring/prometheus
+      grafana:
+        enabled: true
+        in_cluster_url: http://grafana.wealist-localhost.svc.cluster.local:3000
+        url: http://localhost:8080/api/monitoring/grafana
+      tracing:
+        enabled: true
+        in_cluster_url: http://tracing.istio-system.svc.cluster.local
+        url: http://localhost:8080/api/monitoring/jaeger
+        use_grpc: false
+    server:
+      observability:
+        metrics:
+          enabled: true
+          port: 9090
+      port: 20001
+      web_root: /api/monitoring/kiali
+    kiali_feature_flags:
+      validations:
+        ignore:
+        - KIA1301
+KIALI_CONFIG
+
+# Kiali Deployment 프로브 경로 수정 (web_root 반영)
+kubectl patch deployment kiali -n istio-system --type='json' -p='[
+  {"op": "replace", "path": "/spec/template/spec/containers/0/startupProbe/httpGet/path", "value": "/api/monitoring/kiali/healthz"},
+  {"op": "replace", "path": "/spec/template/spec/containers/0/livenessProbe/httpGet/path", "value": "/api/monitoring/kiali/healthz"},
+  {"op": "replace", "path": "/spec/template/spec/containers/0/readinessProbe/httpGet/path", "value": "/api/monitoring/kiali/healthz"}
+]' 2>/dev/null || true
 
 # Jaeger 환경변수 설정 (QUERY_BASE_PATH)
-kubectl set env deployment/jaeger -n istio-system QUERY_BASE_PATH=/monitoring/jaeger 2>/dev/null || true
+kubectl set env deployment/jaeger -n istio-system QUERY_BASE_PATH=/api/monitoring/jaeger 2>/dev/null || true
 
-# Kiali, Jaeger 재시작 (설정 적용)
-kubectl rollout restart deployment/kiali -n istio-system 2>/dev/null || true
-kubectl rollout restart deployment/jaeger -n istio-system 2>/dev/null || true
-
-echo "✅ Kiali, Jaeger 설치 완료 (subpath: /monitoring/kiali, /monitoring/jaeger)"
+echo "✅ Kiali, Jaeger 설치 완료 (subpath: /api/monitoring/kiali, /api/monitoring/jaeger)"
 
 # 8. Istio Native Gateway 설치 (VirtualService용)
 # NOTE: Kubernetes Gateway API가 아닌 Istio Native Gateway 사용
