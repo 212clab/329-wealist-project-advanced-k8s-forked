@@ -375,26 +375,59 @@ else
 fi
 
 # =============================================================================
-# 14-1. ArgoCD Google OAuth 설정 (환경변수에서 읽음)
+# 14-1. ArgoCD Google OAuth 설정
 # =============================================================================
-# 환경변수:
-#   GOOGLE_OAUTH_CLIENT_ID - Google OAuth Client ID
-#   GOOGLE_OAUTH_CLIENT_SECRET - Google OAuth Client Secret
-#
-# 설정 방법:
-#   export GOOGLE_OAUTH_CLIENT_ID="xxx.apps.googleusercontent.com"
-#   export GOOGLE_OAUTH_CLIENT_SECRET="GOCSPX-xxx"
+# 우선순위:
+#   1. 환경변수 (GOOGLE_OAUTH_CLIENT_ID, GOOGLE_OAUTH_CLIENT_SECRET)
+#   2. AWS Secrets Manager (wealist/dev/oauth/argocd)
+#   3. CLI 입력
 # =============================================================================
 echo ""
-echo "🔐 ArgoCD Google OAuth 설정 확인 중..."
+echo "🔐 ArgoCD Google OAuth 설정 중..."
 
-if [ -n "${GOOGLE_OAUTH_CLIENT_ID}" ] && [ -n "${GOOGLE_OAUTH_CLIENT_SECRET}" ]; then
-    echo "  → Google OAuth 환경변수 발견, 설정 적용 중..."
+OAUTH_CLIENT_ID="${GOOGLE_OAUTH_CLIENT_ID:-}"
+OAUTH_CLIENT_SECRET="${GOOGLE_OAUTH_CLIENT_SECRET:-}"
+
+# 환경변수 없으면 AWS Secrets Manager에서 시도
+if [ -z "$OAUTH_CLIENT_ID" ] || [ -z "$OAUTH_CLIENT_SECRET" ]; then
+    echo "  → 환경변수 없음, AWS Secrets Manager에서 조회 중..."
+
+    # AWS Secrets Manager에서 가져오기 시도
+    OAUTH_SECRET=$(aws secretsmanager get-secret-value \
+        --secret-id "wealist/dev/oauth/argocd" \
+        --region ${AWS_REGION} \
+        --query SecretString \
+        --output text 2>/dev/null || echo "")
+
+    if [ -n "$OAUTH_SECRET" ]; then
+        OAUTH_CLIENT_ID=$(echo "$OAUTH_SECRET" | jq -r '.client_id // empty' 2>/dev/null)
+        OAUTH_CLIENT_SECRET=$(echo "$OAUTH_SECRET" | jq -r '.client_secret // empty' 2>/dev/null)
+        if [ -n "$OAUTH_CLIENT_ID" ] && [ -n "$OAUTH_CLIENT_SECRET" ]; then
+            echo "  ✅ AWS Secrets Manager에서 OAuth 자격증명 로드 완료"
+        fi
+    fi
+fi
+
+# 여전히 없으면 CLI 입력
+if [ -z "$OAUTH_CLIENT_ID" ] || [ -z "$OAUTH_CLIENT_SECRET" ]; then
+    echo ""
+    echo "  Google OAuth 설정이 필요합니다."
+    echo "  (Google Cloud Console → API 및 서비스 → 사용자 인증 정보)"
+    echo ""
+    read -p "  Google OAuth Client ID (Enter 건너뛰기): " OAUTH_CLIENT_ID
+    if [ -n "$OAUTH_CLIENT_ID" ]; then
+        read -p "  Google OAuth Client Secret: " OAUTH_CLIENT_SECRET
+    fi
+fi
+
+# OAuth 설정 적용
+if [ -n "$OAUTH_CLIENT_ID" ] && [ -n "$OAUTH_CLIENT_SECRET" ]; then
+    echo "  → Google OAuth 설정 적용 중..."
 
     # Google OAuth Secret 추가
     kubectl patch secret argocd-secret -n argocd --type merge -p "{
       \"stringData\": {
-        \"dex.google.clientSecret\": \"${GOOGLE_OAUTH_CLIENT_SECRET}\"
+        \"dex.google.clientSecret\": \"${OAUTH_CLIENT_SECRET}\"
       }
     }" 2>/dev/null || true
 
@@ -402,7 +435,7 @@ if [ -n "${GOOGLE_OAUTH_CLIENT_ID}" ] && [ -n "${GOOGLE_OAUTH_CLIENT_SECRET}" ];
     kubectl patch configmap argocd-cm -n argocd --type merge -p "{
       \"data\": {
         \"url\": \"https://dev.wealist.co.kr/api/argo\",
-        \"dex.config\": \"connectors:\\n  - type: google\\n    id: google\\n    name: Google\\n    config:\\n      clientID: ${GOOGLE_OAUTH_CLIENT_ID}\\n      clientSecret: \\\$dex.google.clientSecret\\n      redirectURI: https://dev.wealist.co.kr/api/argo/api/dex/callback\"
+        \"dex.config\": \"connectors:\\n  - type: google\\n    id: google\\n    name: Google\\n    config:\\n      clientID: ${OAUTH_CLIENT_ID}\\n      clientSecret: \\\$dex.google.clientSecret\\n      redirectURI: https://dev.wealist.co.kr/api/argo/api/dex/callback\"
       }
     }"
 
@@ -414,11 +447,7 @@ if [ -n "${GOOGLE_OAUTH_CLIENT_ID}" ] && [ -n "${GOOGLE_OAUTH_CLIENT_SECRET}" ];
     echo "✅ ArgoCD Google OAuth 설정 완료"
     echo "   - Google 로그인: https://dev.wealist.co.kr/api/argo"
 else
-    echo "⚠️  Google OAuth 환경변수가 설정되지 않았습니다."
-    echo "   Google 로그인을 사용하려면 다음 환경변수를 설정하세요:"
-    echo "   export GOOGLE_OAUTH_CLIENT_ID=\"your-client-id.apps.googleusercontent.com\""
-    echo "   export GOOGLE_OAUTH_CLIENT_SECRET=\"GOCSPX-xxx\""
-    echo "   그 후 make kind-dev-setup 재실행"
+    echo "⚠️  Google OAuth 설정 건너뜀 (admin 계정으로 로그인)"
 fi
 
 # =============================================================================
