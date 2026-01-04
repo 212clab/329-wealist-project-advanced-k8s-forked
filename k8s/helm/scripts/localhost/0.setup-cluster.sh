@@ -128,47 +128,72 @@ kubectl rollout restart deployment/jaeger -n istio-system 2>/dev/null || true
 
 echo "✅ Kiali, Jaeger 설치 완료 (subpath: /monitoring/kiali, /monitoring/jaeger)"
 
-# 8. Istio Ingress Gateway 설치 (외부 트래픽용)
-echo "⏳ Istio Ingress Gateway 설치 중..."
+# 8. Istio Native Gateway 설치 (VirtualService용)
+# NOTE: Kubernetes Gateway API가 아닌 Istio Native Gateway 사용
+#       - VirtualService는 networking.istio.io/v1 Gateway 필요
+#       - istio install --profile=default가 생성한 istio-ingressgateway와 연결
+echo "⏳ Istio Native Gateway 설치 중..."
 kubectl apply -f - <<EOF
-apiVersion: gateway.networking.k8s.io/v1
+apiVersion: networking.istio.io/v1
 kind: Gateway
 metadata:
   name: istio-ingressgateway
   namespace: istio-system
 spec:
-  gatewayClassName: istio
-  listeners:
-  - name: http
-    port: 80
-    protocol: HTTP
-    allowedRoutes:
-      namespaces:
-        from: All
+  selector:
+    istio: ingressgateway
+  servers:
+  - port:
+      number: 80
+      name: http
+      protocol: HTTP
+    hosts:
+    - "*"
+  - port:
+      number: 443
+      name: https
+      protocol: HTTPS
+    hosts:
+    - "*"
+    tls:
+      mode: PASSTHROUGH
 EOF
 
-echo "⏳ Istio Gateway Pod 준비 대기 중..."
-sleep 5
+echo "⏳ Istio Ingressgateway Pod 준비 대기 중..."
 kubectl wait --namespace istio-system \
   --for=condition=ready pod \
-  --selector=gateway.networking.k8s.io/gateway-name=istio-ingressgateway \
+  --selector=app=istio-ingressgateway \
   --timeout=120s || echo "WARNING: Istio gateway not ready yet"
 
-# 9. Istio Gateway Service를 NodePort로 노출 (Kind hostPort 8080 사용)
-# ports[0]=status-port(15021), ports[1]=http(80) → http에 NodePort 30080 할당
-echo "⚙️ Istio Gateway NodePort 설정 중..."
-kubectl patch service istio-ingressgateway-istio -n istio-system --type='json' -p='[
-  {
-    "op": "replace",
-    "path": "/spec/type",
-    "value": "NodePort"
-  },
-  {
-    "op": "add",
-    "path": "/spec/ports/1/nodePort",
-    "value": 30080
-  }
-]' || echo "INFO: Service 이미 NodePort로 설정됨"
+# 9. Istio Gateway NodePort 서비스 생성 (Kind hostPort 30080 연결)
+# NOTE: 기본 istio-ingressgateway는 LoadBalancer 타입
+#       Kind에서는 NodePort 30080이 hostPort 80/8080에 매핑됨
+echo "⚙️ Istio Gateway NodePort 서비스 생성 중..."
+kubectl apply -f - <<EOF
+apiVersion: v1
+kind: Service
+metadata:
+  name: istio-ingressgateway-nodeport
+  namespace: istio-system
+  labels:
+    app: istio-ingressgateway
+    istio: ingressgateway
+spec:
+  type: NodePort
+  selector:
+    app: istio-ingressgateway
+    istio: ingressgateway
+  ports:
+  - name: http
+    port: 80
+    targetPort: 8080
+    nodePort: 30080
+  - name: https
+    port: 443
+    targetPort: 8443
+    nodePort: 30443
+EOF
+echo "✅ Istio Gateway NodePort 서비스 생성 완료 (30080→80, 30443→443)"
 
 # 10. Argo Rollouts 설치 (Progressive Delivery)
 echo "⏳ Argo Rollouts 설치 중..."

@@ -115,51 +115,74 @@ echo "✅ Istio Sidecar 설치 완료"
 # NOTE: Kiali, Jaeger는 ArgoCD가 istio-addons 차트로 배포합니다.
 # 수동 설치하면 충돌이 발생하므로 여기서는 설치하지 않습니다.
 
-# 5. Istio Ingress Gateway 설치
-echo "⏳ Istio Ingress Gateway 설치 중..."
+# 5. Istio Native Gateway 설치 (VirtualService용)
+# NOTE: Kubernetes Gateway API가 아닌 Istio Native Gateway 사용
+#       - VirtualService는 networking.istio.io/v1 Gateway 필요
+#       - istio install --profile=default가 생성한 istio-ingressgateway와 연결
+echo "⏳ Istio Native Gateway 설치 중..."
 kubectl apply -f - <<EOF
-apiVersion: gateway.networking.k8s.io/v1
+apiVersion: networking.istio.io/v1
 kind: Gateway
 metadata:
   name: istio-ingressgateway
   namespace: istio-system
 spec:
-  gatewayClassName: istio
-  listeners:
-  - name: http
-    port: 80
-    protocol: HTTP
-    allowedRoutes:
-      namespaces:
-        from: All
+  selector:
+    istio: ingressgateway
+  servers:
+  - port:
+      number: 80
+      name: http
+      protocol: HTTP
+    hosts:
+    - "*"
+  - port:
+      number: 443
+      name: https
+      protocol: HTTPS
+    hosts:
+    - "*"
+    tls:
+      mode: PASSTHROUGH
 EOF
 
-echo "⏳ Istio Gateway Pod 준비 대기 중..."
-sleep 5
+echo "⏳ Istio Ingressgateway Pod 준비 대기 중..."
 kubectl wait --namespace istio-system \
   --for=condition=ready pod \
-  --selector=gateway.networking.k8s.io/gateway-name=istio-ingressgateway \
+  --selector=app=istio-ingressgateway \
   --timeout=120s || echo "WARNING: Istio gateway not ready yet"
 
-# 6. Istio Gateway Service를 NodePort로 노출
-echo "⚙️ Istio Gateway NodePort 설정 중..."
-echo "⏳ Istio Gateway 서비스 대기 중..."
-kubectl wait --namespace istio-system \
-  --for=jsonpath='{.spec.type}'=LoadBalancer \
-  svc/istio-ingressgateway-istio \
-  --timeout=60s 2>/dev/null || true
-
-kubectl patch service istio-ingressgateway-istio -n istio-system --type='json' -p='[
-  {"op": "replace", "path": "/spec/type", "value": "NodePort"},
-  {"op": "replace", "path": "/spec/ports/1/nodePort", "value": 30080}
-]' 2>/dev/null || \
-kubectl patch service istio-ingressgateway-istio -n istio-system --type='json' -p='[
-  {"op": "replace", "path": "/spec/type", "value": "NodePort"},
-  {"op": "add", "path": "/spec/ports/1/nodePort", "value": 30080}
-]' 2>/dev/null || echo "⚠️ NodePort 패치 실패 - 수동 설정 필요"
+# 6. Istio Gateway NodePort 서비스 생성 (Kind hostPort 30080 연결)
+# NOTE: 기본 istio-ingressgateway는 LoadBalancer 타입
+#       Kind에서는 NodePort 30080이 hostPort 80/8080에 매핑됨
+echo "⚙️ Istio Gateway NodePort 서비스 생성 중..."
+kubectl apply -f - <<EOF
+apiVersion: v1
+kind: Service
+metadata:
+  name: istio-ingressgateway-nodeport
+  namespace: istio-system
+  labels:
+    app: istio-ingressgateway
+    istio: ingressgateway
+spec:
+  type: NodePort
+  selector:
+    app: istio-ingressgateway
+    istio: ingressgateway
+  ports:
+  - name: http
+    port: 80
+    targetPort: 8080
+    nodePort: 30080
+  - name: https
+    port: 443
+    targetPort: 8443
+    nodePort: 30443
+EOF
 
 echo "📋 Gateway 서비스 상태:"
-kubectl get svc -n istio-system istio-ingressgateway-istio -o wide
+kubectl get svc -n istio-system -l istio=ingressgateway
 
 echo "✅ Istio Gateway 설정 완료"
 
@@ -481,34 +504,38 @@ else
     echo "⚠️  ReferenceGrant 파일을 찾을 수 없습니다: ${REFERENCEGRANT}"
 fi
 
-# ArgoCD HTTPRoute 부트스트랩 (ArgoCD sync 전에 접근 가능하도록)
-echo "🔐 ArgoCD HTTPRoute 부트스트랩 적용 중..."
+# ArgoCD VirtualService 부트스트랩 (ArgoCD sync 전에 접근 가능하도록)
+# NOTE: Istio Native Gateway + VirtualService 사용
+echo "🔐 ArgoCD VirtualService 부트스트랩 적용 중..."
 kubectl apply -f - <<EOF
-apiVersion: gateway.networking.k8s.io/v1
-kind: HTTPRoute
+apiVersion: networking.istio.io/v1
+kind: VirtualService
 metadata:
   name: argocd-bootstrap-route
-  namespace: ${NAMESPACE}
+  namespace: argocd
   labels:
     app: argocd-bootstrap
     managed-by: setup-script
 spec:
-  parentRefs:
-    - name: istio-ingressgateway
-      namespace: istio-system
-  hostnames:
-    - "dev.wealist.co.kr"
-  rules:
-    - matches:
-        - path:
-            type: PathPrefix
-            value: /api/argo
-      backendRefs:
-        - name: argocd-server
-          namespace: argocd
-          port: 80
+  hosts:
+  - "dev.wealist.co.kr"
+  - "*"
+  gateways:
+  - istio-system/istio-ingressgateway
+  http:
+  - match:
+    - uri:
+        prefix: /api/argo
+    rewrite:
+      uri: /
+    route:
+    - destination:
+        host: argocd-server.argocd.svc.cluster.local
+        port:
+          number: 80
+    timeout: 30s
 EOF
-echo "✅ ArgoCD HTTPRoute 적용 완료 - /api/argo 라우팅 활성화"
+echo "✅ ArgoCD VirtualService 적용 완료 - /api/argo 라우팅 활성화"
 
 # =============================================================================
 # 13. ArgoCD Root App 배포
