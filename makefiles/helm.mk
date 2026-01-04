@@ -702,17 +702,16 @@ istio-status: ## Istio 설치 상태 확인
 	@echo "=== Istio 시스템 컴포넌트 ==="
 	@kubectl get pods -n istio-system
 	@echo ""
-	@echo "=== Istio 모드 상태 ($(K8S_NAMESPACE)) ==="
-	@echo -n "Ambient 모드: "; kubectl get namespace $(K8S_NAMESPACE) -o jsonpath='{.metadata.labels.istio\.io/dataplane-mode}' 2>/dev/null && echo "" || echo "비활성화"
-	@echo -n "사이드카 주입: "; kubectl get namespace $(K8S_NAMESPACE) -o jsonpath='{.metadata.labels.istio-injection}' 2>/dev/null && echo "" || echo "비활성화"
+	@echo "=== Istio Sidecar 모드 상태 ($(K8S_NAMESPACE)) ==="
+	@echo -n "Sidecar 주입: "; kubectl get namespace $(K8S_NAMESPACE) -o jsonpath='{.metadata.labels.istio-injection}' 2>/dev/null && echo "" || echo "비활성화"
 	@echo ""
-	@echo "=== ztunnel 상태 (Ambient) ==="
-	@kubectl get pods -n istio-system -l app=ztunnel 2>/dev/null || echo "ztunnel 미설치"
+	@echo "=== istiod 상태 ==="
+	@kubectl get pods -n istio-system -l app=istiod 2>/dev/null || echo "istiod 미설치"
 	@echo ""
-	@echo "=== Waypoint Proxy ($(K8S_NAMESPACE)) ==="
-	@kubectl get gateway -n $(K8S_NAMESPACE) -l istio.io/waypoint-for 2>/dev/null || echo "Waypoint 프록시 없음"
+	@echo "=== Sidecar 주입된 파드 ($(K8S_NAMESPACE)) ==="
+	@kubectl get pods -n $(K8S_NAMESPACE) -o jsonpath='{range .items[*]}{.metadata.name}{"\t"}{range .spec.containers[*]}{.name}{" "}{end}{"\n"}{end}' 2>/dev/null | grep istio-proxy || echo "Sidecar 주입된 파드 없음"
 	@echo ""
-	@echo "=== 파드 ($(K8S_NAMESPACE)) ==="
+	@echo "=== 전체 파드 ($(K8S_NAMESPACE)) ==="
 	@kubectl get pods -n $(K8S_NAMESPACE) -o jsonpath='{range .items[*]}{.metadata.name}{"\t"}{range .spec.containers[*]}{.name}{" "}{end}{"\n"}{end}' 2>/dev/null | grep -v "^$$" || echo "파드 없음"
 
 istio-uninstall: ## Istio 완전 삭제
@@ -723,18 +722,15 @@ istio-uninstall: ## Istio 완전 삭제
 	@echo ""
 	@echo "단계 2: 네임스페이스 레이블 삭제 중..."
 	@kubectl label namespace $(K8S_NAMESPACE) istio-injection- 2>/dev/null || true
-	@kubectl label namespace $(K8S_NAMESPACE) istio.io/dataplane-mode- 2>/dev/null || true
 	@echo ""
 	@echo "단계 3: Istio 애드온 삭제 중..."
 	@kubectl delete -f https://raw.githubusercontent.com/istio/istio/release-$(ISTIO_VERSION)/samples/addons/kiali.yaml 2>/dev/null || true
 	@kubectl delete -f https://raw.githubusercontent.com/istio/istio/release-$(ISTIO_VERSION)/samples/addons/jaeger.yaml 2>/dev/null || true
 	@echo ""
-	@echo "단계 4: Istio 코어 (Ambient 컴포넌트 포함) 삭제 중..."
+	@echo "단계 4: Istio 코어 삭제 중..."
 	@helm uninstall istio-ingressgateway -n istio-system 2>/dev/null || true
-	@helm uninstall ztunnel -n istio-system 2>/dev/null || true
 	@helm uninstall istiod -n istio-system 2>/dev/null || true
-	@helm uninstall istio-cni -n istio-system 2>/dev/null || true
 	@helm uninstall istio-base -n istio-system 2>/dev/null || true
 	@echo ""
 	@echo "Istio 삭제 완료!"
-	@echo "참고: 사이드카 모드의 경우, 사이드카 제거를 위해 파드 재시작: make istio-restart-pods"
+	@echo "참고: Sidecar 제거를 위해 파드 재시작: make istio-restart-pods"

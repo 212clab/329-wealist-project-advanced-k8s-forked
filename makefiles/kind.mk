@@ -1333,7 +1333,7 @@ kind-info: ## 클러스터 배포 정보 (Git 레포/브랜치/배포자) 확인
 		DEPLOYED_BY=$$(kubectl get namespace $(K8S_NAMESPACE) -o jsonpath='{.metadata.annotations.wealist\.io/deployed-by}' 2>/dev/null); \
 		DEPLOYED_BY_EMAIL=$$(kubectl get namespace $(K8S_NAMESPACE) -o jsonpath='{.metadata.annotations.wealist\.io/deployed-by-email}' 2>/dev/null); \
 		DEPLOY_TIME=$$(kubectl get namespace $(K8S_NAMESPACE) -o jsonpath='{.metadata.annotations.wealist\.io/deploy-time}' 2>/dev/null); \
-		ISTIO_MODE=$$(kubectl get namespace $(K8S_NAMESPACE) -o jsonpath='{.metadata.labels.istio\.io/dataplane-mode}' 2>/dev/null); \
+		ISTIO_MODE=$$(kubectl get namespace $(K8S_NAMESPACE) -o jsonpath='{.metadata.labels.istio-injection}' 2>/dev/null); \
 		echo "  📦 Git Repository"; \
 		echo "    - Repo:     https://github.com/$${GIT_REPO:-unknown}"; \
 		echo "    - Branch:   $${GIT_BRANCH:-unknown}"; \

@@ -55,7 +55,7 @@ make kind-staging-setup
 **수행 내용:**
 
 1. Kind 클러스터 생성 (3노드)
-2. Istio Ambient 모드 설치
+2. Istio Sidecar 모드 설치
 3. Gateway API + HTTPRoute 설정
 4. ArgoCD 설치
 5. Git 레포 등록 (GitHub 토큰 필요)

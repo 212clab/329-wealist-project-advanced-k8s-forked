@@ -147,7 +147,7 @@ jwtAuth:
   issuer: ""
   jwksUri: ""
 
-# Old Istio Gateway API (disabled by default for Ambient mode)
+# Old Istio Gateway API (disabled by default, use Kubernetes Gateway API)
 gateway:
   enabled: false
 

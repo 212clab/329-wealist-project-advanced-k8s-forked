@@ -247,7 +247,7 @@ istio:
     tls:
       enabled: false
 
-  # Kubernetes Gateway API - Ingress Gateway (Ambient 모드 권장)
+  # Kubernetes Gateway API - Ingress Gateway
   # Istio가 자동으로 Deployment/Service 생성
   # infrastructure.annotations는 자동 생성되는 Service에 적용됨
   k8sGateway:
