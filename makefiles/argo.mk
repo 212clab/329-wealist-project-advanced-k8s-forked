@@ -112,6 +112,9 @@ argo-setup: ## ArgoCD 설치 (인터랙티브)
 	@echo "다음 명령어로 포트 포워딩:"
 	@echo "  make ui"
 
+argo-admin-password: ## [ArgoCD] admin 비밀번호 조회
+	@kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath='{.data.password}' 2>/dev/null | base64 -d && echo "" || echo "❌ Secret이 없거나 argocd namespace 접근 불가"
+
 # ============================================
 # 클러스터 관리
 # ============================================
@@ -487,16 +490,15 @@ kind-dev-setup: ## [ArgoCD] Kind 클러스터 + DB 컨테이너 + ArgoCD + 앱 �
 	@echo "📊 환경 상태: make kind-dev-env-status"
 	@echo ""
 	@echo "🌐 접속 정보:"
-	@echo "   - ArgoCD: http://localhost:9080/api/argo"
+	@echo "   - ArgoCD: https://dev.wealist.co.kr/api/argo"
 	@echo "   - PostgreSQL: localhost:9432"
 	@echo "   - Redis: localhost:9379"
 	@echo ""
 	@echo "🔐 팀원 RBAC 설정: make kind-dev-rbac"
 	@echo "🔑 팀원 kubeconfig: make kind-dev-kubeconfig USERNAME=<이름>"
 	@echo ""
-	@echo "ArgoCD 로그인:"
-	@echo "   Username: admin"
-	@echo "   Password: $$(kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath='{.data.password}' 2>/dev/null | base64 -d || echo '(생성 중...)')"
+	@echo "ArgoCD 로그인: Google OAuth (LOG IN VIA GOOGLE 버튼)"
+	@echo "   또는 admin 계정: make argo-admin-password"
 
 # ============================================
 # 리셋 명령어
