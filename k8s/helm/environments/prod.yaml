@@ -55,6 +55,8 @@ auth-service:
     limits:
       memory: "768Mi"   # Spring Boot 충분
       cpu: "500m"
+  # NOTE: Java OTEL config는 ArgoCD Application parameters에서 관리
+  # k8s/argocd/apps/prod/auth-service.yaml 참조
 
 # 핵심 서비스 - 2 replicas
 board-service:

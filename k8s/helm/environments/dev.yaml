@@ -115,12 +115,9 @@ shared:
     # Internal API Key (dev용)
     INTERNAL_API_KEY: "dev-internal-key-2024"
 
-    # OTEL Configuration
-    OTEL_EXPORTER_OTLP_ENDPOINT: "http://otel-collector:4317"
-    OTEL_EXPORTER_OTLP_PROTOCOL: "grpc"
-    OTEL_TRACES_SAMPLER: "parentbased_traceidratio"
-    OTEL_TRACES_SAMPLER_ARG: "0.5"
-    OTEL_PROPAGATORS: "tracecontext,baggage"
+    # OTEL Configuration (base.yaml 상속, 환경별 오버라이드만)
+    # Protocol: HTTP/protobuf (http://otel-collector:4318) - base.yaml에서 정의
+    OTEL_TRACES_SAMPLER_ARG: "0.5"  # dev: 50% 샘플링
     OTEL_RESOURCE_ATTRIBUTES: "deployment.environment=dev"
 
 # -----------------------------------------------------------------------------
