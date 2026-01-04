@@ -615,7 +615,9 @@ otelCollector:
   connectors:
     # Prometheus Remote Write endpoint (for connector metrics)
     prometheusRemoteWrite:
-      endpoint: "http://prometheus:9090/api/v1/write"
+      # NOTE: Prometheus uses --web.route-prefix=/api/monitoring/prometheus
+      # So the remote write endpoint must include this prefix
+      endpoint: "http://prometheus:9090/api/monitoring/prometheus/api/v1/write"
       resourceToTelemetryConversion: true
 
     # Span Metrics Connector
