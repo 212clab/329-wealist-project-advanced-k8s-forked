@@ -24,13 +24,31 @@ spec:
   # ==========================================================================
   # OAuth2 Routes (must be first for auth flow)
   # ==========================================================================
+  # /oauth2/* and /login/oauth2/* - no rewrite needed
   - match:
     - uri:
         prefix: /oauth2
     - uri:
         prefix: /login/oauth2
+    route:
+    - destination:
+        host: auth-service
+        port:
+          number: 8080
+    timeout: 30s
+    retries:
+      attempts: 3
+      perTryTimeout: 10s
+      retryOn: "5xx,reset,connect-failure"
+
+  # /api/oauth2/* - rewrite to /oauth2/* (Spring Security expects /oauth2/callback/*)
+  - match:
     - uri:
         prefix: /api/oauth2
+    rewrite:
+      uriRegexRewrite:
+        match: "^/api/oauth2(.*)$"
+        rewrite: '/oauth2\1'
     route:
     - destination:
         host: auth-service
