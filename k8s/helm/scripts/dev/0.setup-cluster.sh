@@ -441,16 +441,6 @@ else
     echo "✅ ArgoCD 설치 완료 (비밀번호는 이미 변경됨)"
 fi
 
-# ArgoCD RBAC 설정 (Google OAuth 사용자 권한)
-echo "🔐 ArgoCD RBAC 설정 적용 중..."
-ARGOCD_RBAC="${SCRIPT_DIR}/../../../argocd/config/argocd-rbac-cm.yaml"
-if [ -f "${ARGOCD_RBAC}" ]; then
-    kubectl apply -f "${ARGOCD_RBAC}"
-    echo "✅ ArgoCD RBAC 설정 완료 (관리자 이메일 등록됨)"
-else
-    echo "⚠️  ArgoCD RBAC 파일을 찾을 수 없습니다: ${ARGOCD_RBAC}"
-fi
-
 # =============================================================================
 # 14-1. ArgoCD Google OAuth 설정
 # =============================================================================
@@ -537,6 +527,16 @@ EOF
     echo "   - Google 로그인: https://dev.wealist.co.kr/api/argo"
 else
     echo "⚠️  Google OAuth 설정 건너뜀 (admin 계정으로 로그인)"
+fi
+
+# ArgoCD RBAC 설정 (Google OAuth 사용자 권한) - OAuth 설정 후 적용해야 함
+echo "🔐 ArgoCD RBAC 설정 적용 중..."
+ARGOCD_RBAC="${SCRIPT_DIR}/../../../argocd/config/argocd-rbac-cm.yaml"
+if [ -f "${ARGOCD_RBAC}" ]; then
+    kubectl apply -f "${ARGOCD_RBAC}"
+    echo "✅ ArgoCD RBAC 설정 완료 (관리자 이메일 등록됨)"
+else
+    echo "⚠️  ArgoCD RBAC 파일을 찾을 수 없습니다: ${ARGOCD_RBAC}"
 fi
 
 # =============================================================================
