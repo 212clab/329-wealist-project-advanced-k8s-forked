@@ -48,8 +48,12 @@ spec:
                 secretKeyRef:
                   name: wealist-shared-secret
                   key: REDIS_PASSWORD
+            # rediss:// for SSL/TLS (AWS ElastiCache requires TLS)
             - name: REDIS_ADDR
               value: "rediss://$(REDIS_HOST):{{ .Values.redisExporter.config.port }}"
+            # Skip TLS verification for ElastiCache (uses Amazon CA)
+            - name: REDIS_EXPORTER_SKIP_TLS_VERIFICATION
+              value: "true"
             {{- else }}
             # Local/Dev: values에서 직접 가져옴
             - name: REDIS_ADDR

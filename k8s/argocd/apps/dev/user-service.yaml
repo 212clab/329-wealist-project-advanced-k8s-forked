@@ -5,6 +5,9 @@ metadata:
   namespace: argocd
   annotations:
     argocd.argoproj.io/sync-wave: "2"
+    notifications.argoproj.io/subscribe.on-deployed.webhook: discord
+    notifications.argoproj.io/subscribe.on-sync-failed.webhook: discord
+    notifications.argoproj.io/subscribe.on-health-degraded.webhook: discord
 spec:
   project: wealist-dev
   source:
@@ -18,11 +21,23 @@ spec:
         - ../../environments/dev.yaml
       parameters:
         - name: global.imageRegistry
-          value: "<AWS_ACCOUNT_ID>.dkr.ecr.ap-northeast-2.amazonaws.com"
+          value: "290008131187.dkr.ecr.ap-northeast-2.amazonaws.com"
         - name: image.repository
           value: "user-service"
         - name: image.tag
-          value: "dev-latest"
+          value: "56-4ff1148"
+        - name: imagePullSecrets[0].name
+          value: "ecr-secret"
+        - name: shared.config.DB_HOST
+          value: "postgres"
+        - name: shared.config.POSTGRES_HOST
+          value: "postgres"
+        - name: shared.config.REDIS_HOST
+          value: "redis"
+        - name: config.DB_NAME
+          value: "wealist"
+        - name: config.DB_USER
+          value: "wealist"
   destination:
     server: https://kubernetes.default.svc
     namespace: wealist-dev

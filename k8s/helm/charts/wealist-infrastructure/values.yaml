@@ -35,6 +35,10 @@ postgres:
     enabled: true
     storageClass: ""  # Use default storage class
     size: 10Gi
+    # Kind/로컬 환경용 hostPath 설정
+    hostPath:
+      enabled: false
+      path: /data/postgres
 
   resources:
     requests:
@@ -64,8 +68,6 @@ postgres:
         user: noti_service
       - name: wealist_storage_service_db
         user: storage_service
-      - name: wealist_video_service_db
-        user: video_service
 
 # Redis configuration
 redis:
@@ -89,6 +91,10 @@ redis:
     enabled: true
     storageClass: ""
     size: 5Gi
+    # Kind/로컬 환경용 hostPath 설정
+    hostPath:
+      enabled: false
+      path: /data/redis
 
   config:
     password: ""  # Set in production
@@ -141,7 +147,7 @@ minio:
 
 # Ingress configuration
 # Note: These are LOCAL/DEV defaults. Production settings should be in
-# helm/environments/prod.yaml or staging.yaml.
+# helm/environments/prod.yaml or dev.yaml.
 ingress:
   enabled: true
   className: nginx
@@ -157,9 +163,9 @@ ingress:
     nginx.ingress.kubernetes.io/websocket-services: "livekit"
     nginx.ingress.kubernetes.io/upstream-hash-by: "$request_uri"
     nginx.ingress.kubernetes.io/proxy-buffering: "off"
-    # SSL/TLS - default off for local (override in prod/staging)
+    # SSL/TLS - default off for local (override in prod/dev)
     nginx.ingress.kubernetes.io/ssl-redirect: "false"
-    # cert-manager annotation should be added via environment files (prod.yaml, staging.yaml)
+    # cert-manager annotation should be added via environment files (prod.yaml, dev.yaml)
     # NOT here - local/dev environments don't use cert-manager
 
   # Default: localhost (override in environment files)

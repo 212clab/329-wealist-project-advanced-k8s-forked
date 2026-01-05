@@ -10,6 +10,9 @@ metadata:
     app.kubernetes.io/component: monitoring
 spec:
   replicas: {{ .Values.prometheus.replicas }}
+  # Recreate strategy required for PVC-based deployments to avoid lock conflicts
+  strategy:
+    type: Recreate
   selector:
     matchLabels:
       app: prometheus
@@ -18,10 +21,14 @@ spec:
       labels:
         app: prometheus
         app.kubernetes.io/name: prometheus
-        # Ambient 모드에 포함 - mTLS로 서비스 메트릭 수집
-        # PeerAuthentication에서 PERMISSIVE 설정으로 외부 접근도 허용
       annotations:
+        # Sidecar 활성화 - mTLS 서비스 스크레이핑을 위해 필요
+        sidecar.istio.io/inject: "true"
+        # ConfigMap 변경 시 자동 Pod 재시작을 위한 checksum
         checksum/config: {{ include (print $.Template.BasePath "/prometheus/configmap.yaml") . | sha256sum }}
+        {{- if .Values.prometheus.alerting.enabled }}
+        checksum/alert-rules: {{ include (print $.Template.BasePath "/prometheus/alertrules-configmap.yaml") . | sha256sum }}
+        {{- end }}
     spec:
       serviceAccountName: prometheus
       securityContext:
@@ -47,6 +54,14 @@ spec:
             - "--web.route-prefix={{ .Values.prometheus.config.routePrefix }}"
             {{- else }}
             - "--web.route-prefix=/"
+            {{- end }}
+            {{- if .Values.prometheus.remoteWriteReceiver.enabled }}
+            # Remote Write Receiver (Tempo Metrics Generator → Prometheus)
+            - "--web.enable-remote-write-receiver"
+            {{- end }}
+            {{- if .Values.prometheus.exemplarStorage.enabled }}
+            # Exemplar Storage (Metrics → Traces 연결)
+            - "--enable-feature=exemplar-storage"
             {{- end }}
           ports:
             - name: http

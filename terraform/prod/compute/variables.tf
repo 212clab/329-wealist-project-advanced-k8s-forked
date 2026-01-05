@@ -12,7 +12,7 @@ variable "aws_region" {
 # EKS Cluster Configuration
 # =============================================================================
 variable "cluster_version" {
-  description = "Kubernetes version for the EKS cluster (Istio Ambient 1.28 호환)"
+  description = "Kubernetes version for the EKS cluster (Istio Sidecar 1.28 호환)"
   type        = string
   default     = "1.34"
 }
@@ -40,19 +40,19 @@ variable "spot_instance_types" {
 variable "spot_min_size" {
   description = "Minimum number of Spot nodes"
   type        = number
-  default     = 2
+  default     = 2  # 3→2 for cost optimization (2026-01-03)
 }
 
 variable "spot_max_size" {
   description = "Maximum number of Spot nodes"
   type        = number
-  default     = 4
+  default     = 6
 }
 
 variable "spot_desired_size" {
-  description = "Desired number of Spot nodes (t3.large 8GB × 2 = 16GB)"
+  description = "Desired number of Spot nodes (t3.large 8GB × 2 = 16GB, 70 pods capacity)"
   type        = number
-  default     = 2
+  default     = 2  # 3→2 for cost optimization (2026-01-03)
 }
 
 variable "node_disk_size" {
@@ -65,7 +65,7 @@ variable "node_disk_size" {
 # EKS Add-on Versions
 # =============================================================================
 variable "addon_versions" {
-  description = "Versions for EKS managed add-ons (compatible with EKS 1.34 + Istio Ambient 1.28)"
+  description = "Versions for EKS managed add-ons (compatible with EKS 1.34 + Istio Sidecar 1.28)"
   type = object({
     vpc_cni            = string
     coredns            = string
@@ -74,7 +74,7 @@ variable "addon_versions" {
     pod_identity_agent = string
   })
   default = {
-    vpc_cni            = "v1.21.1-eksbuild.1"    # Istio Ambient 호환
+    vpc_cni            = "v1.21.1-eksbuild.1"    # Istio Sidecar 호환
     coredns            = "v1.12.4-eksbuild.1"    # EKS 1.34용
     kube_proxy         = "v1.34.1-eksbuild.2"    # EKS 1.34용
     ebs_csi            = "v1.54.0-eksbuild.1"
@@ -88,7 +88,7 @@ variable "addon_versions" {
 variable "scheduled_scaling_enabled" {
   description = "Enable scheduled scaling for cost optimization (노드 자동 on/off)"
   type        = bool
-  default     = true
+  default     = true  # 비용 최적화 활성화 (평일 01:00-08:00, 주말 03:00-09:00 OFF)
 }
 
 # -----------------------------------------------------------------------------

@@ -5,12 +5,15 @@ on:
     inputs:
       service:
         description: 'Service name'
-        required: false
-        type: string
-      services:
-        description: 'Multiple services (comma-separated)'
-        required: false
-        type: string
+        required: true
+        type: choice
+        options:
+          - auth-service
+          - board-service
+          - chat-service
+          - noti-service
+          - storage-service
+          - user-service
       image_tag:
         description: 'Image tag to deploy (e.g., 42-abc1234)'
         required: true
@@ -26,6 +29,39 @@ env:
   TARGET_BRANCH: k8s-deploy-prod  # 수정할 브랜치
 
 jobs:
+  list-available-images:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN_BACKEND }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: List recent prod images
+        run: |
+          echo "### 📦 Recent Images for prod/${{ inputs.service }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+          aws ecr describe-images \
+            --repository-name "prod/${{ inputs.service }}" \
+            --region ${{ env.AWS_REGION }} \
+            --query 'sort_by(imageDetails,& imagePushedAt)[-10:].[imageTags[0],imagePushedAt]' \
+            --output table >> $GITHUB_STEP_SUMMARY || echo "No images found"
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+
+      - name: Verify selected image exists
+        run: |
+          echo "Verifying image: prod/${{ inputs.service }}:${{ inputs.image_tag }}"
+          aws ecr describe-images \
+            --repository-name "prod/${{ inputs.service }}" \
+            --region ${{ env.AWS_REGION }} \
+            --image-ids imageTag=${{ inputs.image_tag }}
+          echo "✅ Image verified"
+
   update-manifest:
     runs-on: ubuntu-latest
     permissions:
@@ -62,6 +98,7 @@ jobs:
       - name: Update manifests
         id: update
         run: |
+          SERVICE="${{ inputs.service }}"
           TAG="${{ inputs.image_tag }}"
           IFS=',' read -ra SERVICES <<< "$SERVICES_LIST"
           
@@ -153,6 +190,7 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITOPS_PAT || github.token }}
         run: |
+          SERVICE="${{ inputs.service }}"
           TAG="${{ inputs.image_tag }}"
           BRANCH_NAME="deploy/prod-${TAG}-$(date +%s)"
           

@@ -1,7 +1,7 @@
 # =============================================================================
 # EKS Cluster Configuration
 # =============================================================================
-# Istio Ambient 모드를 위한 Security Group 포트 설정 포함
+# Istio Sidecar 모드를 위한 Security Group 포트 설정 포함
 # Pod Identity 사용 (IRSA 대신)
 
 module "eks" {
@@ -51,28 +51,10 @@ module "eks" {
   ]
 
   # -----------------------------------------------------------------------------
-  # Node Security Group - Istio Ambient Ports
+  # Node Security Group - Istio Sidecar Ports
   # -----------------------------------------------------------------------------
   node_security_group_additional_rules = {
-    # Istio HBONE tunnel (ztunnel + Waypoint)
-    istio_hbone_ingress = {
-      description                   = "Istio HBONE tunnel"
-      protocol                      = "tcp"
-      from_port                     = 15008
-      to_port                       = 15008
-      type                          = "ingress"
-      source_cluster_security_group = true
-    }
-    istio_hbone_egress = {
-      description                   = "Istio HBONE tunnel"
-      protocol                      = "tcp"
-      from_port                     = 15008
-      to_port                       = 15008
-      type                          = "egress"
-      source_cluster_security_group = true
-    }
-
-    # Istio traffic redirect ports
+    # Istio traffic redirect ports (Sidecar Envoy)
     istio_redirect_ingress = {
       description                   = "Istio traffic redirect"
       protocol                      = "tcp"
@@ -118,6 +100,18 @@ module "eks" {
       source_cluster_security_group = true
     }
 
+    # Istio webhook (istiod sidecar injection)
+    # API Server → istiod:15017 for MutatingWebhook calls
+    # Port 443 (Service) → 15017 (Pod targetPort)
+    istio_webhook = {
+      description                   = "Istio sidecar injector webhook"
+      protocol                      = "tcp"
+      from_port                     = 15017
+      to_port                       = 15017
+      type                          = "ingress"
+      source_cluster_security_group = true
+    }
+
     # DNS (CoreDNS)
     dns_tcp = {
       description                   = "DNS TCP"
@@ -134,6 +128,40 @@ module "eks" {
       to_port                       = 53
       type                          = "ingress"
       source_cluster_security_group = true
+    }
+
+    # HTTP services (nginx, frontend, ops-portal 등)
+    # 기본 node-to-node ephemeral ports (1025-65535)에 포함되지 않아 별도 규칙 필요
+    http_node_to_node = {
+      description = "HTTP node to node (nginx, frontend)"
+      protocol    = "tcp"
+      from_port   = 80
+      to_port     = 80
+      type        = "ingress"
+      self        = true
+    }
+
+    # =========================================================================
+    # LiveKit WebRTC Ports (video-service)
+    # =========================================================================
+    # WebRTC UDP 미디어 트래픽 (hostNetwork 모드에서 직접 노출)
+    livekit_webrtc_udp_ingress = {
+      description = "LiveKit WebRTC UDP (media traffic)"
+      protocol    = "udp"
+      from_port   = 50000
+      to_port     = 60000
+      type        = "ingress"
+      cidr_blocks = ["0.0.0.0/0"]  # 클라이언트가 어디서든 접속 가능
+    }
+
+    # WebRTC TCP 폴백 (UDP 차단된 네트워크용)
+    livekit_webrtc_tcp_ingress = {
+      description = "LiveKit WebRTC TCP fallback"
+      protocol    = "tcp"
+      from_port   = 7881
+      to_port     = 7881
+      type        = "ingress"
+      cidr_blocks = ["0.0.0.0/0"]
     }
   }
 
@@ -176,13 +204,13 @@ module "eks" {
   # EKS Add-ons
   # -----------------------------------------------------------------------------
   cluster_addons = {
-    # VPC CNI - CRITICAL for Istio Ambient
+    # VPC CNI - EKS 네트워킹
     vpc-cni = {
       addon_version            = var.addon_versions.vpc_cni
       resolve_conflicts_on_create = "OVERWRITE"
       resolve_conflicts_on_update = "OVERWRITE"
 
-      # Istio Ambient 필수 설정
+      # 네트워크 최적화 설정
       configuration_values = jsonencode({
         env = {
           POD_SECURITY_GROUP_ENFORCING_MODE = "standard"

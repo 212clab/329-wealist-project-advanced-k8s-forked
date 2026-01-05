@@ -71,6 +71,40 @@ resource "aws_secretsmanager_secret_version" "jwt_secret" {
 }
 
 # -----------------------------------------------------------------------------
+# JWT RSA Key Pair (수동 입력)
+# -----------------------------------------------------------------------------
+# auth-service에서 JWT 토큰 RS256 서명/검증에 사용
+# 모든 Pod이 동일한 키를 공유해야 함 (Multi-pod 환경 필수)
+# openssl genpkey -algorithm RSA -out private_key.pem -pkeyopt rsa_keygen_bits:2048
+# openssl rsa -pubout -in private_key.pem -out public_key.pem
+# aws secretsmanager put-secret-value \
+#   --secret-id wealist/prod/app/jwt-rsa-keys \
+#   --secret-string '{"public_key":"-----BEGIN PUBLIC KEY-----\n...\n-----END PUBLIC KEY-----","private_key":"-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----"}'
+resource "aws_secretsmanager_secret" "jwt_rsa_keys" {
+  name       = "wealist/prod/app/jwt-rsa-keys"
+  kms_key_id = module.kms.key_arn
+
+  tags = merge(
+    local.common_tags,
+    {
+      Purpose = "JWT RS256 Token Signing"
+    }
+  )
+}
+
+resource "aws_secretsmanager_secret_version" "jwt_rsa_keys" {
+  secret_id = aws_secretsmanager_secret.jwt_rsa_keys.id
+  secret_string = jsonencode({
+    public_key  = "PLACEHOLDER-UPDATE-ME"
+    private_key = "PLACEHOLDER-UPDATE-ME"
+  })
+
+  lifecycle {
+    ignore_changes = [secret_string] # 수동 업데이트 후 덮어쓰지 않음
+  }
+}
+
+# -----------------------------------------------------------------------------
 # Internal API Key (자동 생성)
 # -----------------------------------------------------------------------------
 # 서비스 간 내부 통신 인증에 사용
@@ -116,6 +150,68 @@ resource "aws_secretsmanager_secret_version" "oauth_google" {
   lifecycle {
     ignore_changes = [secret_string] # 수동 업데이트 후 덮어쓰지 않음
   }
+}
+
+# -----------------------------------------------------------------------------
+# OAuth2 ArgoCD (수동 입력 - placeholder)
+# -----------------------------------------------------------------------------
+# ArgoCD SSO를 위한 Google OAuth2 자격 증명 (앱용 oauth/google과 별도)
+# Google Cloud Console에서 ArgoCD 전용 OAuth 클라이언트 생성 후 입력:
+# - Redirect URI: https://argocd.wealist.co.kr/api/dex/callback
+# aws secretsmanager put-secret-value \
+#   --secret-id wealist/prod/oauth/argocd \
+#   --secret-string '{"client_id":"...","client_secret":"..."}'
+resource "aws_secretsmanager_secret" "oauth_argocd" {
+  name       = "wealist/prod/oauth/argocd"
+  kms_key_id = module.kms.key_arn
+
+  tags = merge(
+    local.common_tags,
+    {
+      Purpose = "ArgoCD SSO"
+    }
+  )
+}
+
+resource "aws_secretsmanager_secret_version" "oauth_argocd" {
+  secret_id = aws_secretsmanager_secret.oauth_argocd.id
+  secret_string = jsonencode({
+    client_id     = "PLACEHOLDER-UPDATE-ME"
+    client_secret = "PLACEHOLDER-UPDATE-ME"
+  })
+
+  lifecycle {
+    ignore_changes = [secret_string] # 수동 업데이트 후 덮어쓰지 않음
+  }
+}
+
+# -----------------------------------------------------------------------------
+# ArgoCD Server Secret (자동 생성)
+# -----------------------------------------------------------------------------
+# ArgoCD 서버 인증에 필요한 secretkey
+# ExternalSecret이 이 값을 argocd-secret에 주입
+resource "aws_secretsmanager_secret" "argocd_server" {
+  name       = "wealist/prod/argocd/server"
+  kms_key_id = module.kms.key_arn
+
+  tags = merge(
+    local.common_tags,
+    {
+      Purpose = "ArgoCD Server Authentication"
+    }
+  )
+}
+
+resource "random_password" "argocd_secretkey" {
+  length  = 32
+  special = false
+}
+
+resource "aws_secretsmanager_secret_version" "argocd_server" {
+  secret_id = aws_secretsmanager_secret.argocd_server.id
+  secret_string = jsonencode({
+    secretkey = random_password.argocd_secretkey.result
+  })
 }
 
 # -----------------------------------------------------------------------------

@@ -4,7 +4,10 @@ metadata:
   name: wealist-monitoring-dev
   namespace: argocd
   annotations:
-    argocd.argoproj.io/sync-wave: "12"  # Istio 설정 이후에 설치
+    argocd.argoproj.io/sync-wave: "12" # Istio 설정 이후에 설치
+    notifications.argoproj.io/subscribe.on-deployed.webhook: discord
+    notifications.argoproj.io/subscribe.on-sync-failed.webhook: discord
+    notifications.argoproj.io/subscribe.on-health-degraded.webhook: discord
 spec:
   project: wealist-dev
   source:
@@ -15,14 +18,14 @@ spec:
       valueFiles:
         - ../../environments/base.yaml
         - ../../environments/dev.yaml
-        # - ../../environments/dev-secrets.yaml
       parameters:
         - name: global.namespace
           value: wealist-dev
+        # In-cluster DB (postgres/redis Service)
         - name: postgresExporter.config.host
-          value: postgres
+          value: "postgres"
         - name: redisExporter.config.host
-          value: redis
+          value: "redis"
   destination:
     server: https://kubernetes.default.svc
     namespace: wealist-dev
@@ -32,3 +35,4 @@ spec:
       selfHeal: true
     syncOptions:
       - CreateNamespace=true
+      - ServerSideApply=true
