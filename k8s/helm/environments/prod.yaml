@@ -546,6 +546,10 @@ k6:
     # routePrefix 포함 필수 (/api/monitoring/prometheus)
     remoteWriteUrl: "http://prometheus:9090/api/monitoring/prometheus/api/v1/write"
 
+# Pushgateway (GitHub Actions CI/CD 메트릭 수집용)
+pushgateway:
+  enabled: true
+
 # -----------------------------------------------------------------------------
 # 데이터베이스 Exporter (외부 DB 메트릭 수집)
 # -----------------------------------------------------------------------------
