@@ -98,6 +98,12 @@ istio:
         cpu: 500m
         memory: 256Mi
 
+  # EnvoyFilter for X-Forwarded-Proto header
+  # Required when NLB terminates TLS and forwards HTTP to Istio
+  envoyFilter:
+    forwardedProto:
+      enabled: false  # Enable in prod where NLB terminates TLS
+
   # Istio Gateway (for VirtualService routing)
   # Requires istio-ingressgateway Deployment/Service to be installed separately
   gateway:

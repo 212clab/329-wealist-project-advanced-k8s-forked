@@ -237,6 +237,13 @@ istio:
   enabled: true
   namespace: wealist-prod
 
+  # EnvoyFilter for X-Forwarded-Proto header
+  # NLB terminates TLS and forwards HTTP to Istio
+  # This filter adds X-Forwarded-Proto: https so backend services know original was HTTPS
+  envoyFilter:
+    forwardedProto:
+      enabled: true
+
   # Istio Gateway (VirtualService용)
   # istio-ingressgateway ArgoCD Application에서 Deployment/Service 생성
   # 이 Gateway 리소스는 VirtualService의 진입점으로 사용됨
