@@ -60,3 +60,4 @@ data:
     g, fbaudwo144@gmail.com, role:admin
     g, 212clab@gmail.com, role:admin
     g, chamchi0129@gmail.com, role:admin
+  scopes: '[email]'
