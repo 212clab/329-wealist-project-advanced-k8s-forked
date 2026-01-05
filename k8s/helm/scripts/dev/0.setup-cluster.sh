@@ -543,35 +543,13 @@ fi
 # ArgoCD VirtualService 부트스트랩 (ArgoCD sync 전에 접근 가능하도록)
 # NOTE: Istio Native Gateway + VirtualService 사용
 echo "🔐 ArgoCD VirtualService 부트스트랩 적용 중..."
-kubectl apply -f - <<EOF
-apiVersion: networking.istio.io/v1
-kind: VirtualService
-metadata:
-  name: argocd-bootstrap-route
-  namespace: argocd
-  labels:
-    app: argocd-bootstrap
-    managed-by: setup-script
-spec:
-  hosts:
-  - "dev.wealist.co.kr"
-  - "*"
-  gateways:
-  - istio-system/istio-ingressgateway
-  http:
-  - match:
-    - uri:
-        prefix: /api/argo
-    rewrite:
-      uri: /
-    route:
-    - destination:
-        host: argocd-server.argocd.svc.cluster.local
-        port:
-          number: 80
-    timeout: 30s
-EOF
-echo "✅ ArgoCD VirtualService 적용 완료 - /api/argo 라우팅 활성화"
+ARGOCD_VS="${SCRIPT_DIR}/../../../argocd/base/virtualservice-bootstrap.yaml"
+if [ -f "${ARGOCD_VS}" ]; then
+    kubectl apply -f "${ARGOCD_VS}"
+    echo "✅ ArgoCD VirtualService 적용 완료 - /api/argo 라우팅 활성화"
+else
+    echo "⚠️  ArgoCD VirtualService 파일을 찾을 수 없습니다: ${ARGOCD_VS}"
+fi
 
 # =============================================================================
 # 16. ArgoCD Root App 배포
