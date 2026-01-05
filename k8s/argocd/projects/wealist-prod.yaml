@@ -25,6 +25,8 @@ spec:
     - "https://istio-release.storage.googleapis.com/charts"
     # LiveKit WebRTC SFU Server
     - "https://helm.livekit.io"
+    # Argo Rollouts (Progressive Delivery)
+    - "https://argoproj.github.io/argo-helm"
 
   # 허용된 배포 대상
   destinations:
@@ -39,6 +41,8 @@ spec:
     - namespace: kube-system
       server: https://kubernetes.default.svc
     - namespace: istio-system
+      server: https://kubernetes.default.svc
+    - namespace: argo-rollouts
       server: https://kubernetes.default.svc
 
   # 클러스터 레벨 리소스 허용 (External Secrets, CRDs, RBAC 등)
