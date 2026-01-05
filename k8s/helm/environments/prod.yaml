@@ -493,6 +493,9 @@ grafana:
     allowSignUp: false
     rootUrl: "https://api.wealist.co.kr/api/monitoring/grafana"
     serveFromSubPath: "true"
+  # V3 Dashboards - OTEL Native Monitoring
+  dashboardsV3:
+    enabled: true
 
 # 모니터링 Ingress
 monitoringIngress:
