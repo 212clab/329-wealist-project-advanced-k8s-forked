@@ -11,7 +11,6 @@ import (
 	"context"
 	"errors"
 	"os"
-	"strings"
 	"time"
 
 	"go.opentelemetry.io/otel"
@@ -139,15 +138,16 @@ func newPropagator() propagation.TextMapPropagator {
 }
 
 // newTraceProvider creates a new trace provider with OTLP HTTP exporter.
+// Uses environment variables for endpoint configuration:
+// - OTEL_EXPORTER_OTLP_ENDPOINT: "http://otel-collector:4318" (SDK parses scheme)
+// - OTEL_EXPORTER_OTLP_PROTOCOL: "http/protobuf"
 func newTraceProvider(ctx context.Context, cfg *Config, res *resource.Resource) (*sdktrace.TracerProvider, error) {
-	// Parse endpoint - otlptracehttp expects endpoint without scheme
-	endpoint := parseEndpoint(cfg.OTLPEndpoint)
-
-	// Create OTLP HTTP trace exporter
-	traceExporter, err := otlptracehttp.New(ctx,
-		otlptracehttp.WithEndpoint(endpoint),
-		otlptracehttp.WithInsecure(),
-	)
+	// Let the SDK use OTEL_EXPORTER_OTLP_ENDPOINT environment variable directly.
+	// The SDK correctly parses the scheme (http:// vs https://) and sets insecure mode.
+	// Passing WithEndpoint() would override the env var and require manual scheme handling,
+	// which can cause "too many colons in address" errors.
+	// See: https://github.com/open-telemetry/opentelemetry-go/issues/5706
+	traceExporter, err := otlptracehttp.New(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -174,15 +174,11 @@ func newTraceProvider(ctx context.Context, cfg *Config, res *resource.Resource) 
 }
 
 // newLoggerProvider creates a new logger provider with OTLP HTTP exporter.
+// Uses environment variables for endpoint configuration (same as trace provider).
 func newLoggerProvider(ctx context.Context, cfg *Config, res *resource.Resource) (*log.LoggerProvider, error) {
-	// Parse endpoint - otlploghttp expects endpoint without scheme
-	endpoint := parseEndpoint(cfg.OTLPEndpoint)
-
-	// Create OTLP HTTP log exporter
-	logExporter, err := otlploghttp.New(ctx,
-		otlploghttp.WithEndpoint(endpoint),
-		otlploghttp.WithInsecure(),
-	)
+	// Let the SDK use OTEL_EXPORTER_OTLP_ENDPOINT environment variable directly.
+	// See newTraceProvider for details on why we don't use WithEndpoint().
+	logExporter, err := otlploghttp.New(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -193,20 +189,6 @@ func newLoggerProvider(ctx context.Context, cfg *Config, res *resource.Resource)
 	)
 
 	return loggerProvider, nil
-}
-
-// parseEndpoint extracts host:port from a URL.
-// Input: "http://otel-collector:4318" or "otel-collector:4318"
-// Output: "otel-collector:4318"
-func parseEndpoint(endpoint string) string {
-	// Remove http:// or https:// prefix
-	endpoint = strings.TrimPrefix(endpoint, "http://")
-	endpoint = strings.TrimPrefix(endpoint, "https://")
-	// Remove trailing path if any
-	if idx := strings.Index(endpoint, "/"); idx != -1 {
-		endpoint = endpoint[:idx]
-	}
-	return endpoint
 }
 
 // getEnvOrDefault returns the environment variable value or the default value.
