@@ -106,6 +106,23 @@ export const getNotificationMessage = (notification: Notification): string => {
       return `"${resourceName}" 프로젝트 역할이 변경되었습니다.`;
     case 'PROJECT_REMOVED':
       return `"${resourceName}" 프로젝트에서 제외되었습니다.`;
+    // Board (Kanban) notification types
+    case 'BOARD_ASSIGNED':
+      return `${projectPrefix}"${resourceName}" 카드에 담당자로 지정되었습니다.`;
+    case 'BOARD_UNASSIGNED':
+      return `${projectPrefix}"${resourceName}" 카드 담당에서 해제되었습니다.`;
+    case 'BOARD_PARTICIPANT_ADDED':
+      return `${projectPrefix}"${resourceName}" 카드에 참여자로 추가되었습니다.`;
+    case 'BOARD_UPDATED':
+      return `${projectPrefix}"${resourceName}" 카드가 수정되었습니다.`;
+    case 'BOARD_STATUS_CHANGED':
+      return `${projectPrefix}"${resourceName}" 카드 상태가 변경되었습니다.`;
+    case 'BOARD_COMMENT_ADDED':
+      return `${projectPrefix}"${resourceName}" 카드에 새 댓글이 추가되었습니다.`;
+    case 'BOARD_DUE_SOON':
+      return `${projectPrefix}"${resourceName}" 카드 마감이 임박했습니다.`;
+    case 'BOARD_OVERDUE':
+      return `${projectPrefix}"${resourceName}" 카드 마감일이 지났습니다.`;
     default:
       return '새 알림이 있습니다.';
   }
@@ -116,10 +133,12 @@ export const getNotificationMessage = (notification: Notification): string => {
  */
 export const getNotificationIcon = (
   type: Notification['type'],
-): 'task' | 'comment' | 'workspace' | 'project' => {
+): 'task' | 'comment' | 'workspace' | 'project' | 'board' => {
   if (type.startsWith('TASK_')) return 'task';
+  if (type.startsWith('BOARD_')) return 'board';
   if (type.startsWith('COMMENT_')) return 'comment';
   if (type.startsWith('WORKSPACE_')) return 'workspace';
   if (type.startsWith('PROJECT_')) return 'project';
+  if (type === 'PARTICIPANT_ADDED') return 'board';
   return 'task';
 };

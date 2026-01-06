@@ -11,6 +11,7 @@ import (
 	"gorm.io/datatypes"
 	"gorm.io/gorm"
 
+	"project-board-api/internal/client"
 	"project-board-api/internal/domain"
 	"project-board-api/internal/dto"
 	"project-board-api/internal/metrics"
@@ -36,6 +37,7 @@ type boardServiceImpl struct {
 	attachmentRepo       repository.AttachmentRepository
 	s3Client             S3Client
 	fieldOptionConverter FieldOptionConverter
+	notiClient           client.NotiClient
 	metrics              *metrics.Metrics
 	logger               *zap.Logger
 }
@@ -56,6 +58,7 @@ func NewBoardService(
 	attachmentRepo repository.AttachmentRepository,
 	s3Client S3Client,
 	fieldOptionConverter FieldOptionConverter,
+	notiClient client.NotiClient,
 	m *metrics.Metrics,
 	logger *zap.Logger,
 ) BoardService {
@@ -67,6 +70,7 @@ func NewBoardService(
 		attachmentRepo:       attachmentRepo,
 		s3Client:             s3Client,
 		fieldOptionConverter: fieldOptionConverter,
+		notiClient:           notiClient,
 		metrics:              m,
 		logger:               logger,
 	}
@@ -97,8 +101,8 @@ func (s *boardServiceImpl) CreateBoard(ctx context.Context, req *dto.CreateBoard
 		return nil, err
 	}
 
-	// Verify project exists
-	_, err := s.projectRepo.FindByID(ctx, req.ProjectID)
+	// Verify project exists and get project info for notification
+	project, err := s.projectRepo.FindByID(ctx, req.ProjectID)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			log.Warn("CreateBoard project not found", zap.String("project.id", req.ProjectID.String()))
@@ -221,8 +225,63 @@ func (s *boardServiceImpl) CreateBoard(ctx context.Context, req *dto.CreateBoard
 	// 생성된 Attachments를 Board 객체에 할당 (타입 변환 적용)
 	board.Attachments = toDomainAttachments(createdAttachments)
 
+	// Send notifications to assignee and participants (async, non-blocking)
+	go s.sendBoardCreatedNotifications(context.Background(), authorID, board, project)
+
 	// Convert to response DTO
 	return s.toBoardResponse(board), nil
+}
+
+// sendBoardCreatedNotifications sends notifications when a board is created
+func (s *boardServiceImpl) sendBoardCreatedNotifications(ctx context.Context, actorID uuid.UUID, board *domain.Board, project *domain.Project) {
+	if s.notiClient == nil || !s.notiClient.IsEnabled() {
+		return
+	}
+
+	var notifications []client.NotificationEvent
+
+	// Notify assignee if different from author
+	if board.AssigneeID != nil && *board.AssigneeID != actorID {
+		notifications = append(notifications, *client.NewBoardAssignedEvent(
+			actorID,
+			*board.AssigneeID,
+			project.WorkspaceID,
+			board.ID,
+			board.Title,
+			project.Name,
+		))
+	}
+
+	// Notify all participants (except actor)
+	for _, participant := range board.Participants {
+		if participant.UserID != actorID {
+			// Skip if participant is the same as assignee (avoid duplicate notification)
+			if board.AssigneeID != nil && participant.UserID == *board.AssigneeID {
+				continue
+			}
+			notifications = append(notifications, *client.NewBoardParticipantAddedEvent(
+				actorID,
+				participant.UserID,
+				project.WorkspaceID,
+				board.ID,
+				board.Title,
+				project.Name,
+			))
+		}
+	}
+
+	if len(notifications) > 0 {
+		if err := s.notiClient.SendBulkNotifications(ctx, notifications); err != nil {
+			s.logger.Warn("Failed to send board created notifications",
+				zap.String("board.id", board.ID.String()),
+				zap.Int("notification.count", len(notifications)),
+				zap.Error(err))
+		} else {
+			s.logger.Debug("Board created notifications sent",
+				zap.String("board.id", board.ID.String()),
+				zap.Int("notification.count", len(notifications)))
+		}
+	}
 }
 
 // GetBoard retrieves a board by ID with participants and comments

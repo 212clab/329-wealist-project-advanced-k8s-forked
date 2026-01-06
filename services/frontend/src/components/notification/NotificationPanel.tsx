@@ -23,6 +23,7 @@ interface NotificationPanelProps {
 const getNotificationIcon = (type: Notification['type']) => {
   if (type === 'PARTICIPANT_ADDED') return Users;
   if (type.startsWith('TASK_')) return ClipboardList;
+  if (type.startsWith('BOARD_')) return FolderKanban; // Kanban card notifications
   if (type.startsWith('COMMENT_')) return MessageCircle;
   if (type.startsWith('WORKSPACE_')) return Users;
   if (type.startsWith('PROJECT_')) return FolderKanban;

@@ -235,6 +235,14 @@ func main() {
 		zap.String("endpoint", cfg.S3.Endpoint),
 	)
 
+	// Initialize Notification service client
+	notiClient := client.NewNotiClient(&cfg.NotiAPI, log.Logger)
+	log.Info("Notification service client initialized",
+		zap.String("base_url", cfg.NotiAPI.BaseURL),
+		zap.Bool("enabled", cfg.NotiAPI.Enabled),
+		zap.Bool("api_key_configured", cfg.NotiAPI.InternalAPIKey != ""),
+	)
+
 	// Initialize attachment repository for cleanup job
 	attachmentRepo := repository.NewAttachmentRepository(db)
 
@@ -273,6 +281,7 @@ func main() {
 		AuthServiceURL:  cfg.AuthAPI.BaseURL,
 		JWTIssuer:       cfg.AuthAPI.JWTIssuer,
 		UserClient:      userClient,
+		NotiClient:      notiClient,
 		BasePath:        cfg.Server.BasePath,
 		Metrics:         m,
 		S3Client:        s3Client,

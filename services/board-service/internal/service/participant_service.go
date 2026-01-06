@@ -6,8 +6,10 @@ import (
 	"strings"
 
 	"github.com/google/uuid"
+	"go.uber.org/zap"
 	"gorm.io/gorm"
 
+	"project-board-api/internal/client"
 	"project-board-api/internal/domain"
 	"project-board-api/internal/dto"
 	"project-board-api/internal/repository"
@@ -26,13 +28,22 @@ type ParticipantService interface {
 type participantServiceImpl struct {
 	participantRepo repository.ParticipantRepository
 	boardRepo       repository.BoardRepository
+	notiClient      client.NotiClient
+	logger          *zap.Logger
 }
 
 // NewParticipantService creates a new instance of ParticipantService
-func NewParticipantService(participantRepo repository.ParticipantRepository, boardRepo repository.BoardRepository) ParticipantService {
+func NewParticipantService(
+	participantRepo repository.ParticipantRepository,
+	boardRepo repository.BoardRepository,
+	notiClient client.NotiClient,
+	logger *zap.Logger,
+) ParticipantService {
 	return &participantServiceImpl{
 		participantRepo: participantRepo,
 		boardRepo:       boardRepo,
+		notiClient:      notiClient,
+		logger:          logger,
 	}
 }
 

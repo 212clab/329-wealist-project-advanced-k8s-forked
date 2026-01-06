@@ -31,6 +31,7 @@ type Config struct {
 	AuthServiceURL     string // auth-service URL for SmartValidator
 	JWTIssuer          string // JWT issuer for JWKS validation
 	UserClient         client.UserClient
+	NotiClient         client.NotiClient // Notification service client
 	BasePath           string
 	UserServiceBaseURL string
 	Metrics            *metrics.Metrics
@@ -93,8 +94,8 @@ func Setup(cfg Config) *gin.Engine {
 
 	// Initialize services with repository dependencies
 	projectService := service.NewProjectService(projectRepo, fieldOptionRepo, attachmentRepo, cfg.S3Client, cfg.UserClient, cfg.Metrics, cfg.Logger)
-	boardService := service.NewBoardService(boardRepo, projectRepo, fieldOptionRepo, participantRepo, attachmentRepo, cfg.S3Client, fieldOptionConverter, cfg.Metrics, cfg.Logger)
-	participantService := service.NewParticipantService(participantRepo, boardRepo)
+	boardService := service.NewBoardService(boardRepo, projectRepo, fieldOptionRepo, participantRepo, attachmentRepo, cfg.S3Client, fieldOptionConverter, cfg.NotiClient, cfg.Metrics, cfg.Logger)
+	participantService := service.NewParticipantService(participantRepo, boardRepo, cfg.NotiClient, cfg.Logger)
 	commentService := service.NewCommentService(commentRepo, boardRepo, attachmentRepo, cfg.S3Client, cfg.Logger)
 	fieldOptionService := service.NewFieldOptionService(fieldOptionRepo)
 	projectMemberService := service.NewProjectMemberService(projectRepo, cfg.UserClient)
