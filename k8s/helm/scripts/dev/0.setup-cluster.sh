@@ -526,12 +526,68 @@ fi
 
 # ArgoCD RBAC 설정 (Google OAuth 사용자 권한) - OAuth 설정 후 적용해야 함
 echo "🔐 ArgoCD RBAC 설정 적용 중..."
-ARGOCD_RBAC="${SCRIPT_DIR}/../../../argocd/config/argocd-rbac-cm.yaml"
-if [ -f "${ARGOCD_RBAC}" ]; then
-    kubectl apply -f "${ARGOCD_RBAC}"
-    echo "✅ ArgoCD RBAC 설정 완료 (관리자 이메일 등록됨)"
+
+# AWS Secrets Manager에서 관리자 이메일 로드 시도
+ADMIN_EMAILS_SECRET=$(aws secretsmanager get-secret-value \
+    --secret-id "wealist/dev/argocd/admins" \
+    --region ${AWS_REGION} \
+    --query SecretString \
+    --output text 2>/dev/null || echo "")
+
+if [ -n "$ADMIN_EMAILS_SECRET" ]; then
+    echo "  ✅ AWS Secrets Manager에서 관리자 이메일 로드 완료"
+
+    # JSON 배열에서 이메일 추출하여 policy.csv 형식으로 변환
+    ADMIN_POLICY_LINES=$(echo "$ADMIN_EMAILS_SECRET" | jq -r '.emails[]' 2>/dev/null | \
+        while read email; do
+            echo "    g, $email, role:admin"
+        done)
+
+    # 동적으로 RBAC ConfigMap 생성
+    kubectl apply -f - <<RBAC_EOF
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: argocd-rbac-cm
+  namespace: argocd
+  labels:
+    app.kubernetes.io/name: argocd-rbac-cm
+    app.kubernetes.io/part-of: argocd
+data:
+  policy.default: role:readonly
+  policy.csv: |
+    # 읽기 전용 역할 (기본)
+    p, role:readonly, applications, get, */*, allow
+    p, role:readonly, applications, list, */*, allow
+    p, role:readonly, clusters, get, *, allow
+    p, role:readonly, repositories, get, *, allow
+    p, role:readonly, projects, get, *, allow
+    p, role:readonly, logs, get, */*, allow
+
+    # 관리자 역할
+    p, role:admin, applications, *, */*, allow
+    p, role:admin, clusters, *, *, allow
+    p, role:admin, repositories, *, *, allow
+    p, role:admin, projects, *, *, allow
+    p, role:admin, accounts, *, *, allow
+    p, role:admin, gpgkeys, *, *, allow
+
+    # 관리자 이메일 (AWS Secrets Manager에서 로드)
+${ADMIN_POLICY_LINES}
+RBAC_EOF
+
+    echo "✅ ArgoCD RBAC 설정 완료 (AWS Secrets Manager 기반)"
 else
-    echo "⚠️  ArgoCD RBAC 파일을 찾을 수 없습니다: ${ARGOCD_RBAC}"
+    # Secrets Manager에 없으면 정적 파일 사용
+    echo "  ⚠️  AWS Secrets Manager에서 관리자 이메일을 찾을 수 없습니다."
+    echo "     정적 파일로 폴백합니다."
+    ARGOCD_RBAC="${SCRIPT_DIR}/../../../argocd/config/argocd-rbac-cm.yaml"
+    if [ -f "${ARGOCD_RBAC}" ]; then
+        kubectl apply -f "${ARGOCD_RBAC}"
+        echo "✅ ArgoCD RBAC 설정 완료 (정적 파일 기반)"
+    else
+        echo "⚠️  ArgoCD RBAC 파일을 찾을 수 없습니다: ${ARGOCD_RBAC}"
+    fi
 fi
 
 # =============================================================================
