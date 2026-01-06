@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"time"
 
@@ -20,8 +21,9 @@ import (
 type NotificationType string
 
 const (
-	NotificationTypeTaskAssigned NotificationType = "TASK_ASSIGNED"
-	NotificationTypeCommentAdded NotificationType = "COMMENT_ADDED"
+	NotificationTypeTaskAssigned    NotificationType = "TASK_ASSIGNED"
+	NotificationTypeTaskUpdated     NotificationType = "TASK_STATUS_CHANGED"
+	NotificationTypeCommentAdded    NotificationType = "COMMENT_ADDED"
 )
 
 // ResourceType defines resource types matching noti-service
@@ -29,6 +31,7 @@ type ResourceType string
 
 const (
 	ResourceTypeBoard ResourceType = "board"
+	ResourceTypeTask  ResourceType = "task"
 )
 
 // NotificationEvent represents the payload for creating a notification
@@ -46,6 +49,7 @@ type NotificationEvent struct {
 // NotiClient defines the interface for notification service interactions
 type NotiClient interface {
 	SendNotification(ctx context.Context, event *NotificationEvent) error
+	SendBulkNotifications(ctx context.Context, events []*NotificationEvent) error
 }
 
 // notiClient implements NotiClient interface
@@ -79,6 +83,28 @@ func (c *notiClient) SendNotification(ctx context.Context, event *NotificationEv
 	)
 
 	return c.doRequest(ctx, url, event)
+}
+
+// SendBulkNotifications sends multiple notifications to noti-service
+func (c *notiClient) SendBulkNotifications(ctx context.Context, events []*NotificationEvent) error {
+	if len(events) == 0 {
+		return nil
+	}
+
+	log := c.log(ctx)
+	url := c.BuildURL("/api/internal/notifications/bulk")
+
+	payload := map[string]interface{}{
+		"notifications": events,
+	}
+
+	log.Debug("Sending bulk notifications",
+		zap.String("peer.service", "noti-service"),
+		zap.String("http.url", url),
+		zap.Int("count", len(events)),
+	)
+
+	return c.doRequest(ctx, url, payload)
 }
 
 // log returns a trace-context aware logger
@@ -130,10 +156,12 @@ func (c *notiClient) doRequest(ctx context.Context, url string, payload interfac
 	}
 	defer resp.Body.Close()
 
-	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		log.Warn("Noti service returned non-success status",
+	if resp.StatusCode >= 400 {
+		respBody, _ := io.ReadAll(resp.Body)
+		log.Warn("Noti service returned error status",
 			zap.Int("http.status_code", resp.StatusCode),
 			zap.String("http.url", url),
+			zap.String("response.body", string(respBody)),
 			zap.Duration("http.duration", duration),
 		)
 		// 알림 전송 실패는 치명적이지 않으므로 로그만 남기고 에러 반환하지 않음
@@ -146,4 +174,39 @@ func (c *notiClient) doRequest(ctx context.Context, url string, payload interfac
 	)
 
 	return nil
+}
+
+// Helper function to create a task assignment notification
+func NewTaskAssignedNotification(actorID, targetUserID, workspaceID, boardID uuid.UUID, boardTitle string) *NotificationEvent {
+	title := boardTitle
+	return &NotificationEvent{
+		Type:         NotificationTypeTaskAssigned,
+		ActorID:      actorID,
+		TargetUserID: targetUserID,
+		WorkspaceID:  workspaceID,
+		ResourceType: ResourceTypeTask,
+		ResourceID:   boardID,
+		ResourceName: &title,
+		Metadata: map[string]interface{}{
+			"boardTitle": boardTitle,
+		},
+	}
+}
+
+// Helper function to create a task update notification
+func NewTaskUpdatedNotification(actorID, targetUserID, workspaceID, boardID uuid.UUID, boardTitle string, changeType string) *NotificationEvent {
+	title := boardTitle
+	return &NotificationEvent{
+		Type:         NotificationTypeTaskUpdated,
+		ActorID:      actorID,
+		TargetUserID: targetUserID,
+		WorkspaceID:  workspaceID,
+		ResourceType: ResourceTypeTask,
+		ResourceID:   boardID,
+		ResourceName: &title,
+		Metadata: map[string]interface{}{
+			"boardTitle": boardTitle,
+			"changeType": changeType,
+		},
+	}
 }

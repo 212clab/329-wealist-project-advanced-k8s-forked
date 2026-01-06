@@ -189,7 +189,7 @@ func setupIntegrationRouter(db *gorm.DB) *gin.Engine {
 	commentService := service.NewCommentService(commentRepo, boardRepo, projectRepo, attachmentRepo, s3Client, nil, logger)
 
 	// Initialize handlers
-	boardHandler := NewBoardHandler(boardService)
+	boardHandler := NewBoardHandler(boardService, nil)
 	participantHandler := NewParticipantHandler(participantService)
 	commentHandler := NewCommentHandler(commentService)
 
