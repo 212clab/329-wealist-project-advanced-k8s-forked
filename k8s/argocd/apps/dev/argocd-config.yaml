@@ -1,19 +1,16 @@
 # =============================================================================
-# ArgoCD Self-Configuration (App of Apps, Notifications, ReferenceGrants) - Dev
+# ArgoCD Self-Configuration (Notifications, ReferenceGrants) - Dev
 # =============================================================================
 # ArgoCD 관련 설정을 GitOps로 관리:
-# - apps/dev/: 서비스별 Application 매니페스트 (App of Apps)
 # - notifications-dev/: Discord 알림 설정
 # - base/: ReferenceGrant (HTTPRoute → argocd cross-namespace 허용)
 #
 # 이 Application이 없으면:
-# - CI가 Application manifest 업데이트해도 클러스터에 자동 적용 안 됨
 # - 클러스터 재생성 후 notifications 설정이 사라짐
 # - ArgoCD UI (/api/argo) 접근 불가 (ReferenceGrant 없음)
 # - 수동으로 kubectl apply 해야 함
 #
 # 이 Application이 있으면:
-# - CI가 image tag 업데이트하면 Application manifest 자동 적용
 # - Git에서 설정 변경 시 자동 적용
 # - 클러스터 재배포해도 자동 복구
 # =============================================================================
@@ -32,10 +29,6 @@ metadata:
 spec:
   project: default
   sources:
-    # App of Apps: 서비스별 Application 매니페스트 자동 적용
-    - repoURL: https://github.com/OrangesCloud/wealist-project-advanced-k8s.git
-      targetRevision: k8s-deploy-dev
-      path: k8s/argocd/apps/dev
     # Discord 알림 설정
     - repoURL: https://github.com/OrangesCloud/wealist-project-advanced-k8s.git
       targetRevision: k8s-deploy-dev
