@@ -284,11 +284,6 @@ jobs:
           role-to-assume: ${{ secrets.AWS_ROLE_ARN_BACKEND }}
           aws-region: ${{ env.AWS_REGION }}
 
-      - name: Login to Amazon ECR
-        uses: docker/login-action@v3
-        with:
-          registry: ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com
-
       - name: Set ECR repository name
         id: ecr-repo
         run: |
