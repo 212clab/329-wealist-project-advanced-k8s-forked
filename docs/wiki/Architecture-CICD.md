@@ -58,9 +58,19 @@ weAlist는 **GitOps** 기반의 CI/CD 파이프라인을 구현합니다:
 | **ArgoCD 프로젝트** | `wealist-prod` |
 | **네임스페이스** | `wealist-prod` |
 
-**주요 차이점:**
+**파이프라인 단계:**
+1. **Change Detection** - `dorny/paths-filter`로 변경된 서비스 감지
+2. **Docker Build** - Matrix 빌드 (최대 8개 서비스 병렬)
+3. **ECR Push** - `{BUILD_NUM}-{SHA}` 태그만 (IMMUTABLE, no latest)
+4. **Discord Notification** - 빌드 성공 알림 (배포 버튼 포함)
+5. **Manual Trigger** - Discord에서 `discord-update-production-image.yaml` 실행
+6. **GitOps Update** - `k8s-deploy-prod` 브랜치의 ArgoCD Application YAML 업데이트
+7. **ArgoCD Sync** - 자동 동기화
+
+**주요 차이점 (vs Dev):**
 - ECR 레포지토리가 **IMMUTABLE** (태그 덮어쓰기 불가)
 - `latest` 태그 없음 (버전 태그만 사용)
+- **수동 배포 승인**: CI 빌드 후 Discord 알림 → 수동 워크플로우 트리거로 매니페스트 업데이트
 - Secrets는 AWS Secrets Manager + ESO 사용
 - DB/Redis는 AWS RDS/ElastiCache 사용
 
@@ -115,19 +125,27 @@ index.html, config.js: no-cache, no-store, must-revalidate
 
 ### 브랜치 역할
 
-| 브랜치 | 용도 | 자동 업데이트 |
-|--------|------|--------------|
+| 브랜치 | 용도 | 매니페스트 업데이트 |
+|--------|------|-------------------|
 | `main` | Feature 개발 | - |
 | `service-deploy-dev` | Dev 서비스 빌드 트리거 | - |
 | `service-deploy-prod` | Prod 서비스 빌드 트리거 | - |
-| `k8s-deploy-dev` | Dev K8s 매니페스트 | CI가 image.tag 업데이트 |
-| `k8s-deploy-prod` | Prod K8s 매니페스트 | CI가 image.tag 업데이트 |
+| `k8s-deploy-dev` | Dev K8s 매니페스트 | **자동** (CI가 image.tag 업데이트) |
+| `k8s-deploy-prod` | Prod K8s 매니페스트 | **수동** (Discord 버튼 클릭 필요) |
 
 ### 배포 플로우
 
+**Dev (완전 자동화):**
 ```
-main → PR merge → service-deploy-{env} → CI Build → k8s-deploy-{env} → ArgoCD → EKS
+main → PR merge → service-deploy-dev → CI Build → ECR Push → Auto Update k8s-deploy-dev → ArgoCD → EKS
 ```
+
+**Prod (수동 승인 필요):**
+```
+main → PR merge → service-deploy-prod → CI Build → ECR Push → Discord 알림 → 수동 트리거 → k8s-deploy-prod → ArgoCD → EKS
+```
+
+> **Note**: Production 환경은 빌드 성공 후 Discord로 알림이 전송되며, 개발자가 Discord에서 배포 버튼을 클릭해야 매니페스트가 업데이트됩니다.
 
 ---
 
