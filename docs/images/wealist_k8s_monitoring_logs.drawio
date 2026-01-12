@@ -1,0 +1,83 @@
+<mxfile host="Electron" agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) draw.io/29.3.0 Chrome/140.0.7339.249 Electron/38.7.2 Safari/537.36" version="29.3.0">
+  <diagram name="Log Collection Pipeline" id="log-pipeline">
+    <mxGraphModel dx="1168" dy="1152" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="850" pageHeight="400" background="#FFFFFF" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="7VMDZYxv2ixQCZMdfSeb-1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;" value="" vertex="1">
+          <mxGeometry height="310" width="800" x="20" as="geometry" />
+        </mxCell>
+        <mxCell id="title" parent="1" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;fontSize=14;fontStyle=1;fontColor=#232F3E;" value="Log Collection Pipeline (K8s)" vertex="1">
+          <mxGeometry height="25" width="250" x="300" y="15" as="geometry" />
+        </mxCell>
+        <mxCell id="node-box" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FAFAFA;strokeColor=#326CE5;strokeWidth=2;dashed=1;verticalAlign=top;align=left;spacingLeft=10;spacingTop=8;fontSize=11;fontStyle=1;fontColor=#326CE5;" value="Kubernetes Node" vertex="1">
+          <mxGeometry height="235" width="360" x="40" y="55" as="geometry" />
+        </mxCell>
+        <mxCell id="pod1" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#00ADD8;strokeColor=#00ADD8;strokeWidth=1;fontSize=9;fontColor=#FFFFFF;fontStyle=1;" value="board-service&#xa;Pod" vertex="1">
+          <mxGeometry height="45" width="90" x="60" y="90" as="geometry" />
+        </mxCell>
+        <mxCell id="pod2" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#00ADD8;strokeColor=#00ADD8;strokeWidth=1;fontSize=9;fontColor=#FFFFFF;fontStyle=1;" value="chat-service&#xa;Pod" vertex="1">
+          <mxGeometry height="45" width="90" x="170" y="90" as="geometry" />
+        </mxCell>
+        <mxCell id="pod3" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#00ADD8;strokeColor=#00ADD8;strokeWidth=1;fontSize=9;fontColor=#FFFFFF;fontStyle=1;" value="...other&#xa;Pods" vertex="1">
+          <mxGeometry height="45" width="90" x="280" y="90" as="geometry" />
+        </mxCell>
+        <mxCell id="logs" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#999999;strokeWidth=1;fontSize=9;fontColor=#666666;" value="/var/log/containers/*.log" vertex="1">
+          <mxGeometry height="30" width="200" x="100" y="160" as="geometry" />
+        </mxCell>
+        <mxCell id="alloy" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FF9800;strokeColor=#F57C00;strokeWidth=2;verticalAlign=top;align=center;spacingTop=8;fontSize=11;fontStyle=1;fontColor=#FFFFFF;" value="Alloy (DaemonSet)" vertex="1">
+          <mxGeometry height="60" width="310" x="60" y="210" as="geometry" />
+        </mxCell>
+        <mxCell id="alloy-desc" parent="1" style="text;html=1;strokeColor=none;fillColor=#FF9800;fontSize=9;fontColor=#FFFFFF;" value="discovery.kubernetes → loki.source.kubernetes → loki.write" vertex="1">
+          <mxGeometry height="15" width="290" x="70" y="240" as="geometry" />
+        </mxCell>
+        <mxCell id="loki" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFC107;strokeColor=#FFA000;strokeWidth=2;verticalAlign=top;align=center;spacingTop=8;fontSize=11;fontStyle=1;fontColor=#000000;" value="Loki" vertex="1">
+          <mxGeometry height="80" width="150" x="480" y="100" as="geometry" />
+        </mxCell>
+        <mxCell id="loki-storage" parent="1" style="text;html=1;strokeColor=none;fillColor=#FFC107;fontSize=9;fontColor=#000000;" value="localhost: local storage&#xa;prod: S3 backend" vertex="1">
+          <mxGeometry height="30" width="120" x="495" y="135" as="geometry" />
+        </mxCell>
+        <mxCell id="grafana" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#F46800;strokeColor=#D35400;strokeWidth=2;fontSize=11;fontStyle=1;fontColor=#FFFFFF;" value="Grafana&#xa;(LogQL Query)" vertex="1">
+          <mxGeometry height="55" width="120" x="680" y="110" as="geometry" />
+        </mxCell>
+        <mxCell id="labels-box" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#E8F5E9;strokeColor=#4CAF50;strokeWidth=1;verticalAlign=top;align=left;spacingLeft=8;spacingTop=5;fontSize=10;fontStyle=1;fontColor=#4CAF50;" value="Log Labels" vertex="1">
+          <mxGeometry height="80" width="150" x="480" y="210" as="geometry" />
+        </mxCell>
+        <mxCell id="labels-text" parent="1" style="text;html=1;strokeColor=none;fillColor=none;fontSize=9;fontColor=#666666;align=left;" value="namespace, pod, container&#xa;app (from pod label)&#xa;level (parsed from log)" vertex="1">
+          <mxGeometry height="45" width="130" x="490" y="235" as="geometry" />
+        </mxCell>
+        <mxCell id="edge-pods-logs" edge="1" parent="1" source="pod1" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeWidth=1.5;strokeColor=#999999;endArrow=classic;dashed=1;" target="logs">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="label-stdout" parent="1" style="text;html=1;strokeColor=none;fillColor=#FFFFFF;fontSize=8;fontColor=#666666;" value="stdout/stderr" vertex="1">
+          <mxGeometry height="12" width="60" x="40" y="135" as="geometry" />
+        </mxCell>
+        <mxCell id="edge-logs-alloy" edge="1" parent="1" source="logs" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeWidth=2;strokeColor=#FF9800;endArrow=classic;" target="alloy">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge-alloy-loki" edge="1" parent="1" source="alloy" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeWidth=2;strokeColor=#FFC107;endArrow=classic;" target="loki">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="420" y="240" />
+              <mxPoint x="420" y="140" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="label-push" parent="1" style="text;html=1;strokeColor=none;fillColor=#FFFFFF;fontSize=9;fontColor=#FFA000;fontStyle=1;" value="loki.write" vertex="1">
+          <mxGeometry height="15" width="55" x="420" y="180" as="geometry" />
+        </mxCell>
+        <mxCell id="edge-loki-grafana" edge="1" parent="1" source="loki" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeWidth=2;strokeColor=#F46800;endArrow=classic;" target="grafana">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="670" y="140" />
+              <mxPoint x="670" y="140" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="edge-loki-labels" edge="1" parent="1" source="loki" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeWidth=1;strokeColor=#4CAF50;endArrow=none;dashed=1;" target="labels-box">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

@@ -8,55 +8,26 @@ weAlist의 모니터링, 로깅, 분산 트레이싱 아키텍처입니다.
 
 ![Monitoring Architecture](https://raw.githubusercontent.com/OrangesCloud/wealist-project-advanced-k8s/main/docs/images/wealist_k8s_monitoring.png)
 
-LGTM Stack (Loki, Grafana, Tempo, Mimir/Prometheus) + OpenTelemetry 기반의 통합 관측성(Observability) 플랫폼입니다.
+LGTM Stack + OpenTelemetry 기반 통합 Observability 플랫폼입니다.
 
----
+### Data Pipelines
 
-## Stack Components
+| Pipeline | Source | Collector | Storage | 용도 |
+|----------|--------|-----------|---------|------|
+| **Metrics** | `/metrics`, `/actuator` | Prometheus (scrape) | AMP (prod) | RED 메트릭, SLI |
+| **Traces** | OTEL SDK (OTLP) | OTEL Collector | Tempo (S3) | 분산 추적, 성능 분석 |
+| **Logs** | stdout/stderr | Alloy (DaemonSet) | Loki (S3) | 에러 분석, 디버깅 |
 
-| Component | Role | Port | Storage (Prod) |
-|-----------|------|------|----------------|
-| **Prometheus** | 메트릭 수집/저장 | 9090 | AMP (AWS Managed Prometheus) |
-| **Tempo** | 분산 트레이싱 | 4317/4318 | S3 |
-| **Loki** | 로그 수집/저장 | 3100 | S3 |
-| **Grafana** | 시각화 대시보드 | 3000 | - |
-| **OTEL Collector** | 트레이스 수집/처리 | 4317/4318 | - |
-| **Alloy** | 로그 에이전트 (K8s) | - | - |
-| **Kiali** | Istio 서비스 메시 대시보드 | 20001 | - |
+### Key Components
 
----
-
-## Data Flow
-
-```
-┌─────────────────────────────────────────────────────────────────┐
-│                    Applications (6 Services)                     │
-│  auth(Spring) / user / board / chat / noti / storage (Go)       │
-└─────────────────────────────────────────────────────────────────┘
-         │                    │                         │
-         │ /metrics           │ OTLP traces             │ stdout
-         │ /actuator          │                         │
-         ▼                    ▼                         ▼
-┌─────────────┐     ┌─────────────────┐          ┌─────────┐
-│ Prometheus  │     │  OTEL Collector │          │  Alloy  │
-│  (scrape)   │     │    (gateway)    │          │(K8s log)│
-└─────────────┘     └─────────────────┘          └─────────┘
-         │                    │                         │
-         │                    ├─── spanmetrics ──▶ Prometheus
-         │                    │                         │
-         ▼                    ▼                         ▼
-┌─────────────┐     ┌─────────────────┐          ┌─────────┐
-│    AMP      │     │      Tempo      │          │   Loki  │
-│   (prod)    │     │    (traces)     │          │  (logs) │
-└─────────────┘     └─────────────────┘          └─────────┘
-         └─────────────────┬───────────────────────────┘
-                           │
-                           ▼
-                   ┌─────────────────┐
-                   │     Grafana     │
-                   │  (visualization)│
-                   └─────────────────┘
-```
+| Component | Port | 역할 |
+|-----------|------|------|
+| **Prometheus** | 9090 | 메트릭 수집, Span Metrics 수신 |
+| **Tempo** | 4317/4318 | 분산 트레이스 저장 |
+| **Loki** | 3100 | 로그 저장/쿼리 |
+| **Grafana** | 3000 | 시각화 (모든 데이터소스 통합) |
+| **OTEL Collector** | 4317/4318 | 트레이스 처리, Span Metrics/Service Graph 생성 |
+| **Kiali** | 20001 | Istio 서비스 메시 대시보드 |
 
 ---
 
@@ -114,26 +85,23 @@ istio_tcp_connections_closed_total
 
 ## Distributed Tracing (OpenTelemetry)
 
-### Architecture
+![OTEL Tracing Flow](https://raw.githubusercontent.com/OrangesCloud/wealist-project-advanced-k8s/main/docs/images/wealist_k8s_monitoring_otel.png)
 
-```
-Application (OTEL SDK)
-    │
-    │ HTTP/protobuf (port 4318)
-    │ gRPC/protobuf (port 4317)
-    ▼
-OTEL Collector (Gateway)
-    │
-    ├── Processors
-    │   └── Tail Sampling (prod)
-    │
-    ├── Connectors
-    │   ├── spanmetrics → Prometheus
-    │   └── servicegraph → Prometheus
-    │
-    └── Exporters
-        └── otlp → Tempo
-```
+### 동작 방식
+
+1. **Application SDK**: 각 서비스에서 OTEL SDK가 HTTP 요청, DB 쿼리, Redis 호출을 자동 추적
+2. **OTLP 전송**: HTTP/protobuf (port 4318) 또는 gRPC (port 4317)로 Collector에 전송
+3. **Collector 처리**: 배치 처리, Tail Sampling, Span Metrics 생성
+4. **저장 및 시각화**: Tempo에 트레이스 저장, Grafana에서 조회
+
+### 서비스별 Instrumentation
+
+| 서비스 | HTTP | DB | Redis | SDK |
+|--------|------|-----|-------|-----|
+| auth (Spring) | Micrometer | - | - | Spring OTEL |
+| Go 서비스 (5개) | otelgin | gorm-otel | redisotel | go.opentelemetry.io |
+
+Go 서비스는 HTTP, GORM, Redis 모두 자동 트레이싱됩니다. 별도 코드 없이 미들웨어 등록만으로 전체 요청 흐름을 추적할 수 있습니다.
 
 ### Tail Sampling (Production)
 
@@ -145,54 +113,61 @@ Production 환경에서는 트레이스 볼륨 최적화를 위해 Tail Sampling
 | Slow traces | 100% | latency > 1s |
 | Normal traces | 10% | 기타 |
 
-### Span Metrics Connector
+### OTEL Connectors
 
-트레이스에서 RED 메트릭 자동 추출:
+OTEL Collector의 Connector는 트레이스 데이터를 메트릭으로 변환합니다. 별도 설정 없이 트레이스만 전송하면 RED 메트릭이 자동 생성됩니다.
 
-```
-# 생성되는 메트릭
-traces_spanmetrics_calls_total{service_name, operation, status_code}
-traces_spanmetrics_latency_bucket{service_name, operation}
-```
+**Span Metrics Connector**
 
-### Service Graph Connector
+트레이스의 각 span에서 RED(Rate, Errors, Duration) 메트릭을 추출합니다:
 
-서비스 간 호출 관계를 메트릭으로 추출:
+| 메트릭 | 설명 | 라벨 |
+|--------|------|------|
+| `traces_spanmetrics_calls_total` | 서비스 호출 수 | service_name, operation, status_code |
+| `traces_spanmetrics_latency_bucket` | 지연시간 히스토그램 | service_name, operation |
 
-```
-# 서비스 토폴로지 메트릭
-traces_service_graph_request_total{client, server}
-traces_service_graph_request_failed_total{client, server}
-```
+**Service Graph Connector**
 
-### Exemplars
+서비스 간 호출 관계를 추출하여 의존성 토폴로지를 파악합니다:
 
-Prometheus 메트릭과 Tempo 트레이스 연동:
+| 메트릭 | 설명 |
+|--------|------|
+| `traces_service_graph_request_total{client, server}` | 서비스 간 요청 수 |
+| `traces_service_graph_request_failed_total{client, server}` | 서비스 간 실패 수 |
 
-- Grafana에서 메트릭 쿼리 시 exemplar 아이콘 클릭
-- 해당 시점의 트레이스로 직접 이동 가능
+### Exemplars (Metrics ↔ Traces 연동)
+
+Exemplar는 메트릭 데이터 포인트에 trace_id를 첨부하여 **메트릭에서 트레이스로 직접 이동**할 수 있게 합니다.
+
+**활용 예시**:
+1. Grafana에서 latency 스파이크 발견
+2. 해당 시점의 exemplar 아이콘 클릭
+3. 원인이 된 트레이스로 즉시 이동
+4. 어떤 서비스/쿼리에서 지연이 발생했는지 확인
+
+이를 통해 "무엇이 문제인가" (메트릭)에서 "왜 문제인가" (트레이스)로 빠르게 전환할 수 있습니다.
 
 ---
 
 ## Log Aggregation
 
-### Log Collection Pipeline (K8s)
+![Log Collection Pipeline](https://raw.githubusercontent.com/OrangesCloud/wealist-project-advanced-k8s/main/docs/images/wealist_k8s_monitoring_logs.png)
 
-```
-Application (stdout/stderr)
-    │
-    ▼
-Alloy (DaemonSet)
-    │
-    ├── discovery.kubernetes
-    │   └── Pod 자동 감지
-    │
-    ├── loki.source.kubernetes
-    │   └── Container logs 수집
-    │
-    └── loki.write
-        └── Loki로 전송
-```
+### 동작 방식
+
+1. **Application 로그 출력**: 모든 서비스가 stdout/stderr로 JSON 형식 로그 출력
+2. **Container Runtime**: 로그를 `/var/log/containers/*.log`에 저장
+3. **Alloy 수집**: DaemonSet으로 각 노드에서 로그 파일 감시 및 수집
+4. **Loki 저장**: 라벨 기반으로 인덱싱하여 저장 (S3 backend in prod)
+5. **Grafana 조회**: LogQL로 검색, 필터링, 집계
+
+### Alloy Pipeline
+
+Alloy는 Grafana Agent의 후속 제품으로, 선언적 파이프라인 구성을 제공합니다:
+
+- `discovery.kubernetes`: K8s API로 Pod 자동 감지
+- `loki.source.kubernetes`: Container 로그 수집 + 메타데이터 추출
+- `loki.write`: Loki로 배치 전송
 
 ### Log Labels
 
@@ -215,7 +190,26 @@ count_over_time({namespace="wealist-prod", level="error"}[5m])
 
 # JSON 파싱 후 필터
 {app="auth-service"} | json | status >= 400
+
+# Trace ID로 관련 로그 검색
+{namespace="wealist-prod"} |= "abc123def456"
 ```
+
+### Traces-Logs Correlation
+
+Go 서비스는 로그에 자동으로 trace_id를 포함합니다:
+
+```json
+{"level":"info","trace_id":"abc123","span_id":"def456","msg":"Creating board","service":"board-service"}
+```
+
+**활용 흐름**:
+1. Grafana Tempo에서 느린 트레이스 발견
+2. trace_id 복사
+3. Loki에서 `{app="board-service"} |= "abc123"` 검색
+4. 해당 요청의 상세 로그 확인
+
+이를 통해 트레이스의 각 span에서 어떤 작업이 수행되었는지 로그로 상세히 파악할 수 있습니다.
 
 ---
 
