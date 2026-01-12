@@ -1,0 +1,230 @@
+<mxfile host="Electron" agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) draw.io/29.3.0 Chrome/140.0.7339.249 Electron/38.7.2 Safari/537.36" version="29.3.0">
+  <diagram name="Monitoring Architecture" id="monitoring-arch">
+    <mxGraphModel dx="811" dy="582" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1400" pageHeight="800" background="#FFFFFF" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="UabGAU1Fo-nIIK7OCSPk-1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;" value="" vertex="1">
+          <mxGeometry height="605" width="1145" x="15" y="15" as="geometry" />
+        </mxCell>
+        <mxCell id="title" parent="1" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;fontSize=18;fontStyle=1;fontColor=#232F3E;" value="weAlist Monitoring Architecture (LGTM Stack + OTEL)" vertex="1">
+          <mxGeometry height="35" width="550" x="425" y="20" as="geometry" />
+        </mxCell>
+        <mxCell id="apps-box" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#E3F2FD;strokeColor=#326CE5;strokeWidth=2;dashed=1;verticalAlign=top;align=left;spacingLeft=15;spacingTop=10;fontSize=13;fontStyle=1;fontColor=#326CE5;" value="Application Services (Metrics + Traces)" vertex="1">
+          <mxGeometry height="130" width="850" x="275" y="65" as="geometry" />
+        </mxCell>
+        <mxCell id="pod-auth" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#1E4D8C;strokeColor=#1E4D8C;strokeWidth=1;fontSize=9;fontColor=#FFFFFF;fontStyle=1;align=center;verticalAlign=top;spacingTop=5;" value="auth&#xa;Spring Boot&#xa;:8080/actuator" vertex="1">
+          <mxGeometry height="65" width="100" x="305" y="105" as="geometry" />
+        </mxCell>
+        <mxCell id="pod-user" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#00ADD8;strokeColor=#00ADD8;strokeWidth=1;fontSize=9;fontColor=#FFFFFF;fontStyle=1;align=center;verticalAlign=top;spacingTop=5;" value="user&#xa;Go + Gin&#xa;:8081/metrics" vertex="1">
+          <mxGeometry height="65" width="100" x="425" y="105" as="geometry" />
+        </mxCell>
+        <mxCell id="pod-board" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#00ADD8;strokeColor=#00ADD8;strokeWidth=1;fontSize=9;fontColor=#FFFFFF;fontStyle=1;align=center;verticalAlign=top;spacingTop=5;" value="board&#xa;Go + Gin&#xa;:8000/metrics" vertex="1">
+          <mxGeometry height="65" width="100" x="545" y="105" as="geometry" />
+        </mxCell>
+        <mxCell id="pod-chat" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#00ADD8;strokeColor=#00ADD8;strokeWidth=1;fontSize=9;fontColor=#FFFFFF;fontStyle=1;align=center;verticalAlign=top;spacingTop=5;" value="chat&#xa;Go + Gin&#xa;:8001/metrics" vertex="1">
+          <mxGeometry height="65" width="100" x="665" y="105" as="geometry" />
+        </mxCell>
+        <mxCell id="pod-noti" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#00ADD8;strokeColor=#00ADD8;strokeWidth=1;fontSize=9;fontColor=#FFFFFF;fontStyle=1;align=center;verticalAlign=top;spacingTop=5;" value="noti&#xa;Go + Gin&#xa;:8002/metrics" vertex="1">
+          <mxGeometry height="65" width="100" x="785" y="105" as="geometry" />
+        </mxCell>
+        <mxCell id="pod-storage" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#00ADD8;strokeColor=#00ADD8;strokeWidth=1;fontSize=9;fontColor=#FFFFFF;fontStyle=1;align=center;verticalAlign=top;spacingTop=5;" value="storage&#xa;Go + Gin&#xa;:8003/metrics" vertex="1">
+          <mxGeometry height="65" width="100" x="905" y="105" as="geometry" />
+        </mxCell>
+        <mxCell id="sidecar-label" parent="1" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;fontSize=9;fontColor=#8C4FFF;fontStyle=2;" value="+ Envoy Sidecar (Istio metrics)" vertex="1">
+          <mxGeometry height="15" width="150" x="960" y="75" as="geometry" />
+        </mxCell>
+        <mxCell id="otel-box" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#425CC7;strokeColor=#2E3B8C;strokeWidth=2;verticalAlign=top;align=center;spacingTop=8;fontSize=12;fontStyle=1;fontColor=#FFFFFF;" value="OpenTelemetry Collector (Gateway)" vertex="1">
+          <mxGeometry height="100" width="410" x="510" y="230" as="geometry" />
+        </mxCell>
+        <mxCell id="otel-receivers" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#FFFFFF;strokeWidth=1;fontSize=9;fontColor=#2E3B8C;align=center;verticalAlign=middle;" value="Receivers: otlp (HTTP/gRPC)" vertex="1">
+          <mxGeometry height="22" width="160" x="525" y="265" as="geometry" />
+        </mxCell>
+        <mxCell id="otel-connectors" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#FFFFFF;strokeWidth=1;fontSize=9;fontColor=#2E3B8C;align=center;verticalAlign=middle;" value="Connectors: spanmetrics, servicegraph" vertex="1">
+          <mxGeometry height="22" width="200" x="700" y="268" as="geometry" />
+        </mxCell>
+        <mxCell id="otel-sampling" parent="1" style="text;html=1;strokeColor=none;fillColor=#425CC7;align=center;verticalAlign=middle;fontSize=9;fontColor=#FFFFFF;" value="Tail Sampling (prod): errors 100%, normal 10%" vertex="1">
+          <mxGeometry height="15" width="250" x="575" y="290" as="geometry" />
+        </mxCell>
+        <mxCell id="prometheus" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#E6522C;strokeColor=#C94320;strokeWidth=2;verticalAlign=top;align=center;spacingTop=8;fontSize=12;fontStyle=1;fontColor=#FFFFFF;" value="Prometheus" vertex="1">
+          <mxGeometry height="85" width="180" x="195" y="380" as="geometry" />
+        </mxCell>
+        <mxCell id="prom-scrape" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#FFFFFF;strokeWidth=1;fontSize=9;fontColor=#C94320;align=center;verticalAlign=middle;" value="Scrape: /metrics, /actuator" vertex="1">
+          <mxGeometry height="20" width="150" x="210" y="410" as="geometry" />
+        </mxCell>
+        <mxCell id="prom-storage" parent="1" style="text;html=1;strokeColor=none;fillColor=#E6522C;align=center;verticalAlign=middle;fontSize=9;fontColor=#FFFFFF;" value="prod: remote_write → AMP" vertex="1">
+          <mxGeometry height="15" width="140" x="215" y="438" as="geometry" />
+        </mxCell>
+        <mxCell id="tempo" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#00B3A4;strokeColor=#008F7A;strokeWidth=2;verticalAlign=top;align=center;spacingTop=8;fontSize=12;fontStyle=1;fontColor=#FFFFFF;" value="Tempo" vertex="1">
+          <mxGeometry height="85" width="180" x="610" y="380" as="geometry" />
+        </mxCell>
+        <mxCell id="tempo-receiver" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#FFFFFF;strokeWidth=1;fontSize=9;fontColor=#008F7A;align=center;verticalAlign=middle;" value="Receiver: otlp (from Collector)" vertex="1">
+          <mxGeometry height="20" width="150" x="625" y="410" as="geometry" />
+        </mxCell>
+        <mxCell id="tempo-storage" parent="1" style="text;html=1;strokeColor=none;fillColor=#00B3A4;align=center;verticalAlign=middle;fontSize=9;fontColor=#FFFFFF;" value="prod: S3 backend" vertex="1">
+          <mxGeometry height="15" width="100" x="650" y="438" as="geometry" />
+        </mxCell>
+        <mxCell id="loki" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFC107;strokeColor=#FFA000;strokeWidth=2;verticalAlign=top;align=center;spacingTop=8;fontSize=12;fontStyle=1;fontColor=#000000;" value="Loki" vertex="1">
+          <mxGeometry height="85" width="180" x="905" y="353" as="geometry" />
+        </mxCell>
+        <mxCell id="loki-receiver" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#FFFFFF;strokeWidth=1;fontSize=9;fontColor=#FFA000;align=center;verticalAlign=middle;" value="Receiver: loki (from Alloy)" vertex="1">
+          <mxGeometry height="20" width="145" x="922" y="383" as="geometry" />
+        </mxCell>
+        <mxCell id="loki-storage" parent="1" style="text;html=1;strokeColor=none;fillColor=#FFC107;align=center;verticalAlign=middle;fontSize=9;fontColor=#000000;" value="prod: S3 backend" vertex="1">
+          <mxGeometry height="15" width="100" x="945" y="411" as="geometry" />
+        </mxCell>
+        <mxCell id="alloy" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FF9800;strokeColor=#F57C00;strokeWidth=2;verticalAlign=top;align=center;spacingTop=8;fontSize=11;fontStyle=1;fontColor=#FFFFFF;" value="Alloy (K8s)" vertex="1">
+          <mxGeometry height="60" width="120" x="935" y="213" as="geometry" />
+        </mxCell>
+        <mxCell id="alloy-desc" parent="1" style="text;html=1;strokeColor=none;fillColor=#FF9800;align=center;verticalAlign=middle;fontSize=9;fontColor=#FFFFFF;" value="DaemonSet&#xa;Log collection" vertex="1">
+          <mxGeometry height="28" width="90" x="950" y="238" as="geometry" />
+        </mxCell>
+        <mxCell id="grafana" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#F46800;strokeColor=#D35400;strokeWidth=2;verticalAlign=top;align=center;spacingTop=8;fontSize=14;fontStyle=1;fontColor=#FFFFFF;" value="Grafana (Visualization)" vertex="1">
+          <mxGeometry height="90" width="400" x="500" y="510" as="geometry" />
+        </mxCell>
+        <mxCell id="grafana-ds" parent="1" style="text;html=1;strokeColor=none;fillColor=#F46800;align=center;verticalAlign=middle;fontSize=10;fontColor=#FFFFFF;" value="Data Sources: Prometheus, Tempo, Loki" vertex="1">
+          <mxGeometry height="18" width="250" x="575" y="540" as="geometry" />
+        </mxCell>
+        <mxCell id="grafana-dash" parent="1" style="text;html=1;strokeColor=none;fillColor=#F46800;align=center;verticalAlign=middle;fontSize=10;fontColor=#FFFFFF;" value="V4 Dashboards: Role-based (Dev, Platform, SRE)" vertex="1">
+          <mxGeometry height="18" width="320" x="540" y="565" as="geometry" />
+        </mxCell>
+        <mxCell id="exporters-box" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FAFAFA;strokeColor=#999999;strokeWidth=1;dashed=1;verticalAlign=top;align=left;spacingLeft=10;spacingTop=5;fontSize=10;fontStyle=1;fontColor=#666666;" value="Infra Exporters" vertex="1">
+          <mxGeometry height="65" width="160" x="35" y="400" as="geometry" />
+        </mxCell>
+        <mxCell id="exp-postgres" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#336791;strokeColor=#336791;strokeWidth=1;fontSize=8;fontColor=#FFFFFF;align=center;verticalAlign=middle;" value="postgres" vertex="1">
+          <mxGeometry height="22" width="60" x="50" y="425" as="geometry" />
+        </mxCell>
+        <mxCell id="exp-redis" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#DC382D;strokeColor=#DC382D;strokeWidth=1;fontSize=8;fontColor=#FFFFFF;align=center;verticalAlign=middle;" value="redis" vertex="1">
+          <mxGeometry height="22" width="50" x="120" y="425" as="geometry" />
+        </mxCell>
+        <mxCell id="edge-apps-otel" edge="1" parent="1" source="apps-box" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;strokeColor=#425CC7;endArrow=classic;endSize=8;" target="otel-box">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="700" y="220" />
+              <mxPoint x="700" y="220" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="label-traces" parent="1" style="text;html=1;strokeColor=none;fillColor=#FFFFFF;align=center;verticalAlign=middle;fontSize=9;fontColor=#425CC7;fontStyle=1;" value="OTLP traces" vertex="1">
+          <mxGeometry height="15" width="70" x="740" y="200" as="geometry" />
+        </mxCell>
+        <mxCell id="edge-prom-scrape" edge="1" parent="1" source="apps-box" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;strokeColor=#E6522C;endArrow=classic;endSize=8;exitX=0.016;exitY=1.013;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;exitPerimeter=0;" target="prometheus">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="289" y="200" />
+              <mxPoint x="285" y="200" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="label-scrape" parent="1" style="text;html=1;strokeColor=none;fillColor=#FFFFFF;align=center;verticalAlign=middle;fontSize=9;fontColor=#E6522C;fontStyle=1;" value="scrape" vertex="1">
+          <mxGeometry height="15" width="45" x="235" y="310" as="geometry" />
+        </mxCell>
+        <mxCell id="edge-otel-tempo" edge="1" parent="1" source="otel-box" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;strokeColor=#00B3A4;endArrow=classic;endSize=8;" target="tempo">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="700" y="340" />
+              <mxPoint x="700" y="340" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="label-otlp" parent="1" style="text;html=1;strokeColor=none;fillColor=#FFFFFF;align=center;verticalAlign=middle;fontSize=9;fontColor=#00B3A4;fontStyle=1;" value="OTLP" vertex="1">
+          <mxGeometry height="15" width="35" x="705" y="340" as="geometry" />
+        </mxCell>
+        <mxCell id="edge-otel-prom" edge="1" parent="1" source="otel-box" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=1.5;strokeColor=#E6522C;endArrow=classic;endSize=6;dashed=1;exitX=0;exitY=0.7;exitDx=0;exitDy=0;entryX=0.748;entryY=-0.037;entryDx=0;entryDy=0;entryPerimeter=0;" target="prometheus">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="330" y="300" />
+              <mxPoint x="330" y="350" />
+              <mxPoint x="330" y="350" />
+            </Array>
+            <mxPoint x="350" y="350" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="label-spanmetrics" parent="1" style="text;html=1;strokeColor=none;fillColor=#FFFFFF;align=center;verticalAlign=middle;fontSize=9;fontColor=#E6522C;fontStyle=1;" value="span metrics&#xa;service graph" vertex="1">
+          <mxGeometry height="28" width="75" x="385" y="325" as="geometry" />
+        </mxCell>
+        <mxCell id="edge-alloy-loki" edge="1" parent="1" source="alloy" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;strokeColor=#FFC107;endArrow=classic;endSize=8;" target="loki">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="label-loki-push" parent="1" style="text;html=1;strokeColor=none;fillColor=#FFFFFF;align=center;verticalAlign=middle;fontSize=9;fontColor=#FFA000;fontStyle=1;" value="loki.write" vertex="1">
+          <mxGeometry height="15" width="60" x="1007" y="311" as="geometry" />
+        </mxCell>
+        <mxCell id="edge-exp-prom" edge="1" parent="1" source="exporters-box" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=1.5;strokeColor=#E6522C;endArrow=classic;endSize=6;dashed=1;" target="prometheus">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="115" y="485" />
+              <mxPoint x="270" y="485" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="edge-prom-grafana" edge="1" parent="1" source="prometheus" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;strokeColor=#F46800;endArrow=classic;endSize=8;" target="grafana">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="285" y="490" />
+              <mxPoint x="600" y="490" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="edge-tempo-grafana" edge="1" parent="1" source="tempo" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;strokeColor=#F46800;endArrow=classic;endSize=8;" target="grafana">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge-loki-grafana" edge="1" parent="1" source="loki" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;strokeColor=#F46800;endArrow=classic;endSize=8;" target="grafana">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1000" y="490" />
+              <mxPoint x="800" y="490" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="legend" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FAFAFA;strokeColor=#CCCCCC;strokeWidth=1;verticalAlign=top;align=left;spacingLeft=10;spacingTop=5;fontSize=11;fontStyle=1;fontColor=#666666;" value="Legend" vertex="1">
+          <mxGeometry height="105" width="200" x="35" y="65" as="geometry" />
+        </mxCell>
+        <mxCell id="leg-go" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#00ADD8;strokeColor=#00ADD8;strokeWidth=1;fontSize=8;fontColor=#FFFFFF;" value="Go" vertex="1">
+          <mxGeometry height="18" width="35" x="50" y="90" as="geometry" />
+        </mxCell>
+        <mxCell id="leg-java" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#1E4D8C;strokeColor=#1E4D8C;strokeWidth=1;fontSize=8;fontColor=#FFFFFF;" value="Java" vertex="1">
+          <mxGeometry height="18" width="35" x="95" y="90" as="geometry" />
+        </mxCell>
+        <mxCell id="leg-otel" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#425CC7;strokeColor=#425CC7;strokeWidth=1;fontSize=8;fontColor=#FFFFFF;" value="OTEL" vertex="1">
+          <mxGeometry height="18" width="40" x="140" y="90" as="geometry" />
+        </mxCell>
+        <mxCell id="leg-prom" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#E6522C;strokeColor=#E6522C;strokeWidth=1;fontSize=8;fontColor=#FFFFFF;" value="Prom" vertex="1">
+          <mxGeometry height="18" width="40" x="50" y="113" as="geometry" />
+        </mxCell>
+        <mxCell id="leg-tempo" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#00B3A4;strokeColor=#00B3A4;strokeWidth=1;fontSize=8;fontColor=#FFFFFF;" value="Tempo" vertex="1">
+          <mxGeometry height="18" width="42" x="100" y="113" as="geometry" />
+        </mxCell>
+        <mxCell id="leg-loki" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFC107;strokeColor=#FFC107;strokeWidth=1;fontSize=8;fontColor=#000000;" value="Loki" vertex="1">
+          <mxGeometry height="18" width="35" x="152" y="113" as="geometry" />
+        </mxCell>
+        <mxCell id="leg-grafana" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#F46800;strokeColor=#F46800;strokeWidth=1;fontSize=8;fontColor=#FFFFFF;" value="Grafana" vertex="1">
+          <mxGeometry height="18" width="50" x="50" y="136" as="geometry" />
+        </mxCell>
+        <mxCell id="leg-alloy" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FF9800;strokeColor=#FF9800;strokeWidth=1;fontSize=8;fontColor=#FFFFFF;" value="Alloy" vertex="1">
+          <mxGeometry height="18" width="40" x="110" y="136" as="geometry" />
+        </mxCell>
+        <mxCell id="features-box" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#E8F5E9;strokeColor=#4CAF50;strokeWidth=1;verticalAlign=top;align=left;spacingLeft=10;spacingTop=5;fontSize=11;fontStyle=1;fontColor=#4CAF50;" value="Key Features" vertex="1">
+          <mxGeometry height="130" width="200" x="35" y="175" as="geometry" />
+        </mxCell>
+        <mxCell id="features-text" parent="1" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;fontSize=9;fontColor=#666666;spacingLeft=5;" value="• Metrics: Prometheus scrape&#xa;• Traces: OTEL → Tempo&#xa;• Logs: Alloy → Loki&#xa;• Span Metrics: RED metrics&#xa;• Service Graph: topology&#xa;• Exemplars: trace linking&#xa;• Tail Sampling (prod)" vertex="1">
+          <mxGeometry height="100" width="180" x="40" y="200" as="geometry" />
+        </mxCell>
+        <mxCell id="urls-box" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFF8E1;strokeColor=#FFA000;strokeWidth=1;verticalAlign=top;align=left;spacingLeft=10;spacingTop=5;fontSize=11;fontStyle=1;fontColor=#FFA000;" value="Access URLs" vertex="1">
+          <mxGeometry height="90" width="200" x="35" y="504" as="geometry" />
+        </mxCell>
+        <mxCell id="urls-text" parent="1" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;fontSize=9;fontColor=#666666;spacingLeft=5;" value="localhost:&#xa;  /api/monitoring/grafana&#xa;  /api/monitoring/prometheus&#xa;prod:&#xa;  grafana.wealist.co.kr" vertex="1">
+          <mxGeometry height="70" width="180" x="40" y="524" as="geometry" />
+        </mxCell>
+        <mxCell id="kiali-box" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#8C4FFF;strokeColor=#6B3FBF;strokeWidth=2;verticalAlign=top;align=center;spacingTop=5;fontSize=10;fontStyle=1;fontColor=#FFFFFF;" value="Kiali" vertex="1">
+          <mxGeometry height="60" width="100" x="415" y="393" as="geometry" />
+        </mxCell>
+        <mxCell id="kiali-desc" parent="1" style="text;html=1;strokeColor=none;fillColor=#8C4FFF;align=center;verticalAlign=middle;fontSize=9;fontColor=#FFFFFF;" value="Istio Dashboard&#xa;Service Mesh" vertex="1">
+          <mxGeometry height="28" width="80" x="425" y="422" as="geometry" />
+        </mxCell>
+        <mxCell id="edge-prom-kiali" edge="1" parent="1" source="prometheus" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=1.5;strokeColor=#8C4FFF;endArrow=classic;endSize=6;dashed=1;" target="kiali-box">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
