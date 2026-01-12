@@ -381,29 +381,9 @@ spec:
 
 ### 아키텍처
 
-```
-┌─────────────────────┐      ┌─────────────────────┐
-│  AWS Secrets Manager │      │  ClusterSecretStore │
-│                     │◄─────│                     │
-│  wealist/prod/*     │      │  aws-secrets-store  │
-└─────────────────────┘      └─────────────────────┘
-                                       │
-                                       ▼
-                             ┌─────────────────────┐
-                             │   ExternalSecret    │
-                             │                     │
-                             │ - shared-secrets    │
-                             │ - db-credentials    │
-                             │ - redis-credentials │
-                             └─────────────────────┘
-                                       │
-                                       ▼
-                             ┌─────────────────────┐
-                             │   K8s Secret        │
-                             │                     │
-                             │ (자동 생성/동기화)  │
-                             └─────────────────────┘
-```
+![External Secrets Operator](https://raw.githubusercontent.com/OrangesCloud/wealist-project-advanced-k8s/main/docs/images/wealist_k8s_eso.png)
+
+> **다이어그램 소스**: `docs/images/wealist_k8s_eso.drawio`
 
 ### ClusterSecretStore
 

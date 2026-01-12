@@ -1,0 +1,157 @@
+<mxfile host="Electron" agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) draw.io/29.3.0 Chrome/140.0.7339.249 Electron/38.7.2 Safari/537.36" version="29.3.0">
+  <diagram name="External Secrets Operator" id="eso-flow">
+    <mxGraphModel dx="908" dy="896" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1200" pageHeight="600" background="#FFFFFF" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="0aKW97CwoyJL77StMayy-1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;" value="" vertex="1">
+          <mxGeometry height="400" width="1162.5" x="27.5" y="20" as="geometry" />
+        </mxCell>
+        <mxCell id="title" parent="1" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;fontSize=18;fontStyle=1;fontColor=#232F3E;" value="External Secrets Operator (ESO) Flow" vertex="1">
+          <mxGeometry height="35" width="400" x="400" y="20" as="geometry" />
+        </mxCell>
+        <mxCell id="aws-cloud" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFF3E0;strokeColor=#ED7100;strokeWidth=2;dashed=1;verticalAlign=top;align=left;spacingLeft=15;spacingTop=10;fontSize=13;fontStyle=1;fontColor=#ED7100;" value="AWS Cloud" vertex="1">
+          <mxGeometry height="180" width="220" x="50" y="70" as="geometry" />
+        </mxCell>
+        <mxCell id="secrets-manager" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#DD344C;strokeColor=#DD344C;strokeWidth=2;fontSize=12;fontStyle=1;fontColor=#FFFFFF;align=center;verticalAlign=top;spacingTop=10;" value="Secrets Manager" vertex="1">
+          <mxGeometry height="130" width="180" x="70" y="105" as="geometry" />
+        </mxCell>
+        <mxCell id="secret-shared" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#FFFFFF;strokeWidth=1;fontSize=10;fontColor=#232F3E;align=center;verticalAlign=middle;" value="wealist/prod/shared" vertex="1">
+          <mxGeometry height="24" width="150" x="85" y="140" as="geometry" />
+        </mxCell>
+        <mxCell id="secret-db" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#FFFFFF;strokeWidth=1;fontSize=10;fontColor=#232F3E;align=center;verticalAlign=middle;" value="wealist/prod/db" vertex="1">
+          <mxGeometry height="24" width="150" x="85" y="170" as="geometry" />
+        </mxCell>
+        <mxCell id="secret-redis" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#FFFFFF;strokeWidth=1;fontSize=10;fontColor=#232F3E;align=center;verticalAlign=middle;" value="wealist/prod/redis" vertex="1">
+          <mxGeometry height="24" width="150" x="85" y="200" as="geometry" />
+        </mxCell>
+        <mxCell id="ns-eso" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFF8E1;strokeColor=#FF9800;strokeWidth=2;dashed=1;verticalAlign=top;align=left;spacingLeft=15;spacingTop=10;fontSize=13;fontStyle=1;fontColor=#FF9800;" value="external-secrets namespace" vertex="1">
+          <mxGeometry height="180" width="240" x="340" y="70" as="geometry" />
+        </mxCell>
+        <mxCell id="cluster-store" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#9C27B0;strokeColor=#7B1FA2;strokeWidth=2;fontSize=11;fontStyle=1;fontColor=#FFFFFF;align=center;verticalAlign=middle;" value="ClusterSecretStore&#xa;aws-secrets-store" vertex="1">
+          <mxGeometry height="55" width="200" x="360" y="105" as="geometry" />
+        </mxCell>
+        <mxCell id="eso-controller" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FF9800;strokeColor=#F57C00;strokeWidth=2;fontSize=11;fontStyle=1;fontColor=#FFFFFF;align=center;verticalAlign=middle;" value="ESO Controller&#xa;(watches ExternalSecret)" vertex="1">
+          <mxGeometry height="55" width="200" x="360" y="180" as="geometry" />
+        </mxCell>
+        <mxCell id="ns-prod" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#E3F2FD;strokeColor=#326CE5;strokeWidth=2;dashed=1;verticalAlign=top;align=left;spacingLeft=15;spacingTop=10;fontSize=13;fontStyle=1;fontColor=#326CE5;" value="wealist-prod namespace" vertex="1">
+          <mxGeometry height="330" width="520" x="650" y="70" as="geometry" />
+        </mxCell>
+        <mxCell id="external-secret" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FF9800;strokeColor=#F57C00;strokeWidth=2;fontSize=11;fontStyle=1;fontColor=#FFFFFF;align=center;verticalAlign=top;spacingTop=8;" value="ExternalSecret" vertex="1">
+          <mxGeometry height="70" width="160" x="680" y="105" as="geometry" />
+        </mxCell>
+        <mxCell id="es-name" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#FFFFFF;strokeWidth=1;fontSize=10;fontColor=#232F3E;align=center;verticalAlign=middle;" value="shared-secrets" vertex="1">
+          <mxGeometry height="22" width="130" x="695" y="135" as="geometry" />
+        </mxCell>
+        <mxCell id="es-refresh" parent="1" style="text;html=1;strokeColor=none;fillColor=#FF9800;align=center;verticalAlign=middle;fontSize=9;fontColor=#FFFFFF;" value="refreshInterval: 1h" vertex="1">
+          <mxGeometry height="15" width="100" x="710" y="158" as="geometry" />
+        </mxCell>
+        <mxCell id="k8s-secret" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#326CE5;strokeColor=#1565C0;strokeWidth=2;fontSize=11;fontStyle=1;fontColor=#FFFFFF;align=center;verticalAlign=top;spacingTop=8;" value="K8s Secret (자동 생성)" vertex="1">
+          <mxGeometry height="70" width="160" x="680" y="200" as="geometry" />
+        </mxCell>
+        <mxCell id="secret-name" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#FFFFFF;strokeWidth=1;fontSize=10;fontColor=#232F3E;align=center;verticalAlign=middle;" value="wealist-shared-secret" vertex="1">
+          <mxGeometry height="22" width="130" x="695" y="230" as="geometry" />
+        </mxCell>
+        <mxCell id="secret-keys" parent="1" style="text;html=1;strokeColor=none;fillColor=#326CE5;align=center;verticalAlign=middle;fontSize=9;fontColor=#FFFFFF;" value="DB_HOST, REDIS_HOST, ..." vertex="1">
+          <mxGeometry height="15" width="140" x="690" y="253" as="geometry" />
+        </mxCell>
+        <mxCell id="pods-box" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#326CE5;strokeWidth=2;verticalAlign=top;align=center;spacingTop=8;fontSize=11;fontStyle=1;fontColor=#326CE5;" value="Service Pods (envFrom: secretRef)" vertex="1">
+          <mxGeometry height="80" width="480" x="680" y="295" as="geometry" />
+        </mxCell>
+        <mxCell id="pod-auth" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#1E4D8C;strokeColor=#1E4D8C;strokeWidth=1;fontSize=9;fontColor=#FFFFFF;fontStyle=1;align=center;verticalAlign=middle;" value="auth" vertex="1">
+          <mxGeometry height="35" width="60" x="700" y="325" as="geometry" />
+        </mxCell>
+        <mxCell id="pod-user" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#00ADD8;strokeColor=#00ADD8;strokeWidth=1;fontSize=9;fontColor=#FFFFFF;fontStyle=1;align=center;verticalAlign=middle;" value="user" vertex="1">
+          <mxGeometry height="35" width="60" x="770" y="325" as="geometry" />
+        </mxCell>
+        <mxCell id="pod-board" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#00ADD8;strokeColor=#00ADD8;strokeWidth=1;fontSize=9;fontColor=#FFFFFF;fontStyle=1;align=center;verticalAlign=middle;" value="board" vertex="1">
+          <mxGeometry height="35" width="60" x="840" y="325" as="geometry" />
+        </mxCell>
+        <mxCell id="pod-chat" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#00ADD8;strokeColor=#00ADD8;strokeWidth=1;fontSize=9;fontColor=#FFFFFF;fontStyle=1;align=center;verticalAlign=middle;" value="chat" vertex="1">
+          <mxGeometry height="35" width="60" x="910" y="325" as="geometry" />
+        </mxCell>
+        <mxCell id="pod-noti" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#00ADD8;strokeColor=#00ADD8;strokeWidth=1;fontSize=9;fontColor=#FFFFFF;fontStyle=1;align=center;verticalAlign=middle;" value="noti" vertex="1">
+          <mxGeometry height="35" width="60" x="980" y="325" as="geometry" />
+        </mxCell>
+        <mxCell id="pod-storage" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#00ADD8;strokeColor=#00ADD8;strokeWidth=1;fontSize=9;fontColor=#FFFFFF;fontStyle=1;align=center;verticalAlign=middle;" value="storage" vertex="1">
+          <mxGeometry height="35" width="60" x="1050" y="325" as="geometry" />
+        </mxCell>
+        <mxCell id="edge-sm-css" edge="1" parent="1" source="secrets-manager" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;strokeColor=#9C27B0;endArrow=classic;endSize=8;" target="cluster-store">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="label-fetch" parent="1" style="text;html=1;strokeColor=none;fillColor=#FFFFFF;align=center;verticalAlign=middle;fontSize=9;fontColor=#9C27B0;fontStyle=1;" value="AWS SDK&#xa;(Pod Identity)" vertex="1">
+          <mxGeometry height="28" width="65" x="280" y="118" as="geometry" />
+        </mxCell>
+        <mxCell id="edge-css-eso" edge="1" parent="1" source="cluster-store" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=1.5;strokeColor=#FF9800;endArrow=classic;endSize=6;dashed=1;" target="eso-controller">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge-es-css" edge="1" parent="1" source="external-secret" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;strokeColor=#FF9800;endArrow=classic;endSize=8;" target="cluster-store">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="590" y="140" />
+              <mxPoint x="590" y="140" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="label-ref" parent="1" style="text;html=1;strokeColor=none;fillColor=#FFFFFF;align=center;verticalAlign=middle;fontSize=9;fontColor=#FF9800;fontStyle=1;" value="secretStoreRef" vertex="1">
+          <mxGeometry height="15" width="75" x="600" y="118" as="geometry" />
+        </mxCell>
+        <mxCell id="edge-eso-es" edge="1" parent="1" source="eso-controller" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=1.5;strokeColor=#FF9800;endArrow=classic;endSize=6;dashed=1;exitX=1;exitY=0.3;exitDx=0;exitDy=0;entryX=0;entryY=0.7;entryDx=0;entryDy=0;" target="external-secret">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="620" y="196" />
+              <mxPoint x="620" y="154" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="label-watch" parent="1" style="text;html=1;strokeColor=none;fillColor=#FFFFFF;align=center;verticalAlign=middle;fontSize=9;fontColor=#FF9800;fontStyle=1;" value="watch" vertex="1">
+          <mxGeometry height="15" width="35" x="602" y="166" as="geometry" />
+        </mxCell>
+        <mxCell id="edge-es-secret" edge="1" parent="1" source="external-secret" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;strokeColor=#326CE5;endArrow=classic;endSize=8;" target="k8s-secret">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="label-create" parent="1" style="text;html=1;strokeColor=none;fillColor=#FFFFFF;align=center;verticalAlign=middle;fontSize=9;fontColor=#326CE5;fontStyle=1;" value="creates" vertex="1">
+          <mxGeometry height="15" width="45" x="845" y="180" as="geometry" />
+        </mxCell>
+        <mxCell id="edge-secret-pods" edge="1" parent="1" source="k8s-secret" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;strokeColor=#326CE5;endArrow=classic;endSize=8;" target="pods-box">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="760" y="280" />
+              <mxPoint x="920" y="280" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="label-mount" parent="1" style="text;html=1;strokeColor=none;fillColor=#FFFFFF;align=center;verticalAlign=middle;fontSize=9;fontColor=#326CE5;fontStyle=1;" value="env vars" vertex="1">
+          <mxGeometry height="15" width="50" x="870" y="253" as="geometry" />
+        </mxCell>
+        <mxCell id="legend" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FAFAFA;strokeColor=#CCCCCC;strokeWidth=1;verticalAlign=top;align=left;spacingLeft=10;spacingTop=5;fontSize=11;fontStyle=1;fontColor=#666666;" value="Legend" vertex="1">
+          <mxGeometry height="70" width="260" x="50" y="280" as="geometry" />
+        </mxCell>
+        <mxCell id="leg-aws" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#DD344C;strokeColor=#DD344C;strokeWidth=1;fontSize=9;fontColor=#FFFFFF;" value="AWS" vertex="1">
+          <mxGeometry height="20" width="45" x="65" y="305" as="geometry" />
+        </mxCell>
+        <mxCell id="leg-eso" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FF9800;strokeColor=#FF9800;strokeWidth=1;fontSize=9;fontColor=#FFFFFF;" value="ESO" vertex="1">
+          <mxGeometry height="20" width="45" x="120" y="305" as="geometry" />
+        </mxCell>
+        <mxCell id="leg-css" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#9C27B0;strokeColor=#9C27B0;strokeWidth=1;fontSize=9;fontColor=#FFFFFF;" value="Store" vertex="1">
+          <mxGeometry height="20" width="45" x="175" y="305" as="geometry" />
+        </mxCell>
+        <mxCell id="leg-k8s" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#326CE5;strokeColor=#326CE5;strokeWidth=1;fontSize=9;fontColor=#FFFFFF;" value="K8s" vertex="1">
+          <mxGeometry height="20" width="45" x="230" y="305" as="geometry" />
+        </mxCell>
+        <mxCell id="leg-go" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#00ADD8;strokeColor=#00ADD8;strokeWidth=1;fontSize=9;fontColor=#FFFFFF;" value="Go" vertex="1">
+          <mxGeometry height="20" width="45" x="65" y="328" as="geometry" />
+        </mxCell>
+        <mxCell id="leg-java" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#1E4D8C;strokeColor=#1E4D8C;strokeWidth=1;fontSize=9;fontColor=#FFFFFF;" value="Java" vertex="1">
+          <mxGeometry height="20" width="45" x="120" y="328" as="geometry" />
+        </mxCell>
+        <mxCell id="flow-summary" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#E8F5E9;strokeColor=#4CAF50;strokeWidth=1;verticalAlign=top;align=left;spacingLeft=10;spacingTop=5;fontSize=11;fontStyle=1;fontColor=#4CAF50;" value="Flow Summary" vertex="1">
+          <mxGeometry height="100" width="260" x="330" y="300" as="geometry" />
+        </mxCell>
+        <mxCell id="flow-text" parent="1" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;fontSize=9;fontColor=#666666;spacingLeft=5;" value="1. ESO Controller가 ExternalSecret 감시&#xa;2. ExternalSecret이 ClusterSecretStore 참조&#xa;3. ClusterSecretStore가 AWS SDK로 Secrets Manager 조회&#xa;4. K8s Secret 자동 생성/갱신 (1시간 주기)&#xa;5. Pod가 환경변수로 마운트" vertex="1">
+          <mxGeometry height="75" width="240" x="335" y="320" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
