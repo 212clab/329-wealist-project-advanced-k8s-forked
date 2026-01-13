@@ -2,7 +2,7 @@
 
 Production-ready 마이크로서비스 아키텍처로 구현된 협업 프로젝트 관리 플랫폼입니다.
 
-![Architecture Overview](https://raw.githubusercontent.com/OrangesCloud/wealist-project-advanced-k8s/main/docs/images/wealist_k8s_monitoring.png)
+![Architecture Overview](https://raw.githubusercontent.com/OrangesCloud/wealist-project-advanced-k8s/main/docs/images/wealist_aws_arch_v2.png)
 
 ---
 
@@ -46,9 +46,8 @@ Production-ready 마이크로서비스 아키텍처로 구현된 협업 프로�
 
 | Document | Description |
 |----------|-------------|
-| **[Architecture Overview](Architecture)** | 전체 시스템 아키텍처, 서비스 구성 |
-| **[AWS Architecture](Architecture-AWS)** | EKS, RDS, ElastiCache, VPC 구성 |
-| **[Kubernetes Architecture](Architecture-K8s)** | Helm, ArgoCD, ExternalSecrets 구성 |
+| **[Architecture Overview](Architecture)** | 전체 시스템 아키텍처, AWS, Terraform IaC |
+| **[Kubernetes Architecture](Architecture-K8s)** | EKS 클러스터, Istio, ArgoCD, Helm 구성 |
 | **[CI/CD Pipeline](Architecture-CICD)** | GitHub Actions, ArgoCD GitOps 플로우 |
 | **[Monitoring Stack](Architecture-Monitoring)** | LGTM Stack, OTEL, Distributed Tracing |
 | **[Security (VPC)](Architecture-VPC)** | 네트워크 보안, Private Subnet 구성 |
@@ -66,16 +65,7 @@ Production-ready 마이크로서비스 아키텍처로 구현된 협업 프로�
 
 ---
 
-## Getting Started
-
-| Guide | Description |
-|-------|-------------|
-| **[Getting Started](Getting-Started)** | 로컬 개발 환경 구축 (Docker Compose) |
-| **[Development Guide](Development-Guide)** | Kind 클러스터 설정, Helm 배포 |
-
----
-
-## Services Overview
+## Backend Services
 
 | Service | Tech | Port | Role |
 |---------|------|------|------|
@@ -85,7 +75,7 @@ Production-ready 마이크로서비스 아키텍처로 구현된 협업 프로�
 | **chat-service** | Go + Gin | 8001 | 실시간 메시징 (WebSocket) |
 | **noti-service** | Go + Gin | 8002 | 알림 (Server-Sent Events) |
 | **storage-service** | Go + Gin | 8003 | 파일 저장소 (S3/MinIO) |
-| **frontend** | React + Vite | 3000 | 웹 UI |
+| **ops-service** | Go + Gin | 8004 | 운영 대시보드 (메트릭, 로그 조회) |
 
 ---
 

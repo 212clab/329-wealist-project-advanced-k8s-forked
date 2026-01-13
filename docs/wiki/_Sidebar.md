@@ -5,7 +5,6 @@
 
 **Architecture**
 - [Overview](Architecture)
-- [AWS](Architecture-AWS)
 - [Kubernetes](Architecture-K8s)
 - [CI/CD](Architecture-CICD)
 - [Security (VPC)](Architecture-VPC)
@@ -24,6 +23,11 @@
 **Guides**
 - [Getting Started](Getting-Started)
 - [Development](Development-Guide)
+
+---
+
+**Troubleshooting**
+- [Troubleshooting](Troubleshooting)
 
 ---
 
