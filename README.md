@@ -18,20 +18,23 @@
 
 > 클릭하면 YouTube에서 시연 영상을 볼 수 있습니다.
 
-<!-- TODO: VIDEO_ID_HERE를 실제 YouTube 영상 ID로 교체하세요 -->
 
 ---
 
-## Overview
+## Documentation
 
-| 단계 | 문서 | 설명 |
-|------|------|------|
-| 1️⃣ | [요구사항 정의서](../../wiki/Requirements) | 서비스 성장에 따른 확장성/유연성 요구 |
-| 2️⃣ | [클라우드 제안서](../../wiki/Cloud-Proposal) | EKS 전환 제안 및 비용/효율 분석 |
-| 3️⃣ | [아키텍처 설계](../../wiki/Architecture) | K8s 기반 마이크로서비스 설계 |
-| 🔧 | [트러블슈팅](../../wiki/Troubleshooting) | 마이그레이션 과정 이슈 해결 기록 |
+| 문서                                               | 설명                                    |
+|--------------------------------------------------|---------------------------------------|
+| [wiki 전체보기](../../wiki/home)                     | wiki 전체보기                             |
+| [Architecture](../../wiki/Architecture)          | 전체 시스템 아키텍처, AWS 인프라, Terraform IaC   |
+| [Kubernetes](../../wiki/Architecture-K8s)        | EKS 클러스터, Istio, ArgoCD, Helm 구성      |
+| [CI/CD Pipeline](../../wiki/Architecture-CICD)   | GitHub Actions, ArgoCD GitOps 플로우     |
+| [Security (VPC)](../../wiki/Architecture-VPC)    | 네트워크 보안, Private Subnet 구성            |
+| [Monitoring](../../wiki/Architecture-Monitoring) | LGTM Stack, OTEL, Distributed Tracing |
+| [Requirements](../../wiki/Requirements)          | 요구사항 정의서                              |
+| [Cloud Proposal](../../wiki/Cloud-Proposal)      | 클라우드 제안서                              |
+| [ADR](../../wiki/ADR)                            | 아키텍처 결정 기록                            |
 
-> **시나리오**: 성공적인 서비스 오픈 → 트래픽 증가로 기능 추가/확장 어려움 → 클라우드 네이티브 전환 결정
 
 ---
 
@@ -56,6 +59,22 @@
 - **2-Layer IaC**: Foundation (VPC, RDS, Redis) → Compute (EKS, Istio)
 - **Cost Optimization**: 100% Spot Instances, Scheduled Scaling
 - **Security**: Private Subnet, Pod Identity, Secrets Manager
+
+
+---
+
+---
+
+## Overview
+
+| 단계 | 문서 | 설명 |
+|------|------|------|
+| 1️⃣ | [요구사항 정의서](../../wiki/Requirements) | 서비스 성장에 따른 확장성/유연성 요구 |
+| 2️⃣ | [클라우드 제안서](../../wiki/Cloud-Proposal) | EKS 전환 제안 및 비용/효율 분석 |
+| 3️⃣ | [아키텍처 설계](../../wiki/Architecture) | K8s 기반 마이크로서비스 설계 |
+| 🔧 | [트러블슈팅](../../wiki/Troubleshooting) | 마이그레이션 과정 이슈 해결 기록 |
+
+> **시나리오**: 성공적인 서비스 오픈 → 트래픽 증가로 기능 추가/확장 어려움 → 클라우드 네이티브 전환 결정
 
 ---
 
@@ -94,60 +113,6 @@
 | **Storage** | AWS S3 (prod), MinIO (local) |
 
 ---
-
-## Quick Start
-
-### Prerequisites
-
-- Docker & Docker Compose
-- Kind (Kubernetes in Docker)
-- Helm 3.x
-- kubectl
-
-### Local Development (Kind + Helm)
-
-```bash
-# 1. 클러스터 생성
-make kind-setup
-
-# 2. 이미지 빌드 및 로드
-make kind-load-images
-
-# 3. Helm으로 전체 배포
-make helm-install-all ENV=localhost
-
-# 4. 상태 확인
-make status
-
-# 접속: http://localhost
-```
-
-### Docker Compose (간단 테스트)
-
-```bash
-# 환경 변수 설정
-cp docker/env/.env.dev.example docker/env/.env.dev
-
-# 전체 서비스 시작
-make dev-up
-
-# 접속: http://localhost:3000
-```
-
----
-
-## Documentation
-
-| 문서 | 설명 |
-|------|------|
-| [Architecture](../../wiki/Architecture) | 전체 시스템 아키텍처, AWS 인프라, Terraform IaC |
-| [Kubernetes](../../wiki/Architecture-K8s) | EKS 클러스터, Istio, ArgoCD, Helm 구성 |
-| [CI/CD Pipeline](../../wiki/Architecture-CICD) | GitHub Actions, ArgoCD GitOps 플로우 |
-| [Security (VPC)](../../wiki/Architecture-VPC) | 네트워크 보안, Private Subnet 구성 |
-| [Monitoring](../../wiki/Architecture-Monitoring) | LGTM Stack, OTEL, Distributed Tracing |
-| [Requirements](../../wiki/Requirements) | 요구사항 정의서 |
-| [Cloud Proposal](../../wiki/Cloud-Proposal) | 클라우드 제안서 |
-| [ADR](../../wiki/ADR) | 아키텍처 결정 기록 |
 
 ---
 
@@ -216,6 +181,47 @@ make {service}-all       # 빌드 + 로드 + 재배포
 make status              # Pod 상태
 make redeploy-all        # 전체 재시작
 ```
+---
+
+## Quick Start
+
+### Prerequisites
+
+- Docker & Docker Compose
+- Kind (Kubernetes in Docker)
+- Helm 3.x
+- kubectl
+
+### Local Development (Kind + Helm)
+
+```bash
+# 1. 클러스터 생성
+make kind-setup
+
+# 2. 이미지 빌드 및 로드
+make kind-load-images
+
+# 3. Helm으로 전체 배포
+make helm-install-all ENV=localhost
+
+# 4. 상태 확인
+make status
+
+# 접속: http://localhost
+```
+
+### Docker Compose (간단 테스트)
+
+```bash
+# 환경 변수 설정
+cp docker/env/.env.dev.example docker/env/.env.dev
+
+# 전체 서비스 시작
+make dev-up
+
+# 접속: http://localhost:3000
+```
+
 
 ---
 
